@@ -20,6 +20,14 @@ def has_unused_supported_offdiag(Lambda, mask, zero_tol):
     return np.any(np.abs(Lambda[supported_offdiag]) < zero_tol)
 
 
+def is_finite_candidate(Lambda, omega, obj):
+    return (
+        np.all(np.isfinite(Lambda))
+        and np.isfinite(omega)
+        and np.isfinite(obj)
+    )
+
+
 def solve_support_with_restarts(
     Sigma,
     mask,
@@ -41,10 +49,17 @@ def solve_support_with_restarts(
         )
         Lambda_thr = threshold_lambda(Lambda, zero_tol)
         obj = frobenius_objective(Sigma, Lambda_thr, omega)
+
+        if not is_finite_candidate(Lambda_thr, omega, obj):
+            continue
+
         runs.append((Lambda_thr, omega, obj))
 
         if not has_unused_supported_offdiag(Lambda, mask, zero_tol):
             break
+
+    if not runs:
+        return None
 
     ref_pattern = np.abs(runs[0][0]) >= zero_tol
     consistent_runs = [
@@ -124,8 +139,22 @@ if __name__ == "__main__":
     A = np.random.randn(n, n)
     Sigma = A @ A.T / n   # random SPD matrix
 
-    D_m = 4  # 2 edges
+    D_m = 3  # 2 edges
     Lambda, omega, obj = optimize_lambda(Sigma, D_m)
+    print("Test 1: random Sigma")
+    print(f"Best objective: {obj:.6f}")
+    print(f"Best omega:     {omega:.6f}")
+    print(f"Best Lambda:\n{Lambda}")
+
+    Sigma_given = np.array([
+        [2.0, 0, 0.3],
+        [0, 1.5, 0.4],
+        [0.3, 0.4, 1.2],
+    ])
+
+    Lambda, omega, obj = optimize_lambda(Sigma_given, D_m)
+    print("\nTest 2: given Sigma")
+    print(f"Sigma:\n{Sigma_given}")
     print(f"Best objective: {obj:.6f}")
     print(f"Best omega:     {omega:.6f}")
     print(f"Best Lambda:\n{Lambda}")

@@ -10,42 +10,71 @@ def update_omega(Sigma, Lambda):
     residual = Sigma - Lambda.T @ Sigma @ Lambda
     return np.trace(residual) / n
 
-def admm_solve(Sigma, support_mask, beta=1.0, max_iter=500, tol=1e-6):
+def is_finite_state(*arrays):
+    return all(np.all(np.isfinite(arr)) for arr in arrays)
+
+
+def admm_solve(
+    Sigma,
+    support_mask,
+    beta=1.0,
+    max_iter=500,
+    tol=1e-6,
+    max_restarts=3,
+):
     n = Sigma.shape[0]
-    # Initialize
-    L1 = impose_support(np.random.randn(n, n), support_mask)
-    L2 = impose_support(np.random.randn(n, n), support_mask)
-    alpha = np.zeros((n, n))
-    omega = 0.0
+    for _ in range(max_restarts):
+        # Initialize
+        L1 = impose_support(np.random.randn(n, n), support_mask)
+        L2 = impose_support(np.random.randn(n, n), support_mask)
+        alpha = np.zeros((n, n))
+        omega = 0.0
+        failed = False
 
-    for _ in range(max_iter):
-        L1_prev = L1.copy()
+        for _ in range(max_iter):
+            L1_prev = L1.copy()
 
-        # Update Lambda_1
-        SL2 = Sigma @ L2
-        A1 = 2 * SL2 @ SL2.T + beta * np.eye(n)
-        B1 = 2 * SL2 @ (Sigma - omega * np.eye(n)) - alpha + beta * L2
-        L1 = np.linalg.solve(A1, B1)
-        L1 = impose_support(L1, support_mask)
+            try:
+                # Update Lambda_1
+                SL2 = Sigma @ L2
+                A1 = 2 * SL2 @ SL2.T + beta * np.eye(n)
+                B1 = 2 * SL2 @ (Sigma - omega * np.eye(n)) - alpha + beta * L2
+                L1 = np.linalg.solve(A1, B1)
+                L1 = impose_support(L1, support_mask)
 
-        # Update Lambda_2
-        SL1 = Sigma @ L1
-        A2 = 2 * SL1 @ SL1.T + beta * np.eye(n)
-        B2 = 2 * SL1 @ (Sigma - omega * np.eye(n)) + alpha + beta * L1
-        L2 = np.linalg.solve(A2, B2)
-        L2 = impose_support(L2, support_mask)
+                # Update Lambda_2
+                SL1 = Sigma @ L1
+                A2 = 2 * SL1 @ SL1.T + beta * np.eye(n)
+                B2 = 2 * SL1 @ (Sigma - omega * np.eye(n)) + alpha + beta * L1
+                L2 = np.linalg.solve(A2, B2)
+                L2 = impose_support(L2, support_mask)
+            except np.linalg.LinAlgError:
+                failed = True
+                break
 
-        # Update omega
-        omega = update_omega(Sigma, L1)
+            # Update omega
+            omega = update_omega(Sigma, L1)
 
-        # Update dual variable
-        alpha = alpha + beta * (L1 - L2)
+            if not is_finite_state(L1, L2, alpha, omega):
+                failed = True
+                break
 
-        # Check convergence
-        if np.linalg.norm(L1 - L1_prev, 'fro') < tol:
-            break
+            # Update dual variable
+            alpha = alpha + beta * (L1 - L2)
 
-    return L1, omega
+            if not is_finite_state(alpha):
+                failed = True
+                break
+
+            # Check convergence
+            if np.linalg.norm(L1 - L1_prev, 'fro') < tol:
+                return L1, omega
+
+        if not failed and is_finite_state(L1, L2, alpha, omega):
+            return L1, omega
+
+    nan_matrix = np.full((n, n), np.nan)
+    return nan_matrix, np.nan
 
 # Example usage and test case
 if __name__ == "__main__":
