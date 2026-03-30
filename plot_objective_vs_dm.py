@@ -70,7 +70,12 @@ def parse_args():
     parser.add_argument(
         "--output",
         default="objective_vs_dm.png",
-        help="Path to save the plot image.",
+        help="Path to save the plot image for the given Sigma example.",
+    )
+    parser.add_argument(
+        "--random-output",
+        default="objective_vs_dm_random.png",
+        help="Path to save the plot image for the random Sigma example.",
     )
     return parser.parse_args()
 
@@ -78,16 +83,29 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    Sigma = np.array([
+    Sigma_given = np.array([
         [2.0, 0.0, 0.3],
         [0.0, 1.5, 0.4],
         [0.3, 0.4, 1.2],
     ])
 
-    d_m_values, objective_values = compute_objective_curve(Sigma)
+    d_m_values, objective_values = compute_objective_curve(Sigma_given)
 
     if len(d_m_values) == 0:
-        print("No finite solutions were found for any D_m.")
+        print("No finite solutions were found for the given Sigma.")
     else:
         plot_objective_curve(d_m_values, objective_values, args.output)
-        print(f"Saved plot to {args.output}")
+        print(f"Saved given-Sigma plot to {args.output}")
+
+    np.random.seed(1)
+    n = Sigma_given.shape[0]
+    A = np.random.randn(n, n)
+    Sigma_random = A @ A.T / n
+
+    d_m_values, objective_values = compute_objective_curve(Sigma_random)
+
+    if len(d_m_values) == 0:
+        print("No finite solutions were found for the random Sigma.")
+    else:
+        plot_objective_curve(d_m_values, objective_values, args.random_output)
+        print(f"Saved random-Sigma plot to {args.random_output}")
