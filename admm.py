@@ -125,3 +125,24 @@ if __name__ == "__main__":
             break
     primal_residual = np.linalg.norm(L1 - L2, 'fro')
     print(f"  ||L1 - L2||_F (should be ~0) : {primal_residual:.2e}")
+
+    # ── Test 5: solve with a given support ───────────────────────────────────
+    # Use a fixed support mask and verify the returned Lambda respects it.
+    print("=" * 50)
+    print("Test 5: check result with given support")
+    B = np.array([[1.2, 0.1, 0.3],
+                  [0.4, 1.0, 0.2],
+                  [0.2, 0.5, 0.9]])
+    Sigma = B @ B.T / n
+    given_support = np.array([[1, 1, 0],
+                              [0, 1, 0],
+                              [0, 1, 1]], dtype=bool)
+    L1, omega = admm_solve(Sigma, given_support)
+    outside_support_max = np.max(np.abs(L1[~given_support]))
+    residual = Sigma - L1.T @ Sigma @ L1 - omega * np.eye(n)
+    obj = np.linalg.norm(residual, 'fro') ** 2
+    print(f"  Given support mask:\n{given_support.astype(int)}")
+    print(f"  Objective value         : {obj:.8f}")
+    print(f"  omega                   : {omega:.6f}")
+    print(f"  Max entry outside mask  : {outside_support_max:.2e}  (should be 0)")
+    print(f"  Lambda:\n{L1}")
