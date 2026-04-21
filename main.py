@@ -28,6 +28,30 @@ def is_finite_candidate(Lambda, omega, obj):
     )
 
 
+def sample_lambda_star_from_mask(mask, target_fro_norm=0.5, seed=0):
+    if target_fro_norm >= 1.0:
+        raise ValueError("target_fro_norm must be smaller than 1.")
+    if target_fro_norm <= 0.0:
+        raise ValueError("target_fro_norm must be positive.")
+    if not np.any(mask):
+        raise ValueError("Lambda_star_mask must contain at least one True entry.")
+
+    rng = np.random.default_rng(seed)
+    Lambda_star = np.zeros(mask.shape)
+    Lambda_star[mask] = rng.normal(size=np.count_nonzero(mask))
+    Lambda_star *= target_fro_norm / np.linalg.norm(Lambda_star, "fro")
+    return Lambda_star
+
+
+def covariance_from_lambda_star(Lambda_star, omega):
+    n = Lambda_star.shape[0]
+    system_matrix = np.eye(n * n) - np.kron(Lambda_star.T, Lambda_star.T)
+    rhs = (omega * np.eye(n)).reshape(-1, order="F")
+    sigma_vec = np.linalg.solve(system_matrix, rhs)
+    Sigma = sigma_vec.reshape((n, n), order="F")
+    return 0.5 * (Sigma + Sigma.T)
+
+
 def solve_support_with_restarts(
     Sigma,
     mask,
@@ -147,13 +171,40 @@ if __name__ == "__main__":
     print(f"Best Lambda:\n{Lambda}")
 
     Sigma_given = np.array([
-        [2.0, 0, 0.3],
-        [0, 1.5, 0.4],
-        [0.3, 0.4, 1.2],
+        [0.94288908, 0.0271487, -0.09748996],
+        [0.0271487, 2.16931437, 0.14698582],
+        [-0.09748996, 0.14698582, 1.51557001],
     ])
 
     Lambda, omega, obj = optimize_lambda(Sigma_given, D_m)
     print("\nTest 2: given Sigma")
+    print(f"Sigma:\n{Sigma_given}")
+    print(f"Best objective: {obj:.6f}")
+    print(f"Best omega:     {omega:.6f}")
+    print(f"Best Lambda:\n{Lambda}")
+
+    Lambda_star_mask = np.array([
+        [1, 0, 1],
+        [0, 1, 1],
+        [0, 0, 1],
+    ], dtype=bool)
+    Lambda_star = sample_lambda_star_from_mask(
+        Lambda_star_mask,
+        target_fro_norm=0.9,
+        seed=0,
+    )
+    omega_star = 1.0
+
+    lambda_star_fro = np.linalg.norm(Lambda_star, "fro")
+    if lambda_star_fro >= 1.0:
+        raise ValueError("Lambda_star must have Frobenius norm smaller than 1.")
+
+    Sigma_given = covariance_from_lambda_star(Lambda_star, omega_star)
+
+    Lambda, omega, obj = optimize_lambda(Sigma_given, D_m)
+    print("\nTest 3: Sigma generated from Lambda_star")
+    print(f"Lambda_star:\n{Lambda_star}")
+    print(f"Frobenius norm of Lambda_star: {lambda_star_fro:.6f}")
     print(f"Sigma:\n{Sigma_given}")
     print(f"Best objective: {obj:.6f}")
     print(f"Best omega:     {omega:.6f}")
