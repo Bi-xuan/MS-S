@@ -180,6 +180,35 @@ def penalty_values_for_d_m(d_m_values):
     return np.sqrt(d_m_values)
 
 
+def output_path_for_dimension(output_path, n, add_suffix):
+    if not add_suffix:
+        return output_path
+
+    stem, dot, extension = output_path.rpartition(".")
+    if not dot:
+        return f"{output_path}_n{n}"
+    return f"{stem}_n{n}.{extension}"
+
+
+def lambda_star_mask_for_dimension(n):
+    if n == 3:
+        return np.array([
+            [1, 1, 0],
+            [0, 1, 1],
+            [0, 0, 1],
+        ], dtype=bool)
+
+    if n == 4:
+        return np.array([
+            [1, 0, 0, 1],
+            [0, 1, 0, 1],
+            [0, 0, 1, 1],
+            [0, 0, 0, 1],
+        ], dtype=bool)
+
+    raise ValueError(f"No Lambda_star mask is defined for dimension {n}.")
+
+
 def plot_curve(
     x_values,
     y_values,
@@ -257,18 +286,19 @@ def parse_args():
         default=500,
         help="Number of random feasible candidates to try when ADMM fails for a D_m.",
     )
+    parser.add_argument(
+        "--lambda-star-dims",
+        type=int,
+        nargs="+",
+        default=[3, 4],
+        choices=[3, 4],
+        help="Dimensions of Lambda_star to test.",
+    )
     return parser.parse_args()
 
 
-if __name__ == "__main__":
-    args = parse_args()
-
-    n = 3
-    Lambda_star_mask = np.array([
-        [1, 0, 1],
-        [0, 1, 1],
-        [0, 0, 1],
-    ], dtype=bool)
+def run_experiment(args, n, add_output_suffix):
+    Lambda_star_mask = lambda_star_mask_for_dimension(n)
     Lambda_star = sample_lambda_star_from_mask(
         Lambda_star_mask,
         target_fro_norm=0.9,
@@ -282,6 +312,23 @@ if __name__ == "__main__":
 
     Sigma_given = covariance_from_lambda_star(Lambda_star, omega_star)
 
+    given_output = output_path_for_dimension(
+        args.given_output,
+        n,
+        add_output_suffix,
+    )
+    sigma_hat_output = output_path_for_dimension(
+        args.sigma_hat_output,
+        n,
+        add_output_suffix,
+    )
+    sigma_hat_penalty_output = output_path_for_dimension(
+        args.sigma_hat_penalty_output,
+        n,
+        add_output_suffix,
+    )
+
+    print(f"\n=== Lambda_star dimension n = {n} ===")
     print("Lambda_star:")
     print(Lambda_star)
     print(f"Frobenius norm of Lambda_star: {lambda_star_fro:.6f}")
@@ -305,14 +352,14 @@ if __name__ == "__main__":
         plot_curve(
             d_m_values,
             objective_values,
-            args.given_output,
-            title="Optimal Objective Value vs D_m (Given Sigma)",
+            given_output,
+            title=f"Optimal Objective Value vs D_m (Given Sigma, n={n})",
             xlabel="D_m",
             ylabel="Optimal objective value",
             fallback_x_values=fallback_d_m_values,
             fallback_y_values=fallback_objective_values,
         )
-        print(f"Saved given-Sigma plot to {args.given_output}")
+        print(f"Saved given-Sigma plot to {given_output}")
 
     Sigma_hat_given = sample_empirical_covariance(
         Sigma_given,
@@ -340,14 +387,14 @@ if __name__ == "__main__":
         plot_curve(
             d_m_values,
             objective_values,
-            args.sigma_hat_output,
-            title="Optimal Objective Value vs D_m (Sigma_hat from Given Sigma)",
-            xlabel = "D_m",
+            sigma_hat_output,
+            title=f"Optimal Objective Value vs D_m (Sigma_hat from Given Sigma, n={n})",
+            xlabel="D_m",
             ylabel="Optimal objective value",
             fallback_x_values=fallback_d_m_values,
             fallback_y_values=fallback_objective_values,
         )
-        print(f"Saved given-Sigma_hat plot to {args.sigma_hat_output}")
+        print(f"Saved given-Sigma_hat plot to {sigma_hat_output}")
 
     sigma_hat_penalties = penalty_values_for_d_m(d_m_values)
     sigma_hat_fallback_penalties = penalty_values_for_d_m(fallback_d_m_values)
@@ -355,12 +402,19 @@ if __name__ == "__main__":
     plot_curve(
         sigma_hat_penalties,
         objective_values,
-        args.sigma_hat_penalty_output,
-        title="Optimal Objective Value vs pen_n(m) (Sigma_hat from Given Sigma)",
+        sigma_hat_penalty_output,
+        title=f"Optimal Objective Value vs pen_n(m) (Sigma_hat from Given Sigma, n={n})",
         xlabel="pen_n(m)",
         ylabel="Optimal objective value",
         use_data_xticks=False,
         fallback_x_values=sigma_hat_fallback_penalties,
         fallback_y_values=fallback_objective_values,
     )
-    print(f"Saved Sigma_hat objective-vs-pen_n(m) plot to {args.sigma_hat_penalty_output}")
+    print(f"Saved Sigma_hat objective-vs-pen_n(m) plot to {sigma_hat_penalty_output}")
+
+
+if __name__ == "__main__":
+    args = parse_args()
+
+    for index, n in enumerate(args.lambda_star_dims):
+        run_experiment(args, n, add_output_suffix=index > 0)
