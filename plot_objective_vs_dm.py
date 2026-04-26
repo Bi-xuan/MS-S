@@ -28,6 +28,13 @@ def sample_empirical_covariance(Sigma, num_samples, seed=None):
 
 
 def covariance_from_lambda_star(Lambda_star, omega):
+    if omega < 0.0:
+        raise ValueError("omega must be nonnegative.")
+    if lambda_star_spectral_radius(Lambda_star) >= 1.0:
+        raise ValueError(
+            "All eigenvalues of Lambda_star must be smaller than 1 in absolute value."
+        )
+
     n = Lambda_star.shape[0]
     system_matrix = np.eye(n * n) - np.kron(Lambda_star.T, Lambda_star.T)
     rhs = (omega * np.eye(n)).reshape(-1, order="F")
@@ -36,28 +43,60 @@ def covariance_from_lambda_star(Lambda_star, omega):
     return 0.5 * (Sigma + Sigma.T)
 
 
-def sample_lambda_star_from_mask(mask, target_fro_norm=0.5, seed=0):
-    if target_fro_norm >= 1.0:
-        raise ValueError("target_fro_norm must be smaller than 1.")
-    if target_fro_norm <= 0.0:
-        raise ValueError("target_fro_norm must be positive.")
+def lambda_star_spectral_radius(Lambda_star):
+    return np.max(np.abs(np.linalg.eigvals(Lambda_star)))
+
+
+def sample_lambda_star_from_mask(mask, target_spectral_radius=0.5, seed=0):
+    if target_spectral_radius >= 1.0:
+        raise ValueError("target_spectral_radius must be smaller than 1.")
+    if target_spectral_radius <= 0.0:
+        raise ValueError("target_spectral_radius must be positive.")
     if not np.any(mask):
         raise ValueError("Lambda_star_mask must contain at least one True entry.")
 
     rng = np.random.default_rng(seed)
     Lambda_star = np.zeros(mask.shape)
     Lambda_star[mask] = rng.normal(size=np.count_nonzero(mask))
-    Lambda_star *= target_fro_norm / np.linalg.norm(Lambda_star, "fro")
+    spectral_radius = lambda_star_spectral_radius(Lambda_star)
+    if spectral_radius == 0.0:
+        raise ValueError("Cannot scale Lambda_star with zero spectral radius.")
+
+    Lambda_star *= target_spectral_radius / spectral_radius
     return Lambda_star
 
 
 def optimal_omega_for_lambda(Sigma, Lambda):
     n = Sigma.shape[0]
     residual_without_omega = Sigma - Lambda.T @ Sigma @ Lambda
-    return np.trace(residual_without_omega) / n
+    return max(np.trace(residual_without_omega) / n, 0.0)
 
 
-def random_feasible_candidate(Sigma, mask, rng, max_fro_norm=0.95):
+def satisfies_hard_constraints(
+    Lambda,
+    mask,
+    omega,
+    min_supported_offdiag_abs,
+    min_omega,
+):
+    if omega < min_omega:
+        return False
+
+    off_diag_mask = ~np.eye(Lambda.shape[0], dtype=bool)
+    supported_offdiag = mask & off_diag_mask
+    return np.all(
+        np.abs(Lambda[supported_offdiag]) >= min_supported_offdiag_abs
+    )
+
+
+def random_feasible_candidate(
+    Sigma,
+    mask,
+    rng,
+    max_fro_norm=0.95,
+    min_supported_offdiag_abs=1e-3,
+    min_omega=0.0,
+):
     Lambda = np.zeros(mask.shape)
     Lambda[mask] = rng.normal(size=np.count_nonzero(mask))
     lambda_norm = np.linalg.norm(Lambda, "fro")
@@ -76,6 +115,15 @@ def random_feasible_candidate(Sigma, mask, rng, max_fro_norm=0.95):
     ):
         return None
 
+    if not satisfies_hard_constraints(
+        Lambda,
+        mask,
+        omega,
+        min_supported_offdiag_abs,
+        min_omega,
+    ):
+        return None
+
     return Lambda, omega, obj
 
 
@@ -85,6 +133,8 @@ def best_random_feasible_objective(
     rng,
     num_candidates=500,
     max_fro_norm=0.95,
+    min_supported_offdiag_abs=1e-3,
+    min_omega=0.0,
 ):
     n = Sigma.shape[0]
     supports = get_all_supports(n, d_m - 1)
@@ -99,6 +149,8 @@ def best_random_feasible_objective(
             mask,
             rng,
             max_fro_norm=max_fro_norm,
+            min_supported_offdiag_abs=min_supported_offdiag_abs,
+            min_omega=min_omega,
         )
         if candidate is None:
             continue
@@ -120,6 +172,8 @@ def compute_objective_curve(
     fallback_candidates=500,
     fallback_max_fro_norm=0.95,
     fallback_seed=0,
+    min_supported_offdiag_abs=1e-3,
+    min_omega=0.0,
 ):
     n = Sigma.shape[0]
     max_dm = n * (n - 1) + 1
@@ -141,6 +195,8 @@ def compute_objective_curve(
             zero_tol=zero_tol,
             obj_tol=obj_tol,
             max_restarts=max_restarts,
+            min_supported_offdiag_abs=min_supported_offdiag_abs,
+            min_omega=min_omega,
         )
 
         if (
@@ -157,6 +213,8 @@ def compute_objective_curve(
                 fallback_rng,
                 num_candidates=fallback_candidates,
                 max_fro_norm=fallback_max_fro_norm,
+                min_supported_offdiag_abs=min_supported_offdiag_abs,
+                min_omega=min_omega,
             )
             if fallback is not None:
                 fallback_d_m_values.append(d_m)
@@ -301,14 +359,17 @@ def run_experiment(args, n, add_output_suffix):
     Lambda_star_mask = lambda_star_mask_for_dimension(n)
     Lambda_star = sample_lambda_star_from_mask(
         Lambda_star_mask,
-        target_fro_norm=0.9,
+        target_spectral_radius=0.9,
         seed=0,
     )
     omega_star = 1.0
 
-    lambda_star_fro = np.linalg.norm(Lambda_star, "fro")
-    if lambda_star_fro >= 1.0:
-        raise ValueError("Lambda_star must have Frobenius norm smaller than 1.")
+    lambda_star_radius = lambda_star_spectral_radius(Lambda_star)
+    if lambda_star_radius >= 1.0:
+        raise ValueError(
+            "All eigenvalues of Lambda_star must be smaller than 1 "
+            "in absolute value."
+        )
 
     Sigma_given = covariance_from_lambda_star(Lambda_star, omega_star)
 
@@ -331,7 +392,7 @@ def run_experiment(args, n, add_output_suffix):
     print(f"\n=== Lambda_star dimension n = {n} ===")
     print("Lambda_star:")
     print(Lambda_star)
-    print(f"Frobenius norm of Lambda_star: {lambda_star_fro:.6f}")
+    print(f"Spectral radius of Lambda_star: {lambda_star_radius:.6f}")
 
     print("Given Sigma:")
     print(Sigma_given)

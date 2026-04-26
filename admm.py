@@ -5,10 +5,46 @@ def impose_support(M, mask):
     M_out[~mask] = 0.0
     return M_out
 
-def update_omega(Sigma, Lambda):
+def update_omega(Sigma, Lambda, omega_upper=None):
     n = Sigma.shape[0]
     residual = Sigma - Lambda.T @ Sigma @ Lambda
-    return np.trace(residual) / n
+    omega = max(np.trace(residual) / n, 0.0)
+    if omega_upper is not None:
+        omega = min(omega, omega_upper)
+    return omega
+
+
+def covariance_from_lambda_star(Lambda_star, omega):
+    n = Lambda_star.shape[0]
+    system_matrix = np.eye(n * n) - np.kron(Lambda_star.T, Lambda_star.T)
+    rhs = (omega * np.eye(n)).reshape(-1, order="F")
+    sigma_vec = np.linalg.solve(system_matrix, rhs)
+    Sigma = sigma_vec.reshape((n, n), order="F")
+    return 0.5 * (Sigma + Sigma.T)
+
+
+def lambda_star_spectral_radius(Lambda_star):
+    return np.max(np.abs(np.linalg.eigvals(Lambda_star)))
+
+
+def sample_lambda_star_from_mask(mask, target_spectral_radius=0.5, seed=0):
+    if target_spectral_radius >= 1.0:
+        raise ValueError("target_spectral_radius must be smaller than 1.")
+    if target_spectral_radius <= 0.0:
+        raise ValueError("target_spectral_radius must be positive.")
+    if not np.any(mask):
+        raise ValueError("Lambda_star_mask must contain at least one True entry.")
+
+    rng = np.random.default_rng(seed)
+    Lambda_star = np.zeros(mask.shape)
+    Lambda_star[mask] = rng.normal(size=np.count_nonzero(mask))
+    spectral_radius = lambda_star_spectral_radius(Lambda_star)
+    if spectral_radius == 0.0:
+        raise ValueError("Cannot scale Lambda_star with zero spectral radius.")
+
+    Lambda_star *= target_spectral_radius / spectral_radius
+    return Lambda_star
+
 
 def is_finite_state(*arrays):
     return all(np.all(np.isfinite(arr)) for arr in arrays)
@@ -21,14 +57,25 @@ def admm_solve(
     max_iter=500,
     tol=1e-6,
     max_restarts=3,
+    omega_fixed=None,
+    omega_upper=None,
 ):
+    if omega_fixed is not None and omega_fixed < 0.0:
+        raise ValueError("omega_fixed must be nonnegative.")
+    if omega_upper is not None and omega_upper < 0.0:
+        raise ValueError("omega_upper must be nonnegative.")
+
     n = Sigma.shape[0]
+    best_Lambda = None
+    best_omega = None
+    best_obj = np.inf
+
     for _ in range(max_restarts):
         # Initialize
         L1 = impose_support(np.random.randn(n, n), support_mask)
         L2 = impose_support(np.random.randn(n, n), support_mask)
         alpha = np.zeros((n, n))
-        omega = 0.0
+        omega = 0.0 if omega_fixed is None else omega_fixed
         failed = False
 
         for _ in range(max_iter):
@@ -52,8 +99,8 @@ def admm_solve(
                 failed = True
                 break
 
-            # Update omega
-            omega = update_omega(Sigma, L1)
+            if omega_fixed is None:
+                omega = update_omega(Sigma, L1, omega_upper=omega_upper)
 
             if not is_finite_state(L1, L2, alpha, omega):
                 failed = True
@@ -68,10 +115,18 @@ def admm_solve(
 
             # Check convergence
             if np.linalg.norm(L1 - L1_prev, 'fro') < tol:
-                return L1, omega
+                break
 
         if not failed and is_finite_state(L1, L2, alpha, omega):
-            return L1, omega
+            residual = Sigma - L1.T @ Sigma @ L1 - omega * np.eye(n)
+            obj = np.linalg.norm(residual, 'fro') ** 2
+            if np.isfinite(obj) and obj < best_obj:
+                best_Lambda = L1.copy()
+                best_omega = omega
+                best_obj = obj
+
+    if best_Lambda is not None:
+        return best_Lambda, best_omega
 
     nan_matrix = np.full((n, n), np.nan)
     return nan_matrix, np.nan
@@ -171,6 +226,60 @@ if __name__ == "__main__":
     residual = Sigma - L1.T @ Sigma @ L1 - omega * np.eye(n)
     obj = np.linalg.norm(residual, 'fro') ** 2
     print(f"  Given support mask:\n{given_support.astype(int)}")
+    print(f"  Objective value         : {obj:.8f}")
+    print(f"  omega                   : {omega:.6f}")
+    print(f"  Max entry outside mask  : {outside_support_max:.2e}  (should be 0)")
+    print(f"  Lambda:\n{L1}")
+
+    # ── Test 6: solve with Sigma generated from Lambda_star ──────────────────
+    # Use the Lambda_star-style support: diagonal plus edges into variable 4.
+    print("=" * 50)
+    print("Test 6: Sigma generated from Lambda_star with given support")
+    n = 4
+    Lambda_star_mask = np.array([
+        [1, 0, 0, 1],
+        [0, 1, 0, 1],
+        [0, 0, 1, 1],
+        [0, 0, 0, 1],
+    ], dtype=bool)
+    Lambda_star = sample_lambda_star_from_mask(
+        Lambda_star_mask,
+        target_spectral_radius=0.9,
+        seed=0,
+    )
+    omega_star = 1.0
+
+    lambda_star_radius = lambda_star_spectral_radius(Lambda_star)
+    if lambda_star_radius >= 1.0:
+        raise ValueError(
+            "All eigenvalues of Lambda_star must be smaller than 1 "
+            "in absolute value."
+        )
+
+    Sigma = covariance_from_lambda_star(Lambda_star, omega_star)
+
+    true_residual = Sigma - Lambda_star.T @ Sigma @ Lambda_star - omega_star * np.eye(n)
+    true_obj = np.linalg.norm(true_residual, 'fro') ** 2
+    identity_residual = Sigma - np.eye(n).T @ Sigma @ np.eye(n)
+    identity_obj = np.linalg.norm(identity_residual, 'fro') ** 2
+
+    np.random.seed(42)
+    L1, omega = admm_solve(
+        Sigma,
+        Lambda_star_mask,
+        max_iter=2000,
+        tol=1e-9,
+        max_restarts=10,
+    )
+    outside_support_max = np.max(np.abs(L1[~Lambda_star_mask]))
+    residual = Sigma - L1.T @ Sigma @ L1 - omega * np.eye(n)
+    obj = np.linalg.norm(residual, 'fro') ** 2
+    print(f"  Lambda_star:\n{Lambda_star}")
+    print(f"  omega_star             : {omega_star:.6f}")
+    print(f"  True objective value   : {true_obj:.8e}")
+    print(f"  Identity objective     : {identity_obj:.8e}")
+    print(f"  Generated Sigma:\n{Sigma}")
+    print(f"  Given support mask:\n{Lambda_star_mask.astype(int)}")
     print(f"  Objective value         : {obj:.8f}")
     print(f"  omega                   : {omega:.6f}")
     print(f"  Max entry outside mask  : {outside_support_max:.2e}  (should be 0)")
