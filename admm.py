@@ -15,6 +15,13 @@ def update_omega(Sigma, Lambda, omega_upper=None):
 
 
 def covariance_from_lambda_star(Lambda_star, omega):
+    if omega < 0.0:
+        raise ValueError("omega must be nonnegative.")
+    if lambda_star_spectral_radius(Lambda_star) >= 1.0:
+        raise ValueError(
+            "All eigenvalues of Lambda_star must be smaller than 1 in absolute value."
+        )
+
     n = Lambda_star.shape[0]
     system_matrix = np.eye(n * n) - np.kron(Lambda_star.T, Lambda_star.T)
     rhs = (omega * np.eye(n)).reshape(-1, order="F")
@@ -185,7 +192,6 @@ if __name__ == "__main__":
     print("Test 4: primal feasibility at convergence")
     A = np.random.randn(n, n)
     Sigma = A @ A.T / n
-    full_mask = np.ones((n, n), dtype=bool)
 
     # Patch admm_solve temporarily to also return L2
     L1 = np.zeros((n, n))

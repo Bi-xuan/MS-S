@@ -1,6 +1,11 @@
 import numpy as np
 from support_utils import get_all_supports
-from admm import admm_solve
+from admm import (
+    admm_solve,
+    covariance_from_lambda_star,
+    lambda_star_spectral_radius,
+    sample_lambda_star_from_mask,
+)
 from objective import frobenius_objective
 
 def threshold_lambda(Lambda, zero_tol):
@@ -43,45 +48,6 @@ def satisfies_hard_constraints(
     return np.all(
         np.abs(Lambda[supported_offdiag]) >= min_supported_offdiag_abs
     )
-
-
-def lambda_star_spectral_radius(Lambda_star):
-    return np.max(np.abs(np.linalg.eigvals(Lambda_star)))
-
-
-def sample_lambda_star_from_mask(mask, target_spectral_radius=0.5, seed=0):
-    if target_spectral_radius >= 1.0:
-        raise ValueError("target_spectral_radius must be smaller than 1.")
-    if target_spectral_radius <= 0.0:
-        raise ValueError("target_spectral_radius must be positive.")
-    if not np.any(mask):
-        raise ValueError("Lambda_star_mask must contain at least one True entry.")
-
-    rng = np.random.default_rng(seed)
-    Lambda_star = np.zeros(mask.shape)
-    Lambda_star[mask] = rng.normal(size=np.count_nonzero(mask))
-    spectral_radius = lambda_star_spectral_radius(Lambda_star)
-    if spectral_radius == 0.0:
-        raise ValueError("Cannot scale Lambda_star with zero spectral radius.")
-
-    Lambda_star *= target_spectral_radius / spectral_radius
-    return Lambda_star
-
-
-def covariance_from_lambda_star(Lambda_star, omega):
-    if omega < 0.0:
-        raise ValueError("omega must be nonnegative.")
-    if lambda_star_spectral_radius(Lambda_star) >= 1.0:
-        raise ValueError(
-            "All eigenvalues of Lambda_star must be smaller than 1 in absolute value."
-        )
-
-    n = Lambda_star.shape[0]
-    system_matrix = np.eye(n * n) - np.kron(Lambda_star.T, Lambda_star.T)
-    rhs = (omega * np.eye(n)).reshape(-1, order="F")
-    sigma_vec = np.linalg.solve(system_matrix, rhs)
-    Sigma = sigma_vec.reshape((n, n), order="F")
-    return 0.5 * (Sigma + Sigma.T)
 
 
 def empirical_covariance_from_samples(X):
