@@ -189,7 +189,7 @@ def optimize_lambda(
     obj_tol=1e-8,
     max_restarts=3,
     min_supported_offdiag_abs=1e-3,
-    min_omega=0.0,
+    min_omega=1e-8,
     omega_fixed=None,
 ):
     """
@@ -213,6 +213,10 @@ def optimize_lambda(
     n = Sigma.shape[0]
     n_edge = D_m - 1
     supports = get_all_supports(n, n_edge)
+    lambda_min_sigma = np.min(np.linalg.eigvalsh(Sigma))
+
+    if lambda_min_sigma <= min_omega:
+        return None, None, np.inf
 
     best_obj = np.inf
     best_Lambda = None
@@ -231,6 +235,7 @@ def optimize_lambda(
             min_supported_offdiag_abs=min_supported_offdiag_abs,
             min_omega=min_omega,
             omega_fixed=omega_fixed,
+            omega_upper=lambda_min_sigma if omega_fixed is None else None,
         )
 
         if result is None:
@@ -252,10 +257,6 @@ def optimize_lambda(
             best_mask = mask.copy()
 
     if omega_fixed is not None and best_mask is not None:
-        lambda_min_sigma = np.min(np.linalg.eigvalsh(Sigma))
-        if lambda_min_sigma < min_omega:
-            return None, None, np.inf
-
         final_result = solve_support_with_restarts(
             Sigma,
             best_mask,
@@ -396,17 +397,18 @@ if __name__ == "__main__":
     ])
     omega_star = 1.0
     omega_ref = omega_star
-
+    # omega_ref = 0.5
+    
     lambda_star_radius = lambda_star_spectral_radius(Lambda_star)
     if lambda_star_radius >= 1.0:
         raise ValueError(
             "All eigenvalues of Lambda_star must be smaller than 1 "
             "in absolute value."
         )
-
+    
     Sigma_given = covariance_from_lambda_star(Lambda_star, omega_star)
     lambda_min_sigma = np.min(np.linalg.eigvalsh(Sigma_given))
-
+    
     np.random.seed(42)
     Lambda, omega, obj = optimize_lambda(
         Sigma_given,
@@ -429,6 +431,55 @@ if __name__ == "__main__":
     print_optimization_result(Lambda, omega, obj)
     if omega is not None and np.isfinite(omega):
         print(f"omega <= lambda_min(Sigma): {omega <= lambda_min_sigma + 1e-12}")
+
+    # -------------------------------------------------------------------------
+    # Test 7: Sigma generated from Lambda_star, n = 4
+    # -------------------------------------------------------------------------
+    # D_m = 4  # 3 edges
+    # Lambda_star_mask = np.array([
+    #     [1, 0, 0, 1],
+    #     [0, 1, 0, 1],
+    #     [0, 0, 1, 1],
+    #     [0, 0, 0, 1],
+    # ], dtype=bool)
+    # Lambda_star = np.array([
+    #     [0.15, 0.0, 0.0, 0.6],
+    #     [0.0, -0.20, 0.0, -0.45],
+    #     [0.0, 0.0, 0.10, 0.50],
+    #     [0.0, 0.0, 0.0, 0.55],
+    # ])
+    # omega_star = 1.0
+
+    # lambda_star_radius = lambda_star_spectral_radius(Lambda_star)
+    # if lambda_star_radius >= 1.0:
+    #     raise ValueError(
+    #         "All eigenvalues of Lambda_star must be smaller than 1 "
+    #         "in absolute value."
+    #     )
+
+    # Sigma_given = covariance_from_lambda_star(Lambda_star, omega_star)
+    # lambda_min_sigma = np.min(np.linalg.eigvalsh(Sigma_given))
+
+    # np.random.seed(42)
+    # Lambda, omega, obj = optimize_lambda(
+    #     Sigma_given,
+    #     D_m,
+    #     max_iter=800,
+    #     tol=1e-7,
+    #     max_restarts=5,
+    #     omega_fixed=None,
+    # )
+    # print(
+    #     "\nTest 7: bounded free-omega support selection"
+    # )
+    # print(f"Lambda_star:\n{Lambda_star}")
+    # print(f"Spectral radius of Lambda_star: {lambda_star_radius:.6f}")
+    # print(f"omega_star: {omega_star:.6f}")
+    # print(f"lambda_min(Sigma): {lambda_min_sigma:.6f}")
+    # print(f"Sigma:\n{Sigma_given}")
+    # print_optimization_result(Lambda, omega, obj)
+    # if omega is not None and np.isfinite(omega):
+    #     print(f"omega <= lambda_min(Sigma): {omega <= lambda_min_sigma + 1e-12}")
 
     # -------------------------------------------------------------------------
     # Test 8: Sigma_hat from 100 observations, n = 4
