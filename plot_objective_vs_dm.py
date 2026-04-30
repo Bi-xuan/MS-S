@@ -168,24 +168,31 @@ def compute_objective_curve(
     tol=1e-6,
     zero_tol=1e-5,
     obj_tol=1e-8,
-    max_restarts=3,
+    max_restarts=5,
     fallback_candidates=500,
     fallback_max_fro_norm=0.95,
-    fallback_seed=0,
+    random_seed=42,
+    fallback_seed=None,
     min_supported_offdiag_abs=1e-3,
     min_omega=0.0,
+    omega_ref=None,
+    stop_obj_threshold=1e-6,
+    n_jobs=1,
 ):
     n = Sigma.shape[0]
     max_dm = n * (n - 1) + 1
 
-    d_m_values = []
-    objective_values = []
+    exact_d_m_values = []
+    exact_objective_values = []
     fallback_d_m_values = []
     fallback_objective_values = []
+    if fallback_seed is None:
+        fallback_seed = random_seed
     fallback_rng = np.random.default_rng(fallback_seed)
 
     for d_m in range(1, max_dm + 1):
         print(f"Solving for D_m = {d_m}...")
+        np.random.seed(random_seed)
         Lambda, omega, obj = optimize_lambda(
             Sigma,
             d_m,
@@ -197,6 +204,9 @@ def compute_objective_curve(
             max_restarts=max_restarts,
             min_supported_offdiag_abs=min_supported_offdiag_abs,
             min_omega=min_omega,
+            omega_fixed=omega_ref,
+            n_jobs=n_jobs,
+            random_seed=random_seed,
         )
 
         if (
@@ -222,15 +232,32 @@ def compute_objective_curve(
                 print(f"  Random feasible fallback objective = {fallback[2]:.6f}")
             continue
 
-        d_m_values.append(d_m)
-        objective_values.append(obj)
         print(f"  Objective = {obj:.6f}")
+        if obj < stop_obj_threshold:
+            print(
+                f"  Objective is below {stop_obj_threshold:.1e}; "
+                "stopping remaining D_m values without plotting this point."
+            )
+            break
+        exact_d_m_values.append(d_m)
+        exact_objective_values.append(obj)
+
+    d_m_values = np.array(exact_d_m_values)
+    objective_values = np.minimum.accumulate(np.array(exact_objective_values))
 
     return (
-        np.array(d_m_values),
-        np.array(objective_values),
-        np.array(fallback_d_m_values),
-        np.array(fallback_objective_values),
+        d_m_values,
+        objective_values,
+        np.array([
+            d_m
+            for d_m, obj in zip(fallback_d_m_values, fallback_objective_values)
+            if obj >= stop_obj_threshold
+        ]),
+        np.array([
+            obj
+            for obj in fallback_objective_values
+            if obj >= stop_obj_threshold
+        ]),
     )
 
 
@@ -345,24 +372,56 @@ def parse_args():
         help="Number of random feasible candidates to try when ADMM fails for a D_m.",
     )
     parser.add_argument(
+        "--stop-obj-threshold",
+        type=float,
+        default=1e-6,
+        help="Stop solving larger D_m values once a finite objective is below this threshold.",
+    )
+    parser.add_argument(
+        "--n-jobs",
+        type=int,
+        default=1,
+        help="Number of worker processes for support-level parallelism.",
+    )
+    parser.add_argument(
+        "--random-seed",
+        type=int,
+        default=42,
+        help="Base seed used to derive all random seeds in the experiment.",
+    )
+    parser.add_argument(
         "--lambda-star-dims",
         type=int,
         nargs="+",
-        default=[3, 4],
-        choices=[3, 4],
-        help="Dimensions of Lambda_star to test.",
+        default=[4],
+        choices=[4],
+        help="Dimensions of Lambda_star to test. The hand-coded Test 7 example is used for n=4.",
     )
     return parser.parse_args()
 
 
 def run_experiment(args, n, add_output_suffix):
+    given_solve_seed = args.random_seed
+    given_fallback_seed = args.random_seed + 1
+    sigma_hat_sample_seed = args.random_seed + 2
+    sigma_hat_solve_seed = args.random_seed + 3
+    sigma_hat_fallback_seed = args.random_seed + 4
+
     Lambda_star_mask = lambda_star_mask_for_dimension(n)
-    Lambda_star = sample_lambda_star_from_mask(
-        Lambda_star_mask,
-        target_spectral_radius=0.9,
-        seed=0,
-    )
+    # Previous randomized definition:
+    # Lambda_star = sample_lambda_star_from_mask(
+    #     Lambda_star_mask,
+    #     target_spectral_radius=0.9,
+    #     seed=0,
+    # )
+    Lambda_star = np.array([
+        [0.15, 0.0, 0.0, 0.6],
+        [0.0, -0.20, 0.0, -0.45],
+        [0.0, 0.0, 0.10, 0.50],
+        [0.0, 0.0, 0.0, 0.55],
+    ])
     omega_star = 1.0
+    omega_ref = omega_star
 
     lambda_star_radius = lambda_star_spectral_radius(Lambda_star)
     if lambda_star_radius >= 1.0:
@@ -393,6 +452,8 @@ def run_experiment(args, n, add_output_suffix):
     print("Lambda_star:")
     print(Lambda_star)
     print(f"Spectral radius of Lambda_star: {lambda_star_radius:.6f}")
+    print(f"omega_star: {omega_star:.6f}")
+    print(f"omega_ref for support selection: {omega_ref:.6f}")
 
     print("Given Sigma:")
     print(Sigma_given)
@@ -403,8 +464,14 @@ def run_experiment(args, n, add_output_suffix):
         fallback_objective_values,
     ) = compute_objective_curve(
         Sigma_given,
+        max_iter=800,
+        tol=1e-7,
         fallback_candidates=args.fallback_candidates,
-        fallback_seed=0,
+        random_seed=given_solve_seed,
+        fallback_seed=given_fallback_seed,
+        omega_ref=omega_ref,
+        stop_obj_threshold=args.stop_obj_threshold,
+        n_jobs=args.n_jobs,
     )
 
     if len(d_m_values) == 0 and len(fallback_d_m_values) == 0:
@@ -414,9 +481,9 @@ def run_experiment(args, n, add_output_suffix):
             d_m_values,
             objective_values,
             given_output,
-            title=f"Optimal Objective Value vs D_m (Given Sigma, n={n})",
+            title=f"Nested Optimal Objective Value vs D_m (Given Sigma, n={n})",
             xlabel="D_m",
-            ylabel="Optimal objective value",
+            ylabel="Nested optimal objective value",
             fallback_x_values=fallback_d_m_values,
             fallback_y_values=fallback_objective_values,
         )
@@ -425,7 +492,7 @@ def run_experiment(args, n, add_output_suffix):
     Sigma_hat_given = sample_empirical_covariance(
         Sigma_given,
         num_samples=args.num_samples,
-        seed=0,
+        seed=sigma_hat_sample_seed,
     )
 
     print("\nEmpirical covariance Sigma_hat from given Sigma:")
@@ -438,8 +505,14 @@ def run_experiment(args, n, add_output_suffix):
         fallback_objective_values,
     ) = compute_objective_curve(
         Sigma_hat_given,
+        max_iter=800,
+        tol=1e-7,
         fallback_candidates=args.fallback_candidates,
-        fallback_seed=1,
+        random_seed=sigma_hat_solve_seed,
+        fallback_seed=sigma_hat_fallback_seed,
+        omega_ref=omega_ref,
+        stop_obj_threshold=args.stop_obj_threshold,
+        n_jobs=args.n_jobs,
     )
 
     if len(d_m_values) == 0 and len(fallback_d_m_values) == 0:
@@ -449,29 +522,29 @@ def run_experiment(args, n, add_output_suffix):
             d_m_values,
             objective_values,
             sigma_hat_output,
-            title=f"Optimal Objective Value vs D_m (Sigma_hat from Given Sigma, n={n})",
+            title=f"Nested Optimal Objective Value vs D_m (Sigma_hat from Given Sigma, n={n})",
             xlabel="D_m",
-            ylabel="Optimal objective value",
+            ylabel="Nested optimal objective value",
             fallback_x_values=fallback_d_m_values,
             fallback_y_values=fallback_objective_values,
         )
         print(f"Saved given-Sigma_hat plot to {sigma_hat_output}")
 
-    sigma_hat_penalties = penalty_values_for_d_m(d_m_values)
-    sigma_hat_fallback_penalties = penalty_values_for_d_m(fallback_d_m_values)
+        sigma_hat_penalties = penalty_values_for_d_m(d_m_values)
+        sigma_hat_fallback_penalties = penalty_values_for_d_m(fallback_d_m_values)
 
-    plot_curve(
-        sigma_hat_penalties,
-        objective_values,
-        sigma_hat_penalty_output,
-        title=f"Optimal Objective Value vs pen_n(m) (Sigma_hat from Given Sigma, n={n})",
-        xlabel="pen_n(m)",
-        ylabel="Optimal objective value",
-        use_data_xticks=False,
-        fallback_x_values=sigma_hat_fallback_penalties,
-        fallback_y_values=fallback_objective_values,
-    )
-    print(f"Saved Sigma_hat objective-vs-pen_n(m) plot to {sigma_hat_penalty_output}")
+        plot_curve(
+            sigma_hat_penalties,
+            objective_values,
+            sigma_hat_penalty_output,
+            title=f"Nested Optimal Objective Value vs pen_n(m) (Sigma_hat from Given Sigma, n={n})",
+            xlabel="pen_n(m)",
+            ylabel="Nested optimal objective value",
+            use_data_xticks=False,
+            fallback_x_values=sigma_hat_fallback_penalties,
+            fallback_y_values=fallback_objective_values,
+        )
+        print(f"Saved Sigma_hat objective-vs-pen_n(m) plot to {sigma_hat_penalty_output}")
 
 
 if __name__ == "__main__":

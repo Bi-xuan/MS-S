@@ -1,3 +1,7 @@
+import argparse
+import os
+from concurrent.futures import ProcessPoolExecutor
+
 import numpy as np
 from support_utils import get_all_supports
 from admm import (
@@ -145,6 +149,63 @@ def solve_support_with_restarts(
     return None
 
 
+def solve_support_worker(task):
+    (
+        support_index,
+        Sigma,
+        mask,
+        beta,
+        max_iter,
+        tol,
+        zero_tol,
+        max_restarts,
+        min_supported_offdiag_abs,
+        min_omega,
+        omega_fixed,
+        omega_upper,
+        seed,
+    ) = task
+
+    if seed is not None:
+        np.random.seed(seed)
+
+    result = solve_support_with_restarts(
+        Sigma,
+        mask,
+        beta=beta,
+        max_iter=max_iter,
+        tol=tol,
+        zero_tol=zero_tol,
+        max_restarts=max_restarts,
+        min_supported_offdiag_abs=min_supported_offdiag_abs,
+        min_omega=min_omega,
+        omega_fixed=omega_fixed,
+        omega_upper=omega_upper,
+    )
+
+    return support_index, mask, result
+
+
+def update_best_support(
+    best_Lambda,
+    best_omega,
+    best_obj,
+    best_mask,
+    mask,
+    result,
+    obj_tol,
+):
+    if result is None:
+        return best_Lambda, best_omega, best_obj, best_mask
+
+    Lambda, omega, obj = result
+
+    if best_Lambda is None or obj < best_obj - obj_tol:
+        return Lambda.copy(), omega, obj, mask.copy()
+
+    return best_Lambda, best_omega, best_obj, best_mask
+
+
 def optimize_lambda(
     Sigma,
     D_m,
@@ -157,6 +218,8 @@ def optimize_lambda(
     min_supported_offdiag_abs=1e-3,
     min_omega=1e-8,
     omega_fixed=None,
+    n_jobs=1,
+    random_seed=None,
 ):
     """
     Parameters
@@ -169,6 +232,10 @@ def optimize_lambda(
     omega_fixed : float or None — if provided, use this value as omega_ref
         to select the support, then re-optimize that support with free omega
         constrained by omega <= lambda_min(Sigma)
+    n_jobs : int or None — number of worker processes for support-level
+        parallelism. Use 1 for the original serial behavior; None uses all CPUs.
+    random_seed : int or None — if provided, each support solve gets a
+        deterministic seed random_seed + support_index.
     
     Returns
     -------
@@ -189,40 +256,67 @@ def optimize_lambda(
     best_omega = None
     best_mask = None
 
-    for mask in supports:
-        result = solve_support_with_restarts(
+    support_tasks = [
+        (
+            support_index,
             Sigma,
             mask,
-            beta=beta,
-            max_iter=max_iter,
-            tol=tol,
-            zero_tol=zero_tol,
-            max_restarts=max_restarts,
-            min_supported_offdiag_abs=min_supported_offdiag_abs,
-            min_omega=min_omega,
-            omega_fixed=omega_fixed,
-            omega_upper=lambda_min_sigma if omega_fixed is None else None,
+            beta,
+            max_iter,
+            tol,
+            zero_tol,
+            max_restarts,
+            min_supported_offdiag_abs,
+            min_omega,
+            omega_fixed,
+            lambda_min_sigma if omega_fixed is None else None,
+            None if random_seed is None else random_seed + support_index,
         )
+        for support_index, mask in enumerate(supports)
+    ]
 
-        if result is None:
-            continue
+    if n_jobs is None:
+        max_workers = os.cpu_count()
+    else:
+        max_workers = n_jobs
 
-        Lambda, omega, obj = result
+    if max_workers is not None and max_workers < 1:
+        raise ValueError("n_jobs must be positive or None.")
 
-        if best_Lambda is None:
-            best_obj = obj
-            best_Lambda = Lambda.copy()
-            best_omega = omega
-            best_mask = mask.copy()
-            continue
+    if max_workers == 1 or len(support_tasks) <= 1:
+        support_results = map(solve_support_worker, support_tasks)
+    else:
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            support_results = executor.map(solve_support_worker, support_tasks)
 
-        if obj < best_obj - obj_tol:
-            best_obj = obj
-            best_Lambda = Lambda.copy()
-            best_omega = omega
-            best_mask = mask.copy()
+            for _, mask, result in support_results:
+                best_Lambda, best_omega, best_obj, best_mask = update_best_support(
+                    best_Lambda,
+                    best_omega,
+                    best_obj,
+                    best_mask,
+                    mask,
+                    result,
+                    obj_tol,
+                )
+            support_results = None
+
+    if support_results is not None:
+        for _, mask, result in support_results:
+            best_Lambda, best_omega, best_obj, best_mask = update_best_support(
+                best_Lambda,
+                best_omega,
+                best_obj,
+                best_mask,
+                mask,
+                result,
+                obj_tol,
+            )
 
     if omega_fixed is not None and best_mask is not None:
+        if random_seed is not None:
+            np.random.seed(random_seed + len(supports))
+
         final_result = solve_support_with_restarts(
             Sigma,
             best_mask,
@@ -246,6 +340,23 @@ def optimize_lambda(
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Run the active Lambda optimization experiment."
+    )
+    parser.add_argument(
+        "--n-jobs",
+        type=int,
+        default=1,
+        help="Number of worker processes for support-level parallelism.",
+    )
+    parser.add_argument(
+        "--random-seed",
+        type=int,
+        default=42,
+        help="Seed used for deterministic ADMM support solves.",
+    )
+    args = parser.parse_args()
+
     # -------------------------------------------------------------------------
     # Test 1: random Sigma, n = 3
     # -------------------------------------------------------------------------
@@ -375,7 +486,7 @@ if __name__ == "__main__":
     Sigma_given = covariance_from_lambda_star(Lambda_star, omega_star)
     lambda_min_sigma = np.min(np.linalg.eigvalsh(Sigma_given))
     
-    np.random.seed(42)
+    np.random.seed(args.random_seed)
     Lambda, omega, obj = optimize_lambda(
         Sigma_given,
         D_m,
@@ -383,6 +494,8 @@ if __name__ == "__main__":
         tol=1e-7,
         max_restarts=5,
         omega_fixed=omega_ref,
+        n_jobs=args.n_jobs,
+        random_seed=args.random_seed,
     )
     print(
         "\nTest 7: fixed-omega support selection, then bounded free-omega "
