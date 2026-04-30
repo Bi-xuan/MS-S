@@ -275,23 +275,17 @@ def output_path_for_dimension(output_path, n, add_suffix):
     return f"{stem}_n{n}.{extension}"
 
 
-def lambda_star_mask_for_dimension(n):
-    if n == 3:
-        return np.array([
-            [1, 1, 0],
-            [0, 1, 1],
-            [0, 0, 1],
-        ], dtype=bool)
+def lambda_star_for_dimension(n):
+    if n < 2:
+        raise ValueError("n must be at least 2.")
 
-    if n == 4:
-        return np.array([
-            [1, 0, 0, 1],
-            [0, 1, 0, 1],
-            [0, 0, 1, 1],
-            [0, 0, 0, 1],
-        ], dtype=bool)
+    Lambda_star = np.zeros((n, n))
+    diag_values = np.linspace(0.10, 0.55, n)
+    last_col_values = np.linspace(0.60, -0.45, n - 1)
 
-    raise ValueError(f"No Lambda_star mask is defined for dimension {n}.")
+    np.fill_diagonal(Lambda_star, diag_values)
+    Lambda_star[:n - 1, n - 1] = last_col_values
+    return Lambda_star
 
 
 def plot_curve(
@@ -393,9 +387,8 @@ def parse_args():
         "--lambda-star-dims",
         type=int,
         nargs="+",
-        default=[4],
-        choices=[4],
-        help="Dimensions of Lambda_star to test. The hand-coded Test 7 example is used for n=4.",
+        default=[10],
+        help="Dimensions of Lambda_star to test.",
     )
     return parser.parse_args()
 
@@ -407,19 +400,7 @@ def run_experiment(args, n, add_output_suffix):
     sigma_hat_solve_seed = args.random_seed + 3
     sigma_hat_fallback_seed = args.random_seed + 4
 
-    Lambda_star_mask = lambda_star_mask_for_dimension(n)
-    # Previous randomized definition:
-    # Lambda_star = sample_lambda_star_from_mask(
-    #     Lambda_star_mask,
-    #     target_spectral_radius=0.9,
-    #     seed=0,
-    # )
-    Lambda_star = np.array([
-        [0.15, 0.0, 0.0, 0.6],
-        [0.0, -0.20, 0.0, -0.45],
-        [0.0, 0.0, 0.10, 0.50],
-        [0.0, 0.0, 0.0, 0.55],
-    ])
+    Lambda_star = lambda_star_for_dimension(n)
     omega_star = 1.0
     omega_ref = omega_star
 

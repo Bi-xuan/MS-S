@@ -243,15 +243,16 @@ def compute_objective_curve(
 
 
 def lambda_star_for_dimension(n):
-    if n != 4:
-        raise ValueError("Only the hand-coded n=4 Lambda_star experiment is supported.")
+    if n < 2:
+        raise ValueError("n must be at least 2.")
 
-    return np.array([
-        [0.15, 0.0, 0.0, 0.6],
-        [0.0, -0.20, 0.0, -0.45],
-        [0.0, 0.0, 0.10, 0.50],
-        [0.0, 0.0, 0.0, 0.55],
-    ])
+    Lambda_star = np.zeros((n, n))
+    diag_values = np.linspace(0.10, 0.55, n)
+    last_col_values = np.linspace(0.60, -0.45, n - 1)
+
+    np.fill_diagonal(Lambda_star, diag_values)
+    Lambda_star[:n - 1, n - 1] = last_col_values
+    return Lambda_star
 
 
 def output_path_for_dimension(output_path, n, add_suffix):
@@ -354,8 +355,7 @@ def parse_args():
         "--lambda-star-dims",
         type=int,
         nargs="+",
-        default=[4],
-        choices=[4],
+        default=[10],
         help="Dimensions of Lambda_star to compute.",
     )
     return parser.parse_args()
