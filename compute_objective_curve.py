@@ -3,8 +3,6 @@ import argparse
 import numpy as np
 
 from main import optimize_lambda
-from objective import frobenius_objective
-from support_utils import get_all_supports
 
 
 def empirical_covariance_from_samples(X):
@@ -47,101 +45,6 @@ def lambda_star_spectral_radius(Lambda_star):
     return np.max(np.abs(np.linalg.eigvals(Lambda_star)))
 
 
-def optimal_omega_for_lambda(Sigma, Lambda):
-    n = Sigma.shape[0]
-    residual_without_omega = Sigma - Lambda.T @ Sigma @ Lambda
-    return max(np.trace(residual_without_omega) / n, 0.0)
-
-
-def satisfies_hard_constraints(
-    Lambda,
-    mask,
-    omega,
-    min_supported_offdiag_abs,
-    min_omega,
-):
-    if omega < min_omega:
-        return False
-
-    off_diag_mask = ~np.eye(Lambda.shape[0], dtype=bool)
-    supported_offdiag = mask & off_diag_mask
-    return np.all(
-        np.abs(Lambda[supported_offdiag]) >= min_supported_offdiag_abs
-    )
-
-
-def random_feasible_candidate(
-    Sigma,
-    mask,
-    rng,
-    max_fro_norm=0.95,
-    min_supported_offdiag_abs=1e-3,
-    min_omega=0.0,
-):
-    Lambda = np.zeros(mask.shape)
-    Lambda[mask] = rng.normal(size=np.count_nonzero(mask))
-    lambda_norm = np.linalg.norm(Lambda, "fro")
-    if lambda_norm == 0.0:
-        return None
-
-    target_norm = rng.uniform(0.0, max_fro_norm)
-    Lambda *= target_norm / lambda_norm
-    omega = optimal_omega_for_lambda(Sigma, Lambda)
-    obj = frobenius_objective(Sigma, Lambda, omega)
-
-    if (
-        not np.all(np.isfinite(Lambda))
-        or not np.isfinite(omega)
-        or not np.isfinite(obj)
-    ):
-        return None
-
-    if not satisfies_hard_constraints(
-        Lambda,
-        mask,
-        omega,
-        min_supported_offdiag_abs,
-        min_omega,
-    ):
-        return None
-
-    return Lambda, omega, obj
-
-
-def best_random_feasible_objective(
-    Sigma,
-    d_m,
-    rng,
-    num_candidates=500,
-    max_fro_norm=0.95,
-    min_supported_offdiag_abs=1e-3,
-    min_omega=0.0,
-):
-    n = Sigma.shape[0]
-    supports = get_all_supports(n, d_m - 1)
-    if not supports:
-        return None
-
-    best = None
-    for _ in range(num_candidates):
-        mask = supports[rng.integers(len(supports))]
-        candidate = random_feasible_candidate(
-            Sigma,
-            mask,
-            rng,
-            max_fro_norm=max_fro_norm,
-            min_supported_offdiag_abs=min_supported_offdiag_abs,
-            min_omega=min_omega,
-        )
-        if candidate is None:
-            continue
-
-        if best is None or candidate[2] < best[2]:
-            best = candidate
-
-    return best
-
-
 def compute_objective_curve(
     Sigma,
     beta=1.0,
@@ -167,9 +70,6 @@ def compute_objective_curve(
     exact_objective_values = []
     fallback_d_m_values = []
     fallback_objective_values = []
-    if fallback_seed is None:
-        fallback_seed = random_seed
-    fallback_rng = np.random.default_rng(fallback_seed)
 
     for d_m in range(1, max_dm + 1):
         print(f"Solving for D_m = {d_m}...")
@@ -197,20 +97,12 @@ def compute_objective_curve(
             or not np.isfinite(omega)
             or not np.isfinite(obj)
         ):
-            print(f"  Skipping D_m = {d_m} because no finite solution was found.")
-            fallback = best_random_feasible_objective(
-                Sigma,
-                d_m,
-                fallback_rng,
-                num_candidates=fallback_candidates,
-                max_fro_norm=fallback_max_fro_norm,
-                min_supported_offdiag_abs=min_supported_offdiag_abs,
-                min_omega=min_omega,
+            print(
+                f"  No finite solution was found for D_m = {d_m}; "
+                "recording objective = Inf."
             )
-            if fallback is not None:
-                fallback_d_m_values.append(d_m)
-                fallback_objective_values.append(fallback[2])
-                print(f"  Random feasible fallback objective = {fallback[2]:.6f}")
+            exact_d_m_values.append(d_m)
+            exact_objective_values.append(np.inf)
             continue
 
         print(f"  Objective = {obj:.6f}")
@@ -331,7 +223,7 @@ def parse_args():
         "--fallback-candidates",
         type=int,
         default=500,
-        help="Number of random feasible candidates to try when ADMM fails for a D_m.",
+        help="Deprecated; failed D_m solves are now recorded as Inf.",
     )
     parser.add_argument(
         "--stop-obj-threshold",
@@ -355,7 +247,7 @@ def parse_args():
         "--lambda-star-dims",
         type=int,
         nargs="+",
-        default=[10],
+        default=[4],
         help="Dimensions of Lambda_star to compute.",
     )
     return parser.parse_args()

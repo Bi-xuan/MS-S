@@ -1,6 +1,7 @@
 import argparse
 import os
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
+from math import comb
 
 import numpy as np
 from support_utils import get_all_supports
@@ -186,6 +187,29 @@ def solve_support_worker(task):
     return support_index, mask, result
 
 
+def iter_parallel_support_results(tasks, max_workers):
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        task_iter = iter(tasks)
+        pending = set()
+
+        for _ in range(max_workers):
+            try:
+                pending.add(executor.submit(solve_support_worker, next(task_iter)))
+            except StopIteration:
+                break
+
+        while pending:
+            done, pending = wait(pending, return_when=FIRST_COMPLETED)
+
+            for future in done:
+                yield future.result()
+
+                try:
+                    pending.add(executor.submit(solve_support_worker, next(task_iter)))
+                except StopIteration:
+                    pass
+
+
 def update_best_support(
     best_Lambda,
     best_omega,
@@ -245,7 +269,7 @@ def optimize_lambda(
     """
     n = Sigma.shape[0]
     n_edge = D_m - 1
-    supports = get_all_supports(n, n_edge)
+    support_count = comb(n * (n - 1), n_edge)
     lambda_min_sigma = np.min(np.linalg.eigvalsh(Sigma))
 
     if lambda_min_sigma <= min_omega:
@@ -256,66 +280,54 @@ def optimize_lambda(
     best_omega = None
     best_mask = None
 
-    support_tasks = [
-        (
-            support_index,
-            Sigma,
-            mask,
-            beta,
-            max_iter,
-            tol,
-            zero_tol,
-            max_restarts,
-            min_supported_offdiag_abs,
-            min_omega,
-            omega_fixed,
-            lambda_min_sigma if omega_fixed is None else None,
-            None if random_seed is None else random_seed + support_index,
-        )
-        for support_index, mask in enumerate(supports)
-    ]
+    def iter_support_tasks():
+        for support_index, mask in enumerate(get_all_supports(n, n_edge)):
+            yield (
+                support_index,
+                Sigma,
+                mask,
+                beta,
+                max_iter,
+                tol,
+                zero_tol,
+                max_restarts,
+                min_supported_offdiag_abs,
+                min_omega,
+                omega_fixed,
+                lambda_min_sigma if omega_fixed is None else None,
+                None if random_seed is None else random_seed + support_index,
+            )
 
     if n_jobs is None:
-        max_workers = os.cpu_count()
+        max_workers = os.cpu_count() or 1
     else:
         max_workers = n_jobs
 
     if max_workers is not None and max_workers < 1:
         raise ValueError("n_jobs must be positive or None.")
 
-    if max_workers == 1 or len(support_tasks) <= 1:
-        support_results = map(solve_support_worker, support_tasks)
+    if max_workers == 1 or support_count <= 1:
+        support_results = map(solve_support_worker, iter_support_tasks())
     else:
-        with ProcessPoolExecutor(max_workers=max_workers) as executor:
-            support_results = executor.map(solve_support_worker, support_tasks)
+        support_results = iter_parallel_support_results(
+            iter_support_tasks(),
+            max_workers,
+        )
 
-            for _, mask, result in support_results:
-                best_Lambda, best_omega, best_obj, best_mask = update_best_support(
-                    best_Lambda,
-                    best_omega,
-                    best_obj,
-                    best_mask,
-                    mask,
-                    result,
-                    obj_tol,
-                )
-            support_results = None
-
-    if support_results is not None:
-        for _, mask, result in support_results:
-            best_Lambda, best_omega, best_obj, best_mask = update_best_support(
-                best_Lambda,
-                best_omega,
-                best_obj,
-                best_mask,
-                mask,
-                result,
-                obj_tol,
-            )
+    for _, mask, result in support_results:
+        best_Lambda, best_omega, best_obj, best_mask = update_best_support(
+            best_Lambda,
+            best_omega,
+            best_obj,
+            best_mask,
+            mask,
+            result,
+            obj_tol,
+        )
 
     if omega_fixed is not None and best_mask is not None:
         if random_seed is not None:
-            np.random.seed(random_seed + len(supports))
+            np.random.seed(random_seed + support_count)
 
         final_result = solve_support_with_restarts(
             Sigma,
