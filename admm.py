@@ -2,6 +2,48 @@
 
 import numpy as np
 
+
+def van_der_corput(index, base):
+    value = 0.0
+    factor = 1.0 / base
+
+    while index > 0:
+        value += factor * (index % base)
+        index //= base
+        factor /= base
+
+    return value
+
+
+def first_primes(count):
+    primes = []
+    candidate = 2
+
+    while len(primes) < count:
+        is_prime = True
+        for prime in primes:
+            if prime * prime > candidate:
+                break
+            if candidate % prime == 0:
+                is_prime = False
+                break
+
+        if is_prime:
+            primes.append(candidate)
+
+        candidate += 1
+
+    return primes
+
+
+def halton_point(index, dim):
+    primes = first_primes(dim)
+    return np.array([
+        van_der_corput(index, base)
+        for base in primes
+    ])
+
+
 def impose_support(M, mask):
     M_out = M.copy()
     M_out[~mask] = 0.0
@@ -59,6 +101,24 @@ def is_finite_state(*arrays):
     return all(np.all(np.isfinite(arr)) for arr in arrays)
 
 
+def initialize_admm_state(n, support_mask, restart_index, init_strategy):
+    if init_strategy == "halton":
+        point = halton_point(restart_index + 1, n * n)
+        init = 2.0 * (point.reshape(n, n) - 0.5)
+        L1 = impose_support(init, support_mask)
+        L2 = impose_support(init.copy(), support_mask)
+        return L1, L2
+
+    if init_strategy == "random":
+        L1 = impose_support(np.random.randn(n, n), support_mask)
+        L2 = impose_support(np.random.randn(n, n), support_mask)
+        return L1, L2
+
+    raise ValueError(
+        "init_strategy must be one of {'halton', 'random'}."
+    )
+
+
 def admm_solve(
     Sigma,
     support_mask,
@@ -68,6 +128,8 @@ def admm_solve(
     max_restarts=3,
     omega_fixed=None,
     omega_upper=None,
+    init_strategy="halton",
+    init_offset=0,
 ):
     if omega_fixed is not None and omega_fixed < 0.0:
         raise ValueError("omega_fixed must be nonnegative.")
@@ -79,10 +141,14 @@ def admm_solve(
     best_omega = None
     best_obj = np.inf
 
-    for _ in range(max_restarts):
+    for restart_index in range(max_restarts):
         # Initialize
-        L1 = impose_support(np.random.randn(n, n), support_mask)
-        L2 = impose_support(np.random.randn(n, n), support_mask)
+        L1, L2 = initialize_admm_state(
+            n,
+            support_mask,
+            init_offset + restart_index,
+            init_strategy,
+        )
         alpha = np.zeros((n, n))
         omega = 0.0 if omega_fixed is None else omega_fixed
         failed = False

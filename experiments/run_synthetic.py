@@ -49,6 +49,18 @@ def parse_args():
         default=42,
         help="Seed used for deterministic ADMM support solves.",
     )
+    parser.add_argument(
+        "--init-strategy",
+        choices=["halton", "random"],
+        default="halton",
+        help="ADMM initialization strategy.",
+    )
+    parser.add_argument(
+        "--max-restarts",
+        type=int,
+        default=5,
+        help="Number of ADMM initializations to try per support.",
+    )
     return parser.parse_args()
 
 
@@ -81,10 +93,11 @@ def main():
         D_m,
         max_iter=800,
         tol=1e-7,
-        max_restarts=5,
+        max_restarts=args.max_restarts,
         omega_fixed=omega_ref,
         n_jobs=args.n_jobs,
         random_seed=args.random_seed,
+        init_strategy=args.init_strategy,
     )
     print(
         "\nTest 7: fixed-omega support selection, then bounded free-omega "

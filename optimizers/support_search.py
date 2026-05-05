@@ -75,10 +75,11 @@ def solve_support_with_restarts(
     min_omega,
     omega_fixed=None,
     omega_upper=None,
+    init_strategy="halton",
 ):
     runs = []
 
-    for _ in range(max_restarts):
+    for restart_index in range(max_restarts):
         Lambda, omega = admm_solve(
             Sigma,
             mask,
@@ -88,6 +89,8 @@ def solve_support_with_restarts(
             max_restarts=1,
             omega_fixed=omega_fixed,
             omega_upper=omega_upper,
+            init_strategy=init_strategy,
+            init_offset=restart_index,
         )
         Lambda_thr = threshold_lambda(Lambda, zero_tol)
         obj = frobenius_objective(Sigma, Lambda_thr, omega)
@@ -143,6 +146,7 @@ def solve_support_worker(task):
         omega_fixed,
         omega_upper,
         seed,
+        init_strategy,
     ) = task
 
     if seed is not None:
@@ -160,6 +164,7 @@ def solve_support_worker(task):
         min_omega=min_omega,
         omega_fixed=omega_fixed,
         omega_upper=omega_upper,
+        init_strategy=init_strategy,
     )
 
     return support_index, mask, result
@@ -223,6 +228,7 @@ def optimize_lambda(
     support_iterator=None,
     n_jobs=1,
     random_seed=None,
+    init_strategy="halton",
 ):
     """
     Optimize Lambda over a support iterator.
@@ -267,6 +273,7 @@ def optimize_lambda(
                 omega_fixed,
                 lambda_min_sigma if omega_fixed is None else None,
                 None if random_seed is None else random_seed + support_index,
+                init_strategy,
             )
 
     if n_jobs is None:
@@ -317,6 +324,7 @@ def optimize_lambda(
             min_omega=min_omega,
             omega_fixed=None,
             omega_upper=lambda_min_sigma,
+            init_strategy=init_strategy,
         )
 
         if final_result is None:

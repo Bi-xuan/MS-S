@@ -10,7 +10,8 @@ export NUMEXPR_NUM_THREADS=1
 
 N_JOBS="${N_JOBS:-${SLURM_CPUS_PER_TASK:-8}}"
 RANDOM_SEED="${RANDOM_SEED:-42}"
+MAX_RESTARTS="${MAX_RESTARTS:-10}"
 N="${N:-4}"
 
-# python experiments/compute_objective_curve.py --n-jobs "${N_JOBS}" --random-seed "${RANDOM_SEED}" --lambda-star-dims "${N}"
-python experiments/run_synthetic.py --n-jobs "${N_JOBS}" --random-seed "${RANDOM_SEED}"
+python experiments/compute_objective_curve.py --n-jobs "${N_JOBS}" --random-seed "${RANDOM_SEED}" --max-restarts "${MAX_RESTARTS}" --lambda-star-dims "${N}"
+# python experiments/run_synthetic.py --n-jobs "${N_JOBS}" --random-seed "${RANDOM_SEED}" --max-restarts "${MAX_RESTARTS}"

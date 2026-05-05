@@ -69,6 +69,7 @@ def compute_objective_curve(
     omega_ref=None,
     stop_obj_threshold=1e-6,
     n_jobs=1,
+    init_strategy="halton",
 ):
     n = Sigma.shape[0]
     max_dm = n * (n - 1) + 1
@@ -95,6 +96,7 @@ def compute_objective_curve(
             omega_fixed=omega_ref,
             n_jobs=n_jobs,
             random_seed=random_seed,
+            init_strategy=init_strategy,
         )
 
         if (
@@ -251,6 +253,18 @@ def parse_args():
         help="Base seed used to derive all random seeds in the experiment.",
     )
     parser.add_argument(
+        "--init-strategy",
+        choices=["halton", "random"],
+        default="halton",
+        help="ADMM initialization strategy.",
+    )
+    parser.add_argument(
+        "--max-restarts",
+        type=int,
+        default=5,
+        help="Number of ADMM initializations to try per support.",
+    )
+    parser.add_argument(
         "--lambda-star-dims",
         type=int,
         nargs="+",
@@ -304,12 +318,14 @@ def run_experiment(args, n, add_output_suffix):
         Sigma_given,
         max_iter=800,
         tol=1e-7,
+        max_restarts=args.max_restarts,
         fallback_candidates=args.fallback_candidates,
         random_seed=given_solve_seed,
         fallback_seed=given_fallback_seed,
         omega_ref=omega_ref,
         stop_obj_threshold=args.stop_obj_threshold,
         n_jobs=args.n_jobs,
+        init_strategy=args.init_strategy,
     )
     save_curve_result(
         given_output,
@@ -340,12 +356,14 @@ def run_experiment(args, n, add_output_suffix):
         Sigma_hat_given,
         max_iter=800,
         tol=1e-7,
+        max_restarts=args.max_restarts,
         fallback_candidates=args.fallback_candidates,
         random_seed=sigma_hat_solve_seed,
         fallback_seed=sigma_hat_fallback_seed,
         omega_ref=omega_ref,
         stop_obj_threshold=args.stop_obj_threshold,
         n_jobs=args.n_jobs,
+        init_strategy=args.init_strategy,
     )
     save_curve_result(
         sigma_hat_output,
