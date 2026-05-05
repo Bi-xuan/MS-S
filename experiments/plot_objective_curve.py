@@ -1,4 +1,14 @@
+"""Plot objective-curve NPZ outputs produced by compute_objective_curve.py."""
+
 import argparse
+import os
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+os.environ.setdefault(
+    "MPLCONFIGDIR",
+    str(PROJECT_ROOT / "experiments" / "output" / ".matplotlib"),
+)
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -105,27 +115,27 @@ def parse_args():
     )
     parser.add_argument(
         "--given-input",
-        default="objective_curve_given_sigma.npz",
+        default="experiments/output/objective_curve_given_sigma.npz",
         help="NPZ curve data for the given Sigma.",
     )
     parser.add_argument(
         "--sigma-hat-input",
-        default="objective_curve_sigma_hat_from_given_sigma.npz",
+        default="experiments/output/objective_curve_sigma_hat_from_given_sigma.npz",
         help="NPZ curve data for Sigma_hat built from the given Sigma.",
     )
     parser.add_argument(
         "--given-output",
-        default="objective_vs_dm_given_sigma.png",
+        default="experiments/output/objective_vs_dm_given_sigma.png",
         help="Path to save the given-Sigma D_m plot.",
     )
     parser.add_argument(
         "--sigma-hat-output",
-        default="objective_vs_dm_sigma_hat_from_given_sigma.png",
+        default="experiments/output/objective_vs_dm_sigma_hat_from_given_sigma.png",
         help="Path to save the Sigma_hat D_m plot.",
     )
     parser.add_argument(
         "--sigma-hat-penalty-output",
-        default="objective_vs_pen_n_m_sigma_hat_from_given_sigma.png",
+        default="experiments/output/objective_vs_pen_n_m_sigma_hat_from_given_sigma.png",
         help="Path to save the Sigma_hat pen_n(m) plot.",
     )
     return parser.parse_args()

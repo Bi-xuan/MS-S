@@ -1,6 +1,13 @@
-from math import comb
+"""Exact exhaustive support enumeration for small node counts."""
+
 from itertools import combinations
-import numpy as np
+from math import comb
+
+try:
+    from .common import off_diagonal_edges, support_mask_from_edges, validate_n_edge
+except ImportError:
+    from common import off_diagonal_edges, support_mask_from_edges, validate_n_edge
+
 
 def get_all_supports(n, n_edge):
     """
@@ -8,16 +15,10 @@ def get_all_supports(n, n_edge):
     - all diagonal entries are always True (unconstrained)
     - exactly n_edge off-diagonal entries are True (enumerated over all combinations)
     """
-    off_diag = [(i, j) for i in range(n) for j in range(n) if i != j]
+    validate_n_edge(n, n_edge)
+    off_diag = off_diagonal_edges(n)
     for chosen in combinations(off_diag, n_edge):
-        mask = np.zeros((n, n), dtype=bool)
-        # Always include all diagonal entries
-        for i in range(n):
-            mask[i, i] = True
-        # Add the chosen off-diagonal entries
-        for (i, j) in chosen:
-            mask[i, j] = True
-        yield mask
+        yield support_mask_from_edges(n, chosen)
 
 # Example usage and test case
 if __name__ == "__main__":

@@ -1,3 +1,5 @@
+"""ADMM solver and simulation helpers for Lambda/omega covariance models."""
+
 import numpy as np
 
 def impose_support(M, mask):

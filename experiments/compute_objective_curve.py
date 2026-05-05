@@ -1,8 +1,15 @@
+"""Compute and save objective curves showing how the optimum changes with D_m."""
+
 import argparse
+from pathlib import Path
+import sys
 
 import numpy as np
 
-from main import optimize_lambda
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from optimizers.support_search import optimize_lambda
 
 
 def empirical_covariance_from_samples(X):
@@ -205,12 +212,12 @@ def parse_args():
     )
     parser.add_argument(
         "--given-output",
-        default="objective_curve_given_sigma.npz",
+        default="experiments/output/objective_curve_given_sigma.npz",
         help="Path to save computed curve data for the given Sigma.",
     )
     parser.add_argument(
         "--sigma-hat-output",
-        default="objective_curve_sigma_hat_from_given_sigma.npz",
+        default="experiments/output/objective_curve_sigma_hat_from_given_sigma.npz",
         help="Path to save computed curve data for Sigma_hat built from the given Sigma.",
     )
     parser.add_argument(

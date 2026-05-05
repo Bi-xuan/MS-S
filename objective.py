@@ -1,4 +1,5 @@
-# Objective calculation with given Sigma, Lambda, and omega
+"""Objective utilities for evaluating Sigma, Lambda, and omega fits."""
+
 import numpy as np
 
 def frobenius_objective(Sigma, Lambda, omega):

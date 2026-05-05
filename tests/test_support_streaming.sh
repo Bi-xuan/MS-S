@@ -1,5 +1,5 @@
-# Helper file for testing streaming support generation. Run this script with /usr/bin/time -l to measure peak memory usage.
-/usr/bin/time -l python experiments/test_support_streaming.py --mode generator
+# Helper commands for measuring streaming support-generation memory usage.
+/usr/bin/time -l python tests/test_support_streaming.py --mode generator
 
 /usr/bin/time -l python tests/test_support_streaming.py \
   --mode streaming \

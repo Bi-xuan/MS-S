@@ -1,3 +1,5 @@
+"""Check that exact support enumeration streams masks without materializing all of them."""
+
 import argparse
 import itertools
 from pathlib import Path
@@ -8,7 +10,7 @@ import time
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from support_utils import get_all_supports
+from supports.exact import get_all_supports
 
 
 def peak_memory_mb():
