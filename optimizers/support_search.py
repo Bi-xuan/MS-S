@@ -17,17 +17,6 @@ def threshold_lambda(Lambda, zero_tol):
     return Lambda_thr
 
 
-def effective_offdiag_count(Lambda, zero_tol):
-    off_diag_mask = ~np.eye(Lambda.shape[0], dtype=bool)
-    return np.count_nonzero(np.abs(Lambda[off_diag_mask]) >= zero_tol)
-
-
-def has_unused_supported_offdiag(Lambda, mask, zero_tol):
-    off_diag_mask = ~np.eye(Lambda.shape[0], dtype=bool)
-    supported_offdiag = mask & off_diag_mask
-    return np.any(np.abs(Lambda[supported_offdiag]) < zero_tol)
-
-
 def is_finite_candidate(Lambda, omega, obj):
     return (
         np.all(np.isfinite(Lambda))
@@ -37,20 +26,17 @@ def is_finite_candidate(Lambda, omega, obj):
 
 
 def satisfies_hard_constraints(
-    Lambda,
-    mask,
     omega,
-    min_supported_offdiag_abs,
     min_omega,
+    omega_upper=None,
 ):
     if omega < min_omega:
         return False
 
-    off_diag_mask = ~np.eye(Lambda.shape[0], dtype=bool)
-    supported_offdiag = mask & off_diag_mask
-    return np.all(
-        np.abs(Lambda[supported_offdiag]) >= min_supported_offdiag_abs
-    )
+    if omega_upper is not None and omega > omega_upper:
+        return False
+
+    return True
 
 
 def print_optimization_result(Lambda, omega, obj):
@@ -71,7 +57,6 @@ def solve_support_with_restarts(
     tol,
     zero_tol,
     max_restarts,
-    min_supported_offdiag_abs,
     min_omega,
     omega_fixed=None,
     omega_upper=None,
@@ -99,36 +84,18 @@ def solve_support_with_restarts(
             continue
 
         if not satisfies_hard_constraints(
-            Lambda_thr,
-            mask,
             omega,
-            min_supported_offdiag_abs,
             min_omega,
+            omega_upper=omega_upper,
         ):
             continue
 
         runs.append((Lambda_thr, omega, obj))
 
-        if not has_unused_supported_offdiag(
-            Lambda,
-            mask,
-            min_supported_offdiag_abs,
-        ):
-            break
-
     if not runs:
         return None
 
-    ref_pattern = np.abs(runs[0][0]) >= zero_tol
-    consistent_runs = [
-        run for run in runs
-        if np.array_equal(np.abs(run[0]) >= zero_tol, ref_pattern)
-    ]
-
-    if len(consistent_runs) == len(runs):
-        return min(consistent_runs, key=lambda run: run[2])
-
-    return None
+    return min(runs, key=lambda run: run[2])
 
 
 def solve_support_worker(task):
@@ -141,7 +108,6 @@ def solve_support_worker(task):
         tol,
         zero_tol,
         max_restarts,
-        min_supported_offdiag_abs,
         min_omega,
         omega_fixed,
         omega_upper,
@@ -160,7 +126,6 @@ def solve_support_worker(task):
         tol=tol,
         zero_tol=zero_tol,
         max_restarts=max_restarts,
-        min_supported_offdiag_abs=min_supported_offdiag_abs,
         min_omega=min_omega,
         omega_fixed=omega_fixed,
         omega_upper=omega_upper,
@@ -222,13 +187,14 @@ def optimize_lambda(
     zero_tol=1e-5,
     obj_tol=1e-8,
     max_restarts=3,
-    min_supported_offdiag_abs=1e-3,
     min_omega=1e-8,
-    omega_fixed=None,
+    omega_upper_gap=1e-3,
+    omega_ref=None,
     support_iterator=None,
     n_jobs=1,
     random_seed=None,
     init_strategy="halton",
+    refine_after_fixed_omega=False,
 ):
     """
     Optimize Lambda over a support iterator.
@@ -240,8 +206,20 @@ def optimize_lambda(
     n = Sigma.shape[0]
     n_edge = D_m - 1
     lambda_min_sigma = np.min(np.linalg.eigvalsh(Sigma))
+    omega_upper = lambda_min_sigma - omega_upper_gap
 
-    if lambda_min_sigma <= min_omega:
+    if refine_after_fixed_omega and omega_ref is None:
+        raise ValueError(
+            "refine_after_fixed_omega=True requires omega_ref to be set. "
+            "Set omega_ref to a fixed value, or set "
+            "refine_after_fixed_omega=False when running the first stage "
+            "with omega_ref=None."
+        )
+
+    if omega_upper < min_omega:
+        return None, None, np.inf
+
+    if omega_ref is not None and omega_ref > omega_upper:
         return None, None, np.inf
 
     best_obj = np.inf
@@ -268,10 +246,9 @@ def optimize_lambda(
                 tol,
                 zero_tol,
                 max_restarts,
-                min_supported_offdiag_abs,
                 min_omega,
-                omega_fixed,
-                lambda_min_sigma if omega_fixed is None else None,
+                omega_ref,
+                omega_upper,
                 None if random_seed is None else random_seed + support_index,
                 init_strategy,
             )
@@ -307,7 +284,11 @@ def optimize_lambda(
             obj_tol,
         )
 
-    if omega_fixed is not None and best_mask is not None:
+    if (
+        refine_after_fixed_omega
+        and omega_ref is not None
+        and best_mask is not None
+    ):
         if random_seed is not None:
             final_seed_offset = support_count if support_count is not None else 0
             np.random.seed(random_seed + final_seed_offset)
@@ -320,10 +301,9 @@ def optimize_lambda(
             tol=tol,
             zero_tol=zero_tol,
             max_restarts=max_restarts,
-            min_supported_offdiag_abs=min_supported_offdiag_abs,
             min_omega=min_omega,
             omega_fixed=None,
-            omega_upper=lambda_min_sigma,
+            omega_upper=omega_upper,
             init_strategy=init_strategy,
         )
 

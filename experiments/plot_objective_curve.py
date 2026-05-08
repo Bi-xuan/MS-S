@@ -18,6 +18,15 @@ def penalty_values_for_d_m(d_m_values):
     return np.sqrt(d_m_values)
 
 
+def true_dimension_from_lambda_star(Lambda_star, zero_tol=1e-12):
+    off_diag_mask = ~np.eye(Lambda_star.shape[0], dtype=bool)
+    return np.count_nonzero(np.abs(Lambda_star[off_diag_mask]) > zero_tol) + 1
+
+
+def maximal_dimension_from_n(n):
+    return n * (n - 1) // 2
+
+
 def plot_curve(
     x_values,
     y_values,
@@ -28,6 +37,10 @@ def plot_curve(
     use_data_xticks=True,
     fallback_x_values=None,
     fallback_y_values=None,
+    highlight_x=None,
+    highlight_y=None,
+    max_dimension_x=None,
+    max_dimension_y=None,
 ):
     plt.figure(figsize=(8, 5))
     if len(x_values) > 0:
@@ -37,7 +50,6 @@ def plot_curve(
             marker="o",
             linewidth=1.5,
             color="tab:blue",
-            label="ADMM optimized",
         )
     if fallback_x_values is not None and len(fallback_x_values) > 0:
         plt.scatter(
@@ -47,6 +59,29 @@ def plot_curve(
             color="tab:orange",
             label="Best random feasible fallback",
             zorder=3,
+        )
+    if highlight_x is not None and highlight_y is not None:
+        plt.scatter(
+            [highlight_x],
+            [highlight_y],
+            s=160,
+            facecolors="none",
+            edgecolors="tab:red",
+            linewidths=2.0,
+            label="True dimension",
+            zorder=4,
+        )
+    if max_dimension_x is not None and max_dimension_y is not None:
+        plt.scatter(
+            [max_dimension_x],
+            [max_dimension_y],
+            s=120,
+            marker="s",
+            facecolors="none",
+            edgecolors="tab:green",
+            linewidths=2.0,
+            label="Max D_m",
+            zorder=4,
         )
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
@@ -58,7 +93,9 @@ def plot_curve(
             tick_values = np.union1d(tick_values, fallback_x_values)
         if len(tick_values) <= 15:
             plt.xticks(tick_values)
-    plt.legend()
+    handles, labels = plt.gca().get_legend_handles_labels()
+    if handles:
+        plt.legend()
     plt.tight_layout()
     plt.savefig(output_path, dpi=200)
     plt.close()
@@ -69,6 +106,7 @@ def load_curve_data(input_path):
         return {
             "curve_type": data["curve_type"].item(),
             "n": int(data["n"]),
+            "Lambda_star": data["Lambda_star"],
             "d_m_values": data["d_m_values"],
             "objective_values": data["objective_values"],
             "fallback_d_m_values": data["fallback_d_m_values"],
@@ -76,35 +114,63 @@ def load_curve_data(input_path):
         }
 
 
-def plot_d_m_curve(input_path, output_path, title_template):
+def plot_d_m_curve(input_path, output_path, title_template, ylabel):
     data = load_curve_data(input_path)
     title = title_template.format(n=data["n"])
+    true_dimension = true_dimension_from_lambda_star(data["Lambda_star"])
+    true_index = np.where(data["d_m_values"] == true_dimension)[0]
+    highlight_y = None
+    if len(true_index) > 0:
+        highlight_y = data["objective_values"][true_index[0]]
+    max_dimension = maximal_dimension_from_n(data["n"])
+    max_dimension_index = np.where(data["d_m_values"] == max_dimension)[0]
+    max_dimension_y = None
+    if len(max_dimension_index) > 0:
+        max_dimension_y = data["objective_values"][max_dimension_index[0]]
     plot_curve(
         data["d_m_values"],
         data["objective_values"],
         output_path,
         title=title,
         xlabel="D_m",
-        ylabel="Nested optimal objective value",
+        ylabel=ylabel,
         fallback_x_values=data["fallback_d_m_values"],
         fallback_y_values=data["fallback_objective_values"],
+        highlight_x=true_dimension if len(true_index) > 0 else None,
+        highlight_y=highlight_y,
+        max_dimension_x=max_dimension if len(max_dimension_index) > 0 else None,
+        max_dimension_y=max_dimension_y,
     )
     print(f"Saved plot to {output_path}")
 
 
-def plot_penalty_curve(input_path, output_path, title_template):
+def plot_penalty_curve(input_path, output_path, title_template, ylabel):
     data = load_curve_data(input_path)
     title = title_template.format(n=data["n"])
+    true_dimension = true_dimension_from_lambda_star(data["Lambda_star"])
+    true_index = np.where(data["d_m_values"] == true_dimension)[0]
+    highlight_y = None
+    if len(true_index) > 0:
+        highlight_y = data["objective_values"][true_index[0]]
+    max_dimension = maximal_dimension_from_n(data["n"])
+    max_dimension_index = np.where(data["d_m_values"] == max_dimension)[0]
+    max_dimension_y = None
+    if len(max_dimension_index) > 0:
+        max_dimension_y = data["objective_values"][max_dimension_index[0]]
     plot_curve(
         penalty_values_for_d_m(data["d_m_values"]),
         data["objective_values"],
         output_path,
         title=title,
         xlabel="pen_n(m)",
-        ylabel="Nested optimal objective value",
+        ylabel=ylabel,
         use_data_xticks=False,
         fallback_x_values=penalty_values_for_d_m(data["fallback_d_m_values"]),
         fallback_y_values=data["fallback_objective_values"],
+        highlight_x=np.sqrt(true_dimension) if len(true_index) > 0 else None,
+        highlight_y=highlight_y,
+        max_dimension_x=np.sqrt(max_dimension) if len(max_dimension_index) > 0 else None,
+        max_dimension_y=max_dimension_y,
     )
     print(f"Saved plot to {output_path}")
 
@@ -147,15 +213,18 @@ if __name__ == "__main__":
     plot_d_m_curve(
         args.given_input,
         args.given_output,
-        "Nested Optimal Objective Value vs D_m (Given Sigma, n={n})",
+        "Optimal Objective Value vs D_m (Given Sigma, n={n})",
+        ylabel="Optimal objective value",
     )
     plot_d_m_curve(
         args.sigma_hat_input,
         args.sigma_hat_output,
-        "Nested Optimal Objective Value vs D_m (Sigma_hat from Given Sigma, n={n})",
+        "Optimal Objective Value vs D_m (Sigma_hat from Given Sigma, n={n})",
+        ylabel="Optimal objective value",
     )
     plot_penalty_curve(
         args.sigma_hat_input,
         args.sigma_hat_penalty_output,
-        "Nested Optimal Objective Value vs pen_n(m) (Sigma_hat from Given Sigma, n={n})",
+        "Optimal Objective Value vs pen_n(m) (Sigma_hat from Given Sigma, n={n})",
+        ylabel="Optimal objective value",
     )

@@ -13,6 +13,24 @@ from admm import covariance_from_lambda_star, lambda_star_spectral_radius
 from optimizers.support_search import optimize_lambda, print_optimization_result
 
 
+def parse_bool(value):
+    normalized = value.strip().lower()
+    if normalized in ("1", "true", "yes", "y", "on"):
+        return True
+    if normalized in ("0", "false", "no", "n", "off"):
+        return False
+    raise argparse.ArgumentTypeError(
+        "Expected a boolean value: true/false, yes/no, 1/0, or on/off."
+    )
+
+
+def parse_omega_ref(value):
+    normalized = value.strip().lower()
+    if normalized in ("none", "null", "free"):
+        return None
+    return float(value)
+
+
 def empirical_covariance_from_samples(X):
     num_samples = X.shape[0]
     if num_samples < 2:
@@ -61,6 +79,24 @@ def parse_args():
         default=5,
         help="Number of ADMM initializations to try per support.",
     )
+    parser.add_argument(
+        "--refine-after-fixed-omega",
+        type=parse_bool,
+        default=True,
+        help=(
+            "Whether to rerun ADMM with free omega after fixed-omega support "
+            "selection."
+        ),
+    )
+    parser.add_argument(
+        "--omega-ref",
+        type=parse_omega_ref,
+        default=1.0,
+        help=(
+            "Reference omega value for fixed-omega support selection. "
+            "Use none for free-omega support selection."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -75,7 +111,13 @@ def main():
         [0.0, 0.0, 0.0, 0.55],
     ])
     omega_star = 1.0
-    omega_ref = omega_star
+    omega_ref = args.omega_ref
+    if omega_ref is None and args.refine_after_fixed_omega:
+        raise SystemExit(
+            "Error: --omega-ref none conflicts with "
+            "--refine-after-fixed-omega true. Set "
+            "--refine-after-fixed-omega false for free-omega support search."
+        )
 
     lambda_star_radius = lambda_star_spectral_radius(Lambda_star)
     if lambda_star_radius >= 1.0:
@@ -94,24 +136,33 @@ def main():
         max_iter=800,
         tol=1e-7,
         max_restarts=args.max_restarts,
-        omega_fixed=omega_ref,
+        omega_ref=omega_ref,
         n_jobs=args.n_jobs,
         random_seed=args.random_seed,
         init_strategy=args.init_strategy,
+        refine_after_fixed_omega=args.refine_after_fixed_omega,
     )
-    print(
-        "\nTest 7: fixed-omega support selection, then bounded free-omega "
-        "optimization"
-    )
+    if omega_ref is None:
+        print("\nTest 7: free-omega support selection")
+    elif args.refine_after_fixed_omega:
+        print(
+            "\nTest 7: fixed-omega support selection, then bounded "
+            "free-omega optimization"
+        )
+    else:
+        print("\nTest 7: fixed-omega support selection only")
     print(f"Lambda_star:\n{Lambda_star}")
     print(f"Spectral radius of Lambda_star: {lambda_star_radius:.6f}")
     print(f"omega_star: {omega_star:.6f}")
-    print(f"omega_ref for support selection: {omega_ref:.6f}")
+    print(f"omega_ref for support selection: {omega_ref}")
     print(f"lambda_min(Sigma): {lambda_min_sigma:.6f}")
     print(f"Sigma:\n{Sigma_given}")
     print_optimization_result(Lambda, omega, obj)
     if omega is not None and np.isfinite(omega):
-        print(f"omega <= lambda_min(Sigma): {omega <= lambda_min_sigma + 1e-12}")
+        print(
+            "omega <= lambda_min(Sigma) - 1e-3: "
+            f"{omega <= lambda_min_sigma - 1e-3 + 1e-12}"
+        )
 
 
 if __name__ == "__main__":

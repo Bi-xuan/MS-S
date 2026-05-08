@@ -12,6 +12,24 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from optimizers.support_search import optimize_lambda
 
 
+def parse_bool(value):
+    normalized = value.strip().lower()
+    if normalized in ("1", "true", "yes", "y", "on"):
+        return True
+    if normalized in ("0", "false", "no", "n", "off"):
+        return False
+    raise argparse.ArgumentTypeError(
+        "Expected a boolean value: true/false, yes/no, 1/0, or on/off."
+    )
+
+
+def parse_omega_ref(value):
+    normalized = value.strip().lower()
+    if normalized in ("none", "null", "free"):
+        return None
+    return float(value)
+
+
 def empirical_covariance_from_samples(X):
     num_samples = X.shape[0]
     if num_samples < 2:
@@ -64,12 +82,12 @@ def compute_objective_curve(
     fallback_max_fro_norm=0.95,
     random_seed=42,
     fallback_seed=None,
-    min_supported_offdiag_abs=1e-3,
     min_omega=0.0,
     omega_ref=None,
     stop_obj_threshold=1e-6,
     n_jobs=1,
     init_strategy="halton",
+    refine_after_fixed_omega=False,
 ):
     n = Sigma.shape[0]
     max_dm = n * (n - 1) + 1
@@ -91,12 +109,12 @@ def compute_objective_curve(
             zero_tol=zero_tol,
             obj_tol=obj_tol,
             max_restarts=max_restarts,
-            min_supported_offdiag_abs=min_supported_offdiag_abs,
             min_omega=min_omega,
-            omega_fixed=omega_ref,
+            omega_ref=omega_ref,
             n_jobs=n_jobs,
             random_seed=random_seed,
             init_strategy=init_strategy,
+            refine_after_fixed_omega=refine_after_fixed_omega,
         )
 
         if (
@@ -115,31 +133,17 @@ def compute_objective_curve(
             continue
 
         print(f"  Objective = {obj:.6f}")
-        if obj < stop_obj_threshold:
-            print(
-                f"  Objective is below {stop_obj_threshold:.1e}; "
-                "stopping remaining D_m values without saving this point."
-            )
-            break
         exact_d_m_values.append(d_m)
         exact_objective_values.append(obj)
 
     d_m_values = np.array(exact_d_m_values)
-    objective_values = np.minimum.accumulate(np.array(exact_objective_values))
+    objective_values = np.array(exact_objective_values)
 
     return (
         d_m_values,
         objective_values,
-        np.array([
-            d_m
-            for d_m, obj in zip(fallback_d_m_values, fallback_objective_values)
-            if obj >= stop_obj_threshold
-        ]),
-        np.array([
-            obj
-            for obj in fallback_objective_values
-            if obj >= stop_obj_threshold
-        ]),
+        np.array(fallback_d_m_values),
+        np.array(fallback_objective_values),
     )
 
 
@@ -238,7 +242,7 @@ def parse_args():
         "--stop-obj-threshold",
         type=float,
         default=1e-6,
-        help="Stop solving larger D_m values once a finite objective is below this threshold.",
+        help="Deprecated; all D_m values are now computed and saved.",
     )
     parser.add_argument(
         "--n-jobs",
@@ -265,6 +269,24 @@ def parse_args():
         help="Number of ADMM initializations to try per support.",
     )
     parser.add_argument(
+        "--refine-after-fixed-omega",
+        type=parse_bool,
+        default=True,
+        help=(
+            "Whether to rerun ADMM with free omega after fixed-omega support "
+            "selection."
+        ),
+    )
+    parser.add_argument(
+        "--omega-ref",
+        type=parse_omega_ref,
+        default=1.0,
+        help=(
+            "Reference omega value for fixed-omega support selection. "
+            "Use none for free-omega support selection."
+        ),
+    )
+    parser.add_argument(
         "--lambda-star-dims",
         type=int,
         nargs="+",
@@ -283,7 +305,7 @@ def run_experiment(args, n, add_output_suffix):
 
     Lambda_star = lambda_star_for_dimension(n)
     omega_star = 1.0
-    omega_ref = omega_star
+    omega_ref = args.omega_ref
 
     lambda_star_radius = lambda_star_spectral_radius(Lambda_star)
     if lambda_star_radius >= 1.0:
@@ -310,7 +332,13 @@ def run_experiment(args, n, add_output_suffix):
     print(Lambda_star)
     print(f"Spectral radius of Lambda_star: {lambda_star_radius:.6f}")
     print(f"omega_star: {omega_star:.6f}")
-    print(f"omega_ref for support selection: {omega_ref:.6f}")
+    if omega_ref is None and args.refine_after_fixed_omega:
+        raise SystemExit(
+            "Error: --omega-ref none conflicts with "
+            "--refine-after-fixed-omega true. Set "
+            "--refine-after-fixed-omega false for free-omega support search."
+        )
+    print(f"omega_ref for support selection: {omega_ref}")
 
     print("Given Sigma:")
     print(Sigma_given)
@@ -326,6 +354,7 @@ def run_experiment(args, n, add_output_suffix):
         stop_obj_threshold=args.stop_obj_threshold,
         n_jobs=args.n_jobs,
         init_strategy=args.init_strategy,
+        refine_after_fixed_omega=args.refine_after_fixed_omega,
     )
     save_curve_result(
         given_output,
@@ -364,6 +393,7 @@ def run_experiment(args, n, add_output_suffix):
         stop_obj_threshold=args.stop_obj_threshold,
         n_jobs=args.n_jobs,
         init_strategy=args.init_strategy,
+        refine_after_fixed_omega=args.refine_after_fixed_omega,
     )
     save_curve_result(
         sigma_hat_output,
@@ -385,6 +415,12 @@ def run_experiment(args, n, add_output_suffix):
 
 if __name__ == "__main__":
     args = parse_args()
+    if args.omega_ref is None and args.refine_after_fixed_omega:
+        raise SystemExit(
+            "Error: --omega-ref none conflicts with "
+            "--refine-after-fixed-omega true. Set "
+            "--refine-after-fixed-omega false for free-omega support search."
+        )
 
     for index, n in enumerate(args.lambda_star_dims):
         run_experiment(args, n, add_output_suffix=index > 0)
