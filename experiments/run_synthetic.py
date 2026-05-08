@@ -51,9 +51,29 @@ def sample_empirical_covariance(Sigma, num_samples, seed=None):
     return empirical_covariance_from_samples(X)
 
 
+def lambda_star_for_dimension(n):
+    if n < 2:
+        raise ValueError("n must be at least 2.")
+
+    Lambda_star = np.zeros((n, n))
+    diag_values = np.linspace(0.10, 0.55, n)
+    last_col_values = np.linspace(0.60, -0.45, n - 1)
+
+    np.fill_diagonal(Lambda_star, diag_values)
+    Lambda_star[:n - 1, n - 1] = last_col_values
+    return Lambda_star
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Run the active Lambda optimization experiment."
+    )
+    parser.add_argument(
+        "--lambda-star-dims",
+        type=int,
+        nargs="+",
+        default=[4],
+        help="Dimensions of Lambda_star. This single-run script uses the first value.",
     )
     parser.add_argument(
         "--n-jobs",
@@ -103,13 +123,9 @@ def parse_args():
 def main():
     args = parse_args()
 
-    D_m = 4
-    Lambda_star = np.array([
-        [0.15, 0.0, 0.0, 0.6],
-        [0.0, -0.20, 0.0, -0.45],
-        [0.0, 0.0, 0.10, 0.50],
-        [0.0, 0.0, 0.0, 0.55],
-    ])
+    n = args.lambda_star_dims[0]
+    D_m = n
+    Lambda_star = lambda_star_for_dimension(n)
     omega_star = 1.0
     omega_ref = args.omega_ref
     if omega_ref is None and args.refine_after_fixed_omega:

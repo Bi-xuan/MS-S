@@ -1,6 +1,7 @@
 """Compute and save objective curves showing how the optimum changes with D_m."""
 
 import argparse
+import tempfile
 from pathlib import Path
 import sys
 
@@ -88,16 +89,36 @@ def compute_objective_curve(
     n_jobs=1,
     init_strategy="halton",
     refine_after_fixed_omega=False,
+    initial_curve_result=None,
+    save_callback=None,
 ):
     n = Sigma.shape[0]
     max_dm = n * (n - 1) + 1
 
-    exact_d_m_values = []
-    exact_objective_values = []
-    fallback_d_m_values = []
-    fallback_objective_values = []
+    if initial_curve_result is None:
+        exact_d_m_values = []
+        exact_objective_values = []
+        fallback_d_m_values = []
+        fallback_objective_values = []
+    else:
+        (
+            initial_d_m_values,
+            initial_objective_values,
+            initial_fallback_d_m_values,
+            initial_fallback_objective_values,
+        ) = initial_curve_result
+        exact_d_m_values = list(initial_d_m_values)
+        exact_objective_values = list(initial_objective_values)
+        fallback_d_m_values = list(initial_fallback_d_m_values)
+        fallback_objective_values = list(initial_fallback_objective_values)
+
+    completed_d_m_values = set(int(d_m) for d_m in exact_d_m_values)
 
     for d_m in range(1, max_dm + 1):
+        if d_m in completed_d_m_values:
+            print(f"Skipping D_m = {d_m}; already present in output file.")
+            continue
+
         print(f"Solving for D_m = {d_m}...")
         np.random.seed(random_seed)
         Lambda, omega, obj = optimize_lambda(
@@ -130,11 +151,31 @@ def compute_objective_curve(
             )
             exact_d_m_values.append(d_m)
             exact_objective_values.append(np.inf)
+            completed_d_m_values.add(d_m)
+            if save_callback is not None:
+                save_callback(
+                    (
+                        np.array(exact_d_m_values),
+                        np.array(exact_objective_values),
+                        np.array(fallback_d_m_values),
+                        np.array(fallback_objective_values),
+                    )
+                )
             continue
 
         print(f"  Objective = {obj:.6f}")
         exact_d_m_values.append(d_m)
         exact_objective_values.append(obj)
+        completed_d_m_values.add(d_m)
+        if save_callback is not None:
+            save_callback(
+                (
+                    np.array(exact_d_m_values),
+                    np.array(exact_objective_values),
+                    np.array(fallback_d_m_values),
+                    np.array(fallback_objective_values),
+                )
+            )
 
     d_m_values = np.array(exact_d_m_values)
     objective_values = np.array(exact_objective_values)
@@ -170,6 +211,26 @@ def output_path_for_dimension(output_path, n, add_suffix):
     return f"{stem}_n{n}.{extension}"
 
 
+def atomic_savez_compressed(output_path, **arrays):
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            dir=output_path.parent,
+            prefix=f".{output_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temp_file:
+            temp_path = Path(temp_file.name)
+            np.savez_compressed(temp_file, **arrays)
+        temp_path.replace(output_path)
+    finally:
+        if temp_path is not None and temp_path.exists():
+            temp_path.unlink()
+
+
 def save_curve_result(
     output_path,
     curve_type,
@@ -192,7 +253,7 @@ def save_curve_result(
         fallback_objective_values,
     ) = curve_result
 
-    np.savez_compressed(
+    atomic_savez_compressed(
         output_path,
         curve_type=curve_type,
         n=n,
@@ -210,6 +271,51 @@ def save_curve_result(
         fallback_d_m_values=fallback_d_m_values,
         fallback_objective_values=fallback_objective_values,
     )
+
+
+def load_existing_curve_result(
+    output_path,
+    expected_curve_type,
+    expected_n,
+    expected_metadata=None,
+):
+    output_path = Path(output_path)
+    if not output_path.exists():
+        return None
+
+    with np.load(output_path, allow_pickle=True) as data:
+        curve_type = data["curve_type"].item()
+        n = int(data["n"])
+        if curve_type != expected_curve_type or n != expected_n:
+            raise ValueError(
+                f"Refusing to resume from {output_path}: expected "
+                f"curve_type={expected_curve_type!r}, n={expected_n}, but found "
+                f"curve_type={curve_type!r}, n={n}."
+            )
+
+        if expected_metadata is not None:
+            for key, expected_value in expected_metadata.items():
+                actual_value = data[key].item()
+                if actual_value != expected_value:
+                    raise ValueError(
+                        f"Refusing to resume from {output_path}: expected "
+                        f"{key}={expected_value!r}, but found {actual_value!r}."
+                    )
+
+        d_m_values = data["d_m_values"]
+        objective_values = data["objective_values"]
+        if len(d_m_values) != len(objective_values):
+            raise ValueError(
+                f"Refusing to resume from {output_path}: d_m_values and "
+                "objective_values have different lengths."
+            )
+
+        return (
+            d_m_values.copy(),
+            objective_values.copy(),
+            data["fallback_d_m_values"].copy(),
+            data["fallback_objective_values"].copy(),
+        )
 
 
 def parse_args():
@@ -342,6 +448,39 @@ def run_experiment(args, n, add_output_suffix):
 
     print("Given Sigma:")
     print(Sigma_given)
+    given_existing_curve = load_existing_curve_result(
+        given_output,
+        "given_sigma",
+        n,
+        expected_metadata={
+            "omega_ref": omega_ref,
+            "random_seed": args.random_seed,
+            "solve_seed": given_solve_seed,
+            "fallback_seed": given_fallback_seed,
+            "num_samples": -1,
+            "stop_obj_threshold": args.stop_obj_threshold,
+        },
+    )
+    if given_existing_curve is not None:
+        print(f"Resuming given-Sigma curve data from {given_output}")
+
+    def save_given_curve(curve_result):
+        save_curve_result(
+            given_output,
+            "given_sigma",
+            n,
+            Lambda_star,
+            Sigma_given,
+            omega_star,
+            omega_ref,
+            args.random_seed,
+            given_solve_seed,
+            given_fallback_seed,
+            -1,
+            args.stop_obj_threshold,
+            curve_result,
+        )
+
     given_curve = compute_objective_curve(
         Sigma_given,
         max_iter=800,
@@ -355,22 +494,10 @@ def run_experiment(args, n, add_output_suffix):
         n_jobs=args.n_jobs,
         init_strategy=args.init_strategy,
         refine_after_fixed_omega=args.refine_after_fixed_omega,
+        initial_curve_result=given_existing_curve,
+        save_callback=save_given_curve,
     )
-    save_curve_result(
-        given_output,
-        "given_sigma",
-        n,
-        Lambda_star,
-        Sigma_given,
-        omega_star,
-        omega_ref,
-        args.random_seed,
-        given_solve_seed,
-        given_fallback_seed,
-        -1,
-        args.stop_obj_threshold,
-        given_curve,
-    )
+    save_given_curve(given_curve)
     print(f"Saved given-Sigma curve data to {given_output}")
 
     Sigma_hat_given = sample_empirical_covariance(
@@ -381,6 +508,39 @@ def run_experiment(args, n, add_output_suffix):
 
     print("\nEmpirical covariance Sigma_hat from given Sigma:")
     print(Sigma_hat_given)
+    sigma_hat_existing_curve = load_existing_curve_result(
+        sigma_hat_output,
+        "sigma_hat_from_given_sigma",
+        n,
+        expected_metadata={
+            "omega_ref": omega_ref,
+            "random_seed": args.random_seed,
+            "solve_seed": sigma_hat_solve_seed,
+            "fallback_seed": sigma_hat_fallback_seed,
+            "num_samples": args.num_samples,
+            "stop_obj_threshold": args.stop_obj_threshold,
+        },
+    )
+    if sigma_hat_existing_curve is not None:
+        print(f"Resuming Sigma_hat curve data from {sigma_hat_output}")
+
+    def save_sigma_hat_curve(curve_result):
+        save_curve_result(
+            sigma_hat_output,
+            "sigma_hat_from_given_sigma",
+            n,
+            Lambda_star,
+            Sigma_hat_given,
+            omega_star,
+            omega_ref,
+            args.random_seed,
+            sigma_hat_solve_seed,
+            sigma_hat_fallback_seed,
+            args.num_samples,
+            args.stop_obj_threshold,
+            curve_result,
+        )
+
     sigma_hat_curve = compute_objective_curve(
         Sigma_hat_given,
         max_iter=800,
@@ -394,22 +554,10 @@ def run_experiment(args, n, add_output_suffix):
         n_jobs=args.n_jobs,
         init_strategy=args.init_strategy,
         refine_after_fixed_omega=args.refine_after_fixed_omega,
+        initial_curve_result=sigma_hat_existing_curve,
+        save_callback=save_sigma_hat_curve,
     )
-    save_curve_result(
-        sigma_hat_output,
-        "sigma_hat_from_given_sigma",
-        n,
-        Lambda_star,
-        Sigma_hat_given,
-        omega_star,
-        omega_ref,
-        args.random_seed,
-        sigma_hat_solve_seed,
-        sigma_hat_fallback_seed,
-        args.num_samples,
-        args.stop_obj_threshold,
-        sigma_hat_curve,
-    )
+    save_sigma_hat_curve(sigma_hat_curve)
     print(f"Saved Sigma_hat curve data to {sigma_hat_output}")
 
 
