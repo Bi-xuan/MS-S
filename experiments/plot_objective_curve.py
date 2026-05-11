@@ -101,12 +101,93 @@ def plot_curve(
     plt.close()
 
 
+def plot_labeled_curves(
+    curve_data_list,
+    output_path,
+    title,
+    xlabel,
+    ylabel,
+    x_transform=lambda values: values,
+    use_data_xticks=True,
+):
+    if len(curve_data_list) == 0:
+        raise ValueError("At least one curve is required for plotting.")
+
+    reference_data = curve_data_list[0]
+    true_dimension = true_dimension_from_lambda_star(reference_data["Lambda_star"])
+    max_dimension = maximal_dimension_from_n(reference_data["n"])
+    true_x = x_transform(np.array([true_dimension]))[0]
+    max_x = x_transform(np.array([max_dimension]))[0]
+    all_x_values = []
+
+    plt.figure(figsize=(8, 5))
+    for data in curve_data_list:
+        x_values = x_transform(data["d_m_values"])
+        all_x_values.append(x_values)
+        label = sample_count_label(data["num_samples"])
+        line = plt.plot(
+            x_values,
+            data["objective_values"],
+            marker="o",
+            linewidth=1.5,
+            label=label,
+        )[0]
+
+        fallback_x_values = x_transform(data["fallback_d_m_values"])
+        if len(fallback_x_values) > 0:
+            plt.scatter(
+                fallback_x_values,
+                data["fallback_objective_values"],
+                marker="^",
+                color=line.get_color(),
+                alpha=0.8,
+                zorder=3,
+            )
+            all_x_values.append(fallback_x_values)
+
+    plt.axvline(
+        true_x,
+        color="tab:red",
+        linestyle="--",
+        linewidth=1.2,
+        alpha=0.8,
+        label="True dimension",
+    )
+    plt.axvline(
+        max_x,
+        color="tab:green",
+        linestyle=":",
+        linewidth=1.2,
+        alpha=0.8,
+        label="Max D_m",
+    )
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.grid(True, alpha=0.3)
+    if use_data_xticks and len(all_x_values) > 0:
+        tick_values = np.unique(np.concatenate(all_x_values))
+        if len(tick_values) <= 15:
+            plt.xticks(tick_values)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=200)
+    plt.close()
+
+
+def sample_count_label(num_samples):
+    if num_samples is None or num_samples < 0:
+        return "num_samples unknown"
+    return f"num_samples = {num_samples}"
+
+
 def load_curve_data(input_path):
     with np.load(input_path) as data:
         return {
             "curve_type": data["curve_type"].item(),
             "n": int(data["n"]),
             "Lambda_star": data["Lambda_star"],
+            "num_samples": int(data["num_samples"]) if "num_samples" in data else None,
             "d_m_values": data["d_m_values"],
             "objective_values": data["objective_values"],
             "fallback_d_m_values": data["fallback_d_m_values"],
@@ -140,6 +221,54 @@ def plot_d_m_curve(input_path, output_path, title_template, ylabel):
         highlight_y=highlight_y,
         max_dimension_x=max_dimension if len(max_dimension_index) > 0 else None,
         max_dimension_y=max_dimension_y,
+    )
+    print(f"Saved plot to {output_path}")
+
+
+def load_sigma_hat_curve_data(input_paths):
+    curve_data_list = [load_curve_data(input_path) for input_path in input_paths]
+    for input_path, data in zip(input_paths, curve_data_list):
+        if data["curve_type"] != "sigma_hat_from_given_sigma":
+            raise ValueError(
+                f"Expected Sigma_hat curve data in {input_path}, "
+                f"but found curve_type={data['curve_type']!r}."
+            )
+
+    n_values = {data["n"] for data in curve_data_list}
+    if len(n_values) != 1:
+        raise ValueError(
+            "All Sigma_hat inputs must have the same n to be plotted together."
+        )
+    return sorted(
+        curve_data_list,
+        key=lambda data: float("inf") if data["num_samples"] is None else data["num_samples"],
+    )
+
+
+def plot_sigma_hat_d_m_curves(input_paths, output_path, title_template, ylabel):
+    curve_data_list = load_sigma_hat_curve_data(input_paths)
+    title = title_template.format(n=curve_data_list[0]["n"])
+    plot_labeled_curves(
+        curve_data_list,
+        output_path,
+        title=title,
+        xlabel="D_m",
+        ylabel=ylabel,
+    )
+    print(f"Saved plot to {output_path}")
+
+
+def plot_sigma_hat_penalty_curves(input_paths, output_path, title_template, ylabel):
+    curve_data_list = load_sigma_hat_curve_data(input_paths)
+    title = title_template.format(n=curve_data_list[0]["n"])
+    plot_labeled_curves(
+        curve_data_list,
+        output_path,
+        title=title,
+        xlabel="pen_n(m)",
+        ylabel=ylabel,
+        x_transform=penalty_values_for_d_m,
+        use_data_xticks=False,
     )
     print(f"Saved plot to {output_path}")
 
@@ -186,8 +315,12 @@ def parse_args():
     )
     parser.add_argument(
         "--sigma-hat-input",
-        default="experiments/output/objective_curve_sigma_hat_from_given_sigma.npz",
-        help="NPZ curve data for Sigma_hat built from the given Sigma.",
+        nargs="+",
+        default=["experiments/output/objective_curve_sigma_hat_from_given_sigma.npz"],
+        help=(
+            "One or more NPZ curve data files for Sigma_hat built from the "
+            "given Sigma. Multiple files are overlaid and colored by num_samples."
+        ),
     )
     parser.add_argument(
         "--given-output",
@@ -216,13 +349,13 @@ if __name__ == "__main__":
         "Optimal Objective Value vs D_m (Given Sigma, n={n})",
         ylabel="Optimal objective value",
     )
-    plot_d_m_curve(
+    plot_sigma_hat_d_m_curves(
         args.sigma_hat_input,
         args.sigma_hat_output,
         "Optimal Objective Value vs D_m (Sigma_hat from Given Sigma, n={n})",
         ylabel="Optimal objective value",
     )
-    plot_penalty_curve(
+    plot_sigma_hat_penalty_curves(
         args.sigma_hat_input,
         args.sigma_hat_penalty_output,
         "Optimal Objective Value vs pen_n(m) (Sigma_hat from Given Sigma, n={n})",

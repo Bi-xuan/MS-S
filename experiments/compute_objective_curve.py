@@ -333,6 +333,15 @@ def parse_args():
         help="Path to save computed curve data for Sigma_hat built from the given Sigma.",
     )
     parser.add_argument(
+        "--curve",
+        choices=["both", "sigma_given", "sigma_hat"],
+        default="both",
+        help=(
+            "Which objective curve to compute. Use 'both' to compute the "
+            "given-Sigma and Sigma_hat curves."
+        ),
+    )
+    parser.add_argument(
         "--num-samples",
         type=int,
         default=100,
@@ -448,57 +457,67 @@ def run_experiment(args, n, add_output_suffix):
 
     print("Given Sigma:")
     print(Sigma_given)
-    given_existing_curve = load_existing_curve_result(
-        given_output,
-        "given_sigma",
-        n,
-        expected_metadata={
-            "omega_ref": omega_ref,
-            "random_seed": args.random_seed,
-            "solve_seed": given_solve_seed,
-            "fallback_seed": given_fallback_seed,
-            "num_samples": -1,
-            "stop_obj_threshold": args.stop_obj_threshold,
-        },
-    )
-    if given_existing_curve is not None:
-        print(f"Resuming given-Sigma curve data from {given_output}")
+    compute_sigma_given = args.curve in ("both", "sigma_given")
+    compute_sigma_hat = args.curve in ("both", "sigma_hat")
 
-    def save_given_curve(curve_result):
-        save_curve_result(
+    if compute_sigma_given:
+        given_existing_curve = load_existing_curve_result(
             given_output,
             "given_sigma",
             n,
-            Lambda_star,
-            Sigma_given,
-            omega_star,
-            omega_ref,
-            args.random_seed,
-            given_solve_seed,
-            given_fallback_seed,
-            -1,
-            args.stop_obj_threshold,
-            curve_result,
+            expected_metadata={
+                "omega_ref": omega_ref,
+                "random_seed": args.random_seed,
+                "solve_seed": given_solve_seed,
+                "fallback_seed": given_fallback_seed,
+                "num_samples": -1,
+                "stop_obj_threshold": args.stop_obj_threshold,
+            },
         )
+        if given_existing_curve is not None:
+            print(f"Resuming given-Sigma curve data from {given_output}")
 
-    given_curve = compute_objective_curve(
-        Sigma_given,
-        max_iter=800,
-        tol=1e-7,
-        max_restarts=args.max_restarts,
-        fallback_candidates=args.fallback_candidates,
-        random_seed=given_solve_seed,
-        fallback_seed=given_fallback_seed,
-        omega_ref=omega_ref,
-        stop_obj_threshold=args.stop_obj_threshold,
-        n_jobs=args.n_jobs,
-        init_strategy=args.init_strategy,
-        refine_after_fixed_omega=args.refine_after_fixed_omega,
-        initial_curve_result=given_existing_curve,
-        save_callback=save_given_curve,
-    )
-    save_given_curve(given_curve)
-    print(f"Saved given-Sigma curve data to {given_output}")
+        def save_given_curve(curve_result):
+            save_curve_result(
+                given_output,
+                "given_sigma",
+                n,
+                Lambda_star,
+                Sigma_given,
+                omega_star,
+                omega_ref,
+                args.random_seed,
+                given_solve_seed,
+                given_fallback_seed,
+                -1,
+                args.stop_obj_threshold,
+                curve_result,
+            )
+
+        given_curve = compute_objective_curve(
+            Sigma_given,
+            max_iter=800,
+            tol=1e-7,
+            max_restarts=args.max_restarts,
+            fallback_candidates=args.fallback_candidates,
+            random_seed=given_solve_seed,
+            fallback_seed=given_fallback_seed,
+            omega_ref=omega_ref,
+            stop_obj_threshold=args.stop_obj_threshold,
+            n_jobs=args.n_jobs,
+            init_strategy=args.init_strategy,
+            refine_after_fixed_omega=args.refine_after_fixed_omega,
+            initial_curve_result=given_existing_curve,
+            save_callback=save_given_curve,
+        )
+        save_given_curve(given_curve)
+        print(f"Saved given-Sigma curve data to {given_output}")
+    else:
+        print("Skipping given-Sigma curve because --curve sigma_hat was selected.")
+
+    if not compute_sigma_hat:
+        print("Skipping Sigma_hat curve because --curve sigma_given was selected.")
+        return
 
     Sigma_hat_given = sample_empirical_covariance(
         Sigma_given,
