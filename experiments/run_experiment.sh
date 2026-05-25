@@ -30,6 +30,7 @@ python experiments/compute_objective_curve.py \
     --curve "${CURVE}" \
     --num-samples "${NUM_SAMPLES}" \
     --lambda-star-dims "${N}"
+
 # python experiments/run_synthetic.py \
 #     --n-jobs "${N_JOBS}" \
 #     --random-seed "${RANDOM_SEED}" \
