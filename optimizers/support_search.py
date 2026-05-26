@@ -8,7 +8,25 @@ import numpy as np
 
 from admm import admm_solve
 from objective import frobenius_objective
+from supports.common import off_diagonal_edges, support_mask_from_edges
 from supports.exact import get_all_supports
+from supports.preselected import (
+    count_preselected_supports,
+    get_preselected_supports,
+    normalize_preselected_edges,
+)
+
+PRESELECT_DIRECTION_POLICIES = ("directed", "both_per_pair")
+
+
+def support_edges_from_mask(mask):
+    n = mask.shape[0]
+    return [
+        (i, j)
+        for i in range(n)
+        for j in range(n)
+        if i != j and mask[i, j]
+    ]
 
 
 def threshold_lambda(Lambda, zero_tol):
@@ -178,6 +196,129 @@ def update_best_support(
     return best_Lambda, best_omega, best_obj, best_mask
 
 
+def validate_preselect_direction_policy(direction_policy):
+    if direction_policy not in PRESELECT_DIRECTION_POLICIES:
+        raise ValueError(
+            "preselect_direction_policy must be one of "
+            f"{PRESELECT_DIRECTION_POLICIES}."
+        )
+
+
+def select_preselected_edge_scores(
+    edge_scores,
+    preselect_k,
+    direction_policy="directed",
+):
+    """Select directed edges from one-edge scores under the chosen policy."""
+    validate_preselect_direction_policy(direction_policy)
+
+    if preselect_k is None:
+        raise ValueError("preselect_k must be set.")
+
+    sorted_scores = sorted(edge_scores, key=lambda item: (item[1], item[0]))
+    if direction_policy == "directed":
+        max_edges = len(sorted_scores)
+        if not (1 <= preselect_k <= max_edges):
+            raise ValueError(f"preselect_k must be between 1 and {max_edges}.")
+        return sorted_scores[:preselect_k]
+
+    pair_scores = {}
+    for edge, score in sorted_scores:
+        pair = tuple(sorted(edge))
+        pair_scores.setdefault(pair, []).append((edge, score))
+
+    ranked_pairs = sorted(
+        pair_scores.values(),
+        key=lambda pair_entries: (pair_entries[0][1], pair_entries[0][0]),
+    )
+    max_pairs = len(ranked_pairs)
+    if not (1 <= preselect_k <= max_pairs):
+        raise ValueError(f"preselect_k must be between 1 and {max_pairs}.")
+
+    selected = []
+    for pair_entries in ranked_pairs[:preselect_k]:
+        selected.extend(pair_entries)
+    return selected
+
+
+def rank_preselected_edges(
+    Sigma,
+    preselect_k,
+    beta=1.0,
+    max_iter=500,
+    tol=1e-6,
+    zero_tol=1e-5,
+    max_restarts=3,
+    min_omega=1e-8,
+    omega_fixed=None,
+    omega_upper=None,
+    n_jobs=1,
+    random_seed=None,
+    init_strategy="halton",
+    direction_policy="directed",
+):
+    """Rank directed off-diagonal edges by their one-edge support objective."""
+    n = Sigma.shape[0]
+    edges = off_diagonal_edges(n)
+
+    validate_preselect_direction_policy(direction_policy)
+    if direction_policy == "directed":
+        max_preselect_k = len(edges)
+    else:
+        max_preselect_k = n * (n - 1) // 2
+
+    if preselect_k is None:
+        raise ValueError("preselect_k must be set.")
+    if not (1 <= preselect_k <= max_preselect_k):
+        raise ValueError(f"preselect_k must be between 1 and {max_preselect_k}.")
+
+    def iter_preselection_tasks():
+        for edge_index, edge in enumerate(edges):
+            yield (
+                edge_index,
+                Sigma,
+                support_mask_from_edges(n, [edge]),
+                beta,
+                max_iter,
+                tol,
+                zero_tol,
+                max_restarts,
+                min_omega,
+                omega_fixed,
+                omega_upper,
+                None if random_seed is None else random_seed + edge_index,
+                init_strategy,
+            )
+
+    if n_jobs is None:
+        max_workers = os.cpu_count() or 1
+    else:
+        max_workers = n_jobs
+
+    if max_workers is not None and max_workers < 1:
+        raise ValueError("n_jobs must be positive or None.")
+
+    if max_workers == 1:
+        edge_results = map(solve_support_worker, iter_preselection_tasks())
+    else:
+        edge_results = iter_parallel_support_results(
+            iter_preselection_tasks(),
+            max_workers,
+        )
+
+    edge_scores = []
+    for edge_index, _, result in edge_results:
+        obj = np.inf if result is None else result[2]
+        edge_scores.append((edges[edge_index], obj))
+
+    selected = select_preselected_edge_scores(
+        edge_scores,
+        preselect_k,
+        direction_policy=direction_policy,
+    )
+    return [edge for edge, _ in selected], [score for _, score in selected]
+
+
 def optimize_lambda(
     Sigma,
     D_m,
@@ -195,6 +336,10 @@ def optimize_lambda(
     random_seed=None,
     init_strategy="halton",
     refine_after_fixed_omega=False,
+    preselect_k=None,
+    preselect_edges=None,
+    preselect_direction_policy="directed",
+    return_metadata=False,
 ):
     """
     Optimize Lambda over a support iterator.
@@ -203,10 +348,25 @@ def optimize_lambda(
     problems, pass either a support_iterator(n, n_edge) callable or an iterable
     that yields support masks.
     """
+    metadata = {
+        "preselect_k": preselect_k,
+        "preselect_direction_policy": preselect_direction_policy,
+        "preselected_edges": None,
+        "preselected_scores": None,
+        "selected_support_mask": None,
+        "selected_support_edges": None,
+    }
+
+    def result_tuple(Lambda, omega, obj):
+        if return_metadata:
+            return Lambda, omega, obj, metadata
+        return Lambda, omega, obj
+
     n = Sigma.shape[0]
     n_edge = D_m - 1
     lambda_min_sigma = np.min(np.linalg.eigvalsh(Sigma))
     omega_upper = lambda_min_sigma - omega_upper_gap
+    validate_preselect_direction_policy(preselect_direction_policy)
 
     if refine_after_fixed_omega and omega_ref is None:
         raise ValueError(
@@ -217,10 +377,67 @@ def optimize_lambda(
         )
 
     if omega_upper < min_omega:
-        return None, None, np.inf
+        return result_tuple(None, None, np.inf)
 
     if omega_ref is not None and omega_ref > omega_upper:
-        return None, None, np.inf
+        return result_tuple(None, None, np.inf)
+
+    if support_iterator is not None and (
+        preselect_k is not None or preselect_edges is not None
+    ):
+        raise ValueError(
+            "Use either support_iterator or preselection arguments, not both."
+        )
+
+    if preselect_edges is not None:
+        selected_edges = normalize_preselected_edges(n, preselect_edges)
+        if n_edge > len(selected_edges):
+            raise ValueError(
+                "D_m requires more off-diagonal edges than were preselected: "
+                f"n_edge={n_edge}, preselected={len(selected_edges)}."
+            )
+        metadata["preselect_k"] = len(selected_edges)
+        metadata["preselected_edges"] = selected_edges
+        support_iterator = lambda n_arg, n_edge_arg: get_preselected_supports(
+            n_arg,
+            n_edge_arg,
+            selected_edges,
+        )
+    elif preselect_k is not None:
+        if preselect_direction_policy == "both_per_pair":
+            preselect_edge_count = 2 * preselect_k
+        else:
+            preselect_edge_count = preselect_k
+
+        if preselect_edge_count < n_edge:
+            raise ValueError(
+                "Preselection must retain at least D_m - 1 directed edges: "
+                f"retained={preselect_edge_count}, n_edge={n_edge}."
+            )
+
+        selected_edges, selected_scores = rank_preselected_edges(
+            Sigma,
+            preselect_k,
+            beta=beta,
+            max_iter=max_iter,
+            tol=tol,
+            zero_tol=zero_tol,
+            max_restarts=max_restarts,
+            min_omega=min_omega,
+            omega_fixed=omega_ref,
+            omega_upper=omega_upper,
+            n_jobs=n_jobs,
+            random_seed=random_seed,
+            init_strategy=init_strategy,
+            direction_policy=preselect_direction_policy,
+        )
+        metadata["preselected_edges"] = selected_edges
+        metadata["preselected_scores"] = selected_scores
+        support_iterator = lambda n_arg, n_edge_arg: get_preselected_supports(
+            n_arg,
+            n_edge_arg,
+            selected_edges,
+        )
 
     best_obj = np.inf
     best_Lambda = None
@@ -264,6 +481,11 @@ def optimize_lambda(
     support_count = None
     if support_iterator is get_all_supports:
         support_count = comb(n * (n - 1), n_edge)
+    elif metadata["preselected_edges"] is not None:
+        support_count = count_preselected_supports(
+            n_edge,
+            metadata["preselected_edges"],
+        )
 
     if max_workers == 1 or support_count == 1:
         support_results = map(solve_support_worker, iter_support_tasks())
@@ -308,8 +530,12 @@ def optimize_lambda(
         )
 
         if final_result is None:
-            return None, None, np.inf
+            return result_tuple(None, None, np.inf)
 
         best_Lambda, best_omega, best_obj = final_result
 
-    return best_Lambda, best_omega, best_obj
+    if best_mask is not None:
+        metadata["selected_support_mask"] = best_mask.copy()
+        metadata["selected_support_edges"] = support_edges_from_mask(best_mask)
+
+    return result_tuple(best_Lambda, best_omega, best_obj)

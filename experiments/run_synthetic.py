@@ -117,6 +117,24 @@ def parse_args():
             "Use none for free-omega support selection."
         ),
     )
+    parser.add_argument(
+        "--preselect-k",
+        type=int,
+        default=None,
+        help=(
+            "If set, screen all directed off-diagonal positions and restrict "
+            "support search to the top k positions."
+        ),
+    )
+    parser.add_argument(
+        "--preselect-direction-policy",
+        choices=["directed", "both_per_pair"],
+        default="directed",
+        help=(
+            "How to convert directed one-edge screening scores into retained "
+            "preselected positions."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -146,7 +164,7 @@ def main():
     lambda_min_sigma = np.min(np.linalg.eigvalsh(Sigma_given))
 
     np.random.seed(args.random_seed)
-    Lambda, omega, obj = optimize_lambda(
+    Lambda, omega, obj, metadata = optimize_lambda(
         Sigma_given,
         D_m,
         max_iter=800,
@@ -157,6 +175,9 @@ def main():
         random_seed=args.random_seed,
         init_strategy=args.init_strategy,
         refine_after_fixed_omega=args.refine_after_fixed_omega,
+        preselect_k=args.preselect_k,
+        preselect_direction_policy=args.preselect_direction_policy,
+        return_metadata=True,
     )
     if omega_ref is None:
         print("\nTest 7: free-omega support selection")
@@ -171,6 +192,11 @@ def main():
     print(f"Spectral radius of Lambda_star: {lambda_star_radius:.6f}")
     print(f"omega_star: {omega_star:.6f}")
     print(f"omega_ref for support selection: {omega_ref}")
+    if args.preselect_k is not None:
+        print(f"preselect_k: {args.preselect_k}")
+        print(f"preselect_direction_policy: {args.preselect_direction_policy}")
+        print(f"preselected_edges: {metadata['preselected_edges']}")
+        print(f"preselected_scores: {metadata['preselected_scores']}")
     print(f"lambda_min(Sigma): {lambda_min_sigma:.6f}")
     print(f"Sigma:\n{Sigma_given}")
     print_optimization_result(Lambda, omega, obj)

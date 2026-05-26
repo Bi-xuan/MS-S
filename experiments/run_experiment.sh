@@ -16,20 +16,32 @@ NUM_SAMPLES="${NUM_SAMPLES:-100}"
 REFINE_AFTER_FIXED_OMEGA="${REFINE_AFTER_FIXED_OMEGA:-false}"
 OMEGA_REF="${OMEGA_REF:-1.0}"
 CURVE="${CURVE:-both}"
+RETURN_METADATA="${RETURN_METADATA:-false}"
+PRESELECT_K="${PRESELECT_K:-}"
+PRESELECT_DIRECTION_POLICY="${PRESELECT_DIRECTION_POLICY:-both_per_pair}"
 GIVEN_OUTPUT="${GIVEN_OUTPUT:-experiments/output/objective_curve_given_sigma.npz}"
 SIGMA_HAT_OUTPUT="${SIGMA_HAT_OUTPUT:-experiments/output/objective_curve_sigma_hat_from_given_sigma.npz}"
 
-python experiments/compute_objective_curve.py \
-    --given-output "${GIVEN_OUTPUT}" \
-    --sigma-hat-output "${SIGMA_HAT_OUTPUT}" \
-    --n-jobs "${N_JOBS}" \
-    --random-seed "${RANDOM_SEED}" \
-    --max-restarts "${MAX_RESTARTS}" \
-    --refine-after-fixed-omega "${REFINE_AFTER_FIXED_OMEGA}" \
-    --omega-ref "${OMEGA_REF}" \
-    --curve "${CURVE}" \
-    --num-samples "${NUM_SAMPLES}" \
+ARGS=(
+    --given-output "${GIVEN_OUTPUT}"
+    --sigma-hat-output "${SIGMA_HAT_OUTPUT}"
+    --n-jobs "${N_JOBS}"
+    --random-seed "${RANDOM_SEED}"
+    --max-restarts "${MAX_RESTARTS}"
+    --refine-after-fixed-omega "${REFINE_AFTER_FIXED_OMEGA}"
+    --omega-ref "${OMEGA_REF}"
+    --curve "${CURVE}"
+    --return-metadata "${RETURN_METADATA}"
+    --num-samples "${NUM_SAMPLES}"
     --lambda-star-dims "${N}"
+)
+
+if [[ -n "${PRESELECT_K}" ]]; then
+    ARGS+=(--preselect-k "${PRESELECT_K}")
+    ARGS+=(--preselect-direction-policy "${PRESELECT_DIRECTION_POLICY}")
+fi
+
+python experiments/compute_objective_curve.py "${ARGS[@]}"
 
 # python experiments/run_synthetic.py \
 #     --n-jobs "${N_JOBS}" \

@@ -10,7 +10,7 @@ import numpy as np
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from optimizers.support_search import optimize_lambda
+from optimizers.support_search import optimize_lambda, rank_preselected_edges
 
 
 def parse_bool(value):
@@ -89,28 +89,62 @@ def compute_objective_curve(
     n_jobs=1,
     init_strategy="halton",
     refine_after_fixed_omega=False,
+    preselect_edges=None,
+    preselect_direction_policy="directed",
+    return_metadata=False,
     initial_curve_result=None,
     save_callback=None,
 ):
     n = Sigma.shape[0]
-    max_dm = n * (n - 1) + 1
+    if preselect_edges is None:
+        max_dm = n * (n - 1) + 1
+    else:
+        max_dm = len(preselect_edges) + 1
 
     if initial_curve_result is None:
         exact_d_m_values = []
         exact_objective_values = []
         fallback_d_m_values = []
         fallback_objective_values = []
+        selected_support_masks = []
+        selected_support_valid = []
     else:
-        (
-            initial_d_m_values,
-            initial_objective_values,
-            initial_fallback_d_m_values,
-            initial_fallback_objective_values,
-        ) = initial_curve_result
+        if len(initial_curve_result) == 4:
+            (
+                initial_d_m_values,
+                initial_objective_values,
+                initial_fallback_d_m_values,
+                initial_fallback_objective_values,
+            ) = initial_curve_result
+            initial_selected_support_masks = np.zeros(
+                (len(initial_d_m_values), n, n),
+                dtype=bool,
+            )
+            initial_selected_support_valid = np.zeros(
+                len(initial_d_m_values),
+                dtype=bool,
+            )
+        else:
+            (
+                initial_d_m_values,
+                initial_objective_values,
+                initial_fallback_d_m_values,
+                initial_fallback_objective_values,
+                initial_selected_support_masks,
+                initial_selected_support_valid,
+            ) = initial_curve_result
         exact_d_m_values = list(initial_d_m_values)
         exact_objective_values = list(initial_objective_values)
         fallback_d_m_values = list(initial_fallback_d_m_values)
         fallback_objective_values = list(initial_fallback_objective_values)
+        selected_support_masks = [
+            np.array(mask, dtype=bool)
+            for mask in initial_selected_support_masks
+        ]
+        selected_support_valid = [
+            bool(valid)
+            for valid in initial_selected_support_valid
+        ]
 
     completed_d_m_values = set(int(d_m) for d_m in exact_d_m_values)
 
@@ -121,7 +155,7 @@ def compute_objective_curve(
 
         print(f"Solving for D_m = {d_m}...")
         np.random.seed(random_seed)
-        Lambda, omega, obj = optimize_lambda(
+        solve_result = optimize_lambda(
             Sigma,
             d_m,
             beta=beta,
@@ -136,7 +170,11 @@ def compute_objective_curve(
             random_seed=random_seed,
             init_strategy=init_strategy,
             refine_after_fixed_omega=refine_after_fixed_omega,
+            preselect_edges=preselect_edges,
+            preselect_direction_policy=preselect_direction_policy,
+            return_metadata=True,
         )
+        Lambda, omega, obj, metadata = solve_result
 
         if (
             Lambda is None
@@ -151,6 +189,8 @@ def compute_objective_curve(
             )
             exact_d_m_values.append(d_m)
             exact_objective_values.append(np.inf)
+            selected_support_masks.append(np.zeros((n, n), dtype=bool))
+            selected_support_valid.append(False)
             completed_d_m_values.add(d_m)
             if save_callback is not None:
                 save_callback(
@@ -159,6 +199,8 @@ def compute_objective_curve(
                         np.array(exact_objective_values),
                         np.array(fallback_d_m_values),
                         np.array(fallback_objective_values),
+                        np.array(selected_support_masks, dtype=bool),
+                        np.array(selected_support_valid, dtype=bool),
                     )
                 )
             continue
@@ -166,6 +208,10 @@ def compute_objective_curve(
         print(f"  Objective = {obj:.6f}")
         exact_d_m_values.append(d_m)
         exact_objective_values.append(obj)
+        selected_support_masks.append(
+            np.array(metadata["selected_support_mask"], dtype=bool)
+        )
+        selected_support_valid.append(True)
         completed_d_m_values.add(d_m)
         if save_callback is not None:
             save_callback(
@@ -174,6 +220,8 @@ def compute_objective_curve(
                     np.array(exact_objective_values),
                     np.array(fallback_d_m_values),
                     np.array(fallback_objective_values),
+                    np.array(selected_support_masks, dtype=bool),
+                    np.array(selected_support_valid, dtype=bool),
                 )
             )
 
@@ -185,6 +233,8 @@ def compute_objective_curve(
         objective_values,
         np.array(fallback_d_m_values),
         np.array(fallback_objective_values),
+        np.array(selected_support_masks, dtype=bool),
+        np.array(selected_support_valid, dtype=bool),
     )
 
 
@@ -244,14 +294,30 @@ def save_curve_result(
     fallback_seed,
     num_samples,
     stop_obj_threshold,
+    preselect_k,
+    preselect_direction_policy,
+    preselected_edges,
+    preselected_scores,
     curve_result,
 ):
-    (
-        d_m_values,
-        objective_values,
-        fallback_d_m_values,
-        fallback_objective_values,
-    ) = curve_result
+    if len(curve_result) == 4:
+        (
+            d_m_values,
+            objective_values,
+            fallback_d_m_values,
+            fallback_objective_values,
+        ) = curve_result
+        selected_support_masks = np.zeros((len(d_m_values), n, n), dtype=bool)
+        selected_support_valid = np.zeros(len(d_m_values), dtype=bool)
+    else:
+        (
+            d_m_values,
+            objective_values,
+            fallback_d_m_values,
+            fallback_objective_values,
+            selected_support_masks,
+            selected_support_valid,
+        ) = curve_result
 
     atomic_savez_compressed(
         output_path,
@@ -266,8 +332,20 @@ def save_curve_result(
         fallback_seed=fallback_seed,
         num_samples=num_samples,
         stop_obj_threshold=stop_obj_threshold,
+        preselect_k=-1 if preselect_k is None else preselect_k,
+        preselect_direction_policy=preselect_direction_policy,
+        preselected_edges=np.array(
+            [] if preselected_edges is None else preselected_edges,
+            dtype=int,
+        ),
+        preselected_scores=np.array(
+            [] if preselected_scores is None else preselected_scores,
+            dtype=float,
+        ),
         d_m_values=d_m_values,
         objective_values=objective_values,
+        selected_support_masks=selected_support_masks,
+        selected_support_valid=selected_support_valid,
         fallback_d_m_values=fallback_d_m_values,
         fallback_objective_values=fallback_objective_values,
     )
@@ -295,7 +373,17 @@ def load_existing_curve_result(
 
         if expected_metadata is not None:
             for key, expected_value in expected_metadata.items():
-                actual_value = data[key].item()
+                if key in data:
+                    actual_value = data[key].item()
+                elif key == "preselect_k" and expected_value == -1:
+                    actual_value = -1
+                elif key == "preselect_direction_policy":
+                    actual_value = "directed"
+                else:
+                    raise ValueError(
+                        f"Refusing to resume from {output_path}: missing "
+                        f"metadata field {key!r}."
+                    )
                 if actual_value != expected_value:
                     raise ValueError(
                         f"Refusing to resume from {output_path}: expected "
@@ -309,12 +397,35 @@ def load_existing_curve_result(
                 f"Refusing to resume from {output_path}: d_m_values and "
                 "objective_values have different lengths."
             )
+        if "selected_support_masks" in data:
+            selected_support_masks = data["selected_support_masks"].copy()
+        else:
+            selected_support_masks = np.zeros(
+                (len(d_m_values), expected_n, expected_n),
+                dtype=bool,
+            )
+        if "selected_support_valid" in data:
+            selected_support_valid = data["selected_support_valid"].copy()
+        else:
+            selected_support_valid = np.zeros(len(d_m_values), dtype=bool)
+        if len(selected_support_masks) != len(d_m_values):
+            raise ValueError(
+                f"Refusing to resume from {output_path}: selected_support_masks "
+                "and d_m_values have different lengths."
+            )
+        if len(selected_support_valid) != len(d_m_values):
+            raise ValueError(
+                f"Refusing to resume from {output_path}: selected_support_valid "
+                "and d_m_values have different lengths."
+            )
 
         return (
             d_m_values.copy(),
             objective_values.copy(),
             data["fallback_d_m_values"].copy(),
             data["fallback_objective_values"].copy(),
+            selected_support_masks,
+            selected_support_valid,
         )
 
 
@@ -408,7 +519,81 @@ def parse_args():
         default=[4],
         help="Dimensions of Lambda_star to compute.",
     )
+    parser.add_argument(
+        "--preselect-k",
+        type=int,
+        default=None,
+        help=(
+            "If set, screen all directed off-diagonal positions and restrict "
+            "support search to the top k positions."
+        ),
+    )
+    parser.add_argument(
+        "--preselect-direction-policy",
+        choices=["directed", "both_per_pair"],
+        default="directed",
+        help=(
+            "How to convert directed one-edge screening scores into retained "
+            "preselected positions."
+        ),
+    )
+    parser.add_argument(
+        "--return-metadata",
+        type=parse_bool,
+        default=False,
+        help=(
+            "Deprecated; selected-support metadata is now collected "
+            "automatically."
+        ),
+    )
     return parser.parse_args()
+
+
+def preselect_edges_for_sigma(
+    Sigma,
+    args,
+    solve_seed,
+    omega_ref,
+    min_omega=0.0,
+    max_iter=800,
+    tol=1e-7,
+):
+    if args.preselect_k is None:
+        return None, None
+
+    n = Sigma.shape[0]
+    lambda_min_sigma = np.min(np.linalg.eigvalsh(Sigma))
+    omega_upper = lambda_min_sigma - 1e-3
+    if args.preselect_direction_policy == "both_per_pair":
+        max_edges = n * (n - 1) // 2
+    else:
+        max_edges = n * (n - 1)
+
+    if not (1 <= args.preselect_k <= max_edges):
+        raise ValueError(f"--preselect-k must be between 1 and {max_edges}.")
+
+    print(
+        "Preselecting off-diagonal positions: "
+        f"k={args.preselect_k} of {max_edges}, "
+        f"policy={args.preselect_direction_policy}"
+    )
+    selected_edges, selected_scores = rank_preselected_edges(
+        Sigma,
+        args.preselect_k,
+        max_iter=max_iter,
+        tol=tol,
+        max_restarts=args.max_restarts,
+        min_omega=min_omega,
+        omega_fixed=omega_ref,
+        omega_upper=omega_upper,
+        n_jobs=args.n_jobs,
+        random_seed=solve_seed,
+        init_strategy=args.init_strategy,
+        direction_policy=args.preselect_direction_policy,
+    )
+    print(f"  Best one-edge screening objective: {selected_scores[0]:.6f}")
+    print(f"  Worst retained screening objective: {selected_scores[-1]:.6f}")
+    return selected_edges, selected_scores
 
 
 def run_experiment(args, n, add_output_suffix):
@@ -472,10 +657,29 @@ def run_experiment(args, n, add_output_suffix):
                 "fallback_seed": given_fallback_seed,
                 "num_samples": -1,
                 "stop_obj_threshold": args.stop_obj_threshold,
+                "preselect_k": -1 if args.preselect_k is None else args.preselect_k,
+                **(
+                    {
+                        "preselect_direction_policy": (
+                            args.preselect_direction_policy
+                        )
+                    }
+                    if args.preselect_k is not None
+                    else {}
+                ),
             },
         )
         if given_existing_curve is not None:
             print(f"Resuming given-Sigma curve data from {given_output}")
+
+        given_preselected_edges, given_preselected_scores = preselect_edges_for_sigma(
+            Sigma_given,
+            args,
+            given_solve_seed,
+            omega_ref,
+            max_iter=800,
+            tol=1e-7,
+        )
 
         def save_given_curve(curve_result):
             save_curve_result(
@@ -491,6 +695,10 @@ def run_experiment(args, n, add_output_suffix):
                 given_fallback_seed,
                 -1,
                 args.stop_obj_threshold,
+                args.preselect_k,
+                args.preselect_direction_policy,
+                given_preselected_edges,
+                given_preselected_scores,
                 curve_result,
             )
 
@@ -507,6 +715,9 @@ def run_experiment(args, n, add_output_suffix):
             n_jobs=args.n_jobs,
             init_strategy=args.init_strategy,
             refine_after_fixed_omega=args.refine_after_fixed_omega,
+            preselect_edges=given_preselected_edges,
+            preselect_direction_policy=args.preselect_direction_policy,
+            return_metadata=args.return_metadata,
             initial_curve_result=given_existing_curve,
             save_callback=save_given_curve,
         )
@@ -538,10 +749,25 @@ def run_experiment(args, n, add_output_suffix):
             "fallback_seed": sigma_hat_fallback_seed,
             "num_samples": args.num_samples,
             "stop_obj_threshold": args.stop_obj_threshold,
+            "preselect_k": -1 if args.preselect_k is None else args.preselect_k,
+            **(
+                {"preselect_direction_policy": args.preselect_direction_policy}
+                if args.preselect_k is not None
+                else {}
+            ),
         },
     )
     if sigma_hat_existing_curve is not None:
         print(f"Resuming Sigma_hat curve data from {sigma_hat_output}")
+
+    sigma_hat_preselected_edges, sigma_hat_preselected_scores = preselect_edges_for_sigma(
+        Sigma_hat_given,
+        args,
+        sigma_hat_solve_seed,
+        omega_ref,
+        max_iter=800,
+        tol=1e-7,
+    )
 
     def save_sigma_hat_curve(curve_result):
         save_curve_result(
@@ -557,6 +783,10 @@ def run_experiment(args, n, add_output_suffix):
             sigma_hat_fallback_seed,
             args.num_samples,
             args.stop_obj_threshold,
+            args.preselect_k,
+            args.preselect_direction_policy,
+            sigma_hat_preselected_edges,
+            sigma_hat_preselected_scores,
             curve_result,
         )
 
@@ -573,6 +803,9 @@ def run_experiment(args, n, add_output_suffix):
         n_jobs=args.n_jobs,
         init_strategy=args.init_strategy,
         refine_after_fixed_omega=args.refine_after_fixed_omega,
+        preselect_edges=sigma_hat_preselected_edges,
+        preselect_direction_policy=args.preselect_direction_policy,
+        return_metadata=args.return_metadata,
         initial_curve_result=sigma_hat_existing_curve,
         save_callback=save_sigma_hat_curve,
     )
