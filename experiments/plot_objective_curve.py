@@ -175,6 +175,83 @@ def plot_labeled_curves(
     plt.close()
 
 
+def plot_labeled_curves_after_true_dimension(
+    curve_data_list,
+    output_path,
+    title,
+    xlabel,
+    ylabel,
+    x_transform=lambda values: values,
+    use_data_xticks=True,
+    include_true_dimension=True,
+):
+    if len(curve_data_list) == 0:
+        raise ValueError("At least one curve is required for plotting.")
+
+    reference_data = curve_data_list[0]
+    true_dimension = true_dimension_from_lambda_star(reference_data["Lambda_star"])
+    min_d_m = true_dimension if include_true_dimension else true_dimension + 1
+    true_x = x_transform(np.array([true_dimension]))[0]
+    all_x_values = []
+
+    plt.figure(figsize=(8, 5))
+    for data in curve_data_list:
+        after_true_mask = data["d_m_values"] >= min_d_m
+        if not np.any(after_true_mask):
+            continue
+
+        x_values = x_transform(data["d_m_values"][after_true_mask])
+        y_values = data["objective_values"][after_true_mask]
+        all_x_values.append(x_values)
+        label = sample_count_label(data["num_samples"])
+        line = plt.plot(
+            x_values,
+            y_values,
+            marker="o",
+            linewidth=1.5,
+            label=label,
+        )[0]
+
+        fallback_after_true_mask = data["fallback_d_m_values"] >= min_d_m
+        if np.any(fallback_after_true_mask):
+            fallback_x_values = x_transform(
+                data["fallback_d_m_values"][fallback_after_true_mask]
+            )
+            plt.scatter(
+                fallback_x_values,
+                data["fallback_objective_values"][fallback_after_true_mask],
+                marker="^",
+                color=line.get_color(),
+                alpha=0.8,
+                zorder=3,
+            )
+            all_x_values.append(fallback_x_values)
+
+    if len(all_x_values) == 0:
+        raise ValueError("No curve points are available after the true dimension.")
+
+    plt.axvline(
+        true_x,
+        color="tab:red",
+        linestyle="--",
+        linewidth=1.2,
+        alpha=0.8,
+        label="True dimension",
+    )
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.grid(True, alpha=0.3)
+    if use_data_xticks:
+        tick_values = np.unique(np.concatenate(all_x_values))
+        if len(tick_values) <= 15:
+            plt.xticks(tick_values)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=200)
+    plt.close()
+
+
 def sample_count_label(num_samples):
     if num_samples is None or num_samples < 0:
         return "num_samples unknown"
@@ -273,6 +350,26 @@ def plot_sigma_hat_penalty_curves(input_paths, output_path, title_template, ylab
     print(f"Saved plot to {output_path}")
 
 
+def plot_sigma_hat_penalty_curves_after_true_dimension(
+    input_paths,
+    output_path,
+    title_template,
+    ylabel,
+):
+    curve_data_list = load_sigma_hat_curve_data(input_paths)
+    title = title_template.format(n=curve_data_list[0]["n"])
+    plot_labeled_curves_after_true_dimension(
+        curve_data_list,
+        output_path,
+        title=title,
+        xlabel="pen_n(m)",
+        ylabel=ylabel,
+        x_transform=penalty_values_for_d_m,
+        use_data_xticks=False,
+    )
+    print(f"Saved plot to {output_path}")
+
+
 def plot_penalty_curve(input_path, output_path, title_template, ylabel):
     data = load_curve_data(input_path)
     title = title_template.format(n=data["n"])
@@ -337,6 +434,17 @@ def parse_args():
         default="experiments/output/objective_vs_pen_n_m_sigma_hat_from_given_sigma.png",
         help="Path to save the Sigma_hat pen_n(m) plot.",
     )
+    parser.add_argument(
+        "--sigma-hat-penalty-after-true-output",
+        default=(
+            "experiments/output/"
+            "objective_vs_pen_n_m_after_true_sigma_hat_from_given_sigma.png"
+        ),
+        help=(
+            "Path to save the Sigma_hat pen_n(m) plot restricted to points at "
+            "or after the true dimension."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -359,5 +467,11 @@ if __name__ == "__main__":
         args.sigma_hat_input,
         args.sigma_hat_penalty_output,
         "Optimal Objective Value vs pen_n(m) (Sigma_hat from Given Sigma, n={n})",
+        ylabel="Optimal objective value",
+    )
+    plot_sigma_hat_penalty_curves_after_true_dimension(
+        args.sigma_hat_input,
+        args.sigma_hat_penalty_after_true_output,
+        "Post-True-Dimension Objective vs pen_n(m) (n={n})",
         ylabel="Optimal objective value",
     )
