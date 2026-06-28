@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Local macOS files
+.DS_Store
+
+# Generated experiment artifacts
+experiments/output/
+experiments/logs/
+*.out
+*.err
