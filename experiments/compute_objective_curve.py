@@ -33,11 +33,10 @@ def parse_omega_ref(value):
 
 def empirical_covariance_from_samples(X):
     num_samples = X.shape[0]
-    if num_samples < 2:
-        raise ValueError("At least two observations are required to compute Sigma_hat.")
+    if num_samples < 1:
+        raise ValueError("At least one observation is required to compute Sigma_hat.")
 
-    X_centered = X - X.mean(axis=0, keepdims=True)
-    return X_centered.T @ X_centered / (num_samples - 1)
+    return X.T @ X / num_samples
 
 
 def sample_empirical_covariance(Sigma, num_samples, seed=None):

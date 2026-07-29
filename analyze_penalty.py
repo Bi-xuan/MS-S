@@ -19,7 +19,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from penalty import PenaltyConstants, pen_n
+from penalty import PenaltyConstants, pen_n, theorem_constants
 
 
 def scalar_value(data, key, default=None):
@@ -70,19 +70,7 @@ def infer_sample_count(data, num_samples_override):
 def infer_r(data, r_override):
     if r_override is not None:
         return r_override
-
-    omega_ref = scalar_value(data, "omega_ref")
-    if omega_ref is not None and np.isfinite(omega_ref) and float(omega_ref) > 0:
-        return float(omega_ref)
-
-    omega_star = scalar_value(data, "omega_star")
-    if omega_star is not None and np.isfinite(omega_star) and float(omega_star) > 0:
-        return float(omega_star)
-
-    raise ValueError(
-        "r is required because neither omega_ref nor omega_star gives a positive "
-        "finite default. Pass it with --r."
-    )
+    return 1.0
 
 
 def build_penalty_constants(data, args):
@@ -255,6 +243,9 @@ def analyze(args):
     print(f"Penalty num_samples: {constants.num_samples}")
     print(f"Penalty n (matrix dimension): {constants.n}")
     print(f"Penalty scale: {args.penalty_scale:.12g}")
+    derived_constants = theorem_constants(constants)
+    print(f"Penalty r: {constants.r:.12g}")
+    print(f"Penalty L_t_xi: {derived_constants['L_t_xi']:.12g}")
     print(f"True dimension: {true_dimension}")
     if best_index is not None:
         print(f"Selected D_m: {d_m_values[best_index]}")
@@ -303,7 +294,8 @@ def parse_args():
     parser.add_argument(
         "--r",
         type=float,
-        help="Theorem radius r. Defaults to positive omega_ref, then omega_star, from the NPZ.",
+        default=1.0,
+        help="Theorem radius r. Default: 1.",
     )
     parser.add_argument(
         "--Lm",
