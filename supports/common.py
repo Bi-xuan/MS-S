@@ -7,6 +7,10 @@ def off_diagonal_edges(n):
     return [(i, j) for i in range(n) for j in range(n) if i != j]
 
 
+def upper_triangular_edges(n):
+    return [(i, j) for i in range(n) for j in range(i + 1, n)]
+
+
 def diagonal_mask(n):
     return np.eye(n, dtype=bool)
 
@@ -22,9 +26,10 @@ def support_mask_from_edges(n, edges):
     return mask
 
 
-def validate_n_edge(n, n_edge):
-    max_edges = n * (n - 1)
+def validate_n_edge(n, n_edge, max_edges=None):
     if n < 1:
         raise ValueError("n must be positive.")
+    if max_edges is None:
+        max_edges = n * (n - 1)
     if not (0 <= n_edge <= max_edges):
         raise ValueError(f"n_edge must be between 0 and {max_edges}.")

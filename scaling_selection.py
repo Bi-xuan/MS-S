@@ -10,10 +10,16 @@ from __future__ import annotations
 
 from bisect import bisect_right
 from dataclasses import dataclass
-from math import log, sqrt
+from math import expm1, log, log1p, sqrt
 from typing import Mapping
 
 import numpy as np
+
+
+DEFAULT_RECOMMENDATION_FACTOR = 2.0
+DEFAULT_WINDOW_PERTURBATION = 0.2
+DEFAULT_WINDOW_AGGREGATION_RATIO = 1.5
+DEFAULT_WINDOW_SEPARATION_RATIO = 2.5
 
 
 @dataclass(frozen=True)
@@ -69,6 +75,27 @@ class ScalingSelection:
     component_scales: Mapping[str, float]
     threshold: float | None = None
     eta: float | None = None
+    largest_jump: float | None = None
+    recommendation_factor: float = DEFAULT_RECOMMENDATION_FACTOR
+
+
+@dataclass(frozen=True)
+class AdaptiveWindowSelection:
+    """Adaptive window bandwidth and its dominant jump cluster."""
+
+    center: float
+    eta: float
+    largest_jump: float
+    transition_scales: tuple[float, ...]
+
+
+@dataclass(frozen=True)
+class _DominantCluster:
+    first: int
+    last: int
+    strength: float
+    center: float
+    num_tied: int
 
 
 @dataclass(frozen=True)
@@ -345,6 +372,213 @@ def window(path: DimensionPath, eta: float) -> float:
     return sqrt(left * right)
 
 
+def _dominant_cluster(
+    log_transitions: np.ndarray,
+    jumps: np.ndarray,
+    log_half_width: float,
+) -> _DominantCluster:
+    """Return the last strongest transition cluster fitting in a log window."""
+
+    cumulative_jumps = np.concatenate(([0.0], np.cumsum(jumps)))
+    best_strength = float("-inf")
+    tied_clusters: list[tuple[int, int, float]] = []
+    last = -1
+    width = 2.0 * log_half_width
+
+    for first in range(len(log_transitions)):
+        last = max(last, first)
+        while (
+            last + 1 < len(log_transitions)
+            and log_transitions[last + 1] - log_transitions[first]
+            <= width + 1e-14
+        ):
+            last += 1
+
+        strength = float(cumulative_jumps[last + 1] - cumulative_jumps[first])
+        center = float((log_transitions[first] + log_transitions[last]) / 2.0)
+        if strength > best_strength and not np.isclose(
+            strength,
+            best_strength,
+            rtol=1e-12,
+            atol=1e-12,
+        ):
+            best_strength = strength
+            tied_clusters = [(first, last, center)]
+        elif np.isclose(strength, best_strength, rtol=1e-12, atol=1e-12):
+            tied_clusters.append((first, last, center))
+
+    # This matches window(): retain the final maximizing component on the
+    # scale axis when several windows have the same strength.
+    first, last, center = max(tied_clusters, key=lambda item: item[2])
+    return _DominantCluster(
+        first=first,
+        last=last,
+        strength=best_strength,
+        center=center,
+        num_tied=len(tied_clusters),
+    )
+
+
+def _cluster_is_separated(
+    cluster: _DominantCluster,
+    log_transitions: np.ndarray,
+    separation_ratio: float,
+) -> bool:
+    """Return whether a multi-jump cluster is isolated from its neighbors."""
+
+    internal_gaps = np.diff(
+        log_transitions[cluster.first : cluster.last + 1]
+    )
+    if len(internal_gaps) == 0:
+        return False
+
+    external_gaps = []
+    if cluster.first > 0:
+        external_gaps.append(
+            log_transitions[cluster.first]
+            - log_transitions[cluster.first - 1]
+        )
+    if cluster.last + 1 < len(log_transitions):
+        external_gaps.append(
+            log_transitions[cluster.last + 1]
+            - log_transitions[cluster.last]
+        )
+    if not external_gaps:
+        return False
+
+    return min(external_gaps) >= separation_ratio * float(np.max(internal_gaps))
+
+
+def adaptive_window(
+    path: DimensionPath,
+    minimum_eta: float | None = None,
+    *,
+    perturbation: float = DEFAULT_WINDOW_PERTURBATION,
+    aggregation_ratio: float = DEFAULT_WINDOW_AGGREGATION_RATIO,
+    separation_ratio: float = DEFAULT_WINDOW_SEPARATION_RATIO,
+) -> AdaptiveWindowSelection:
+    """Choose the smallest stable bandwidth around a dominant jump cluster.
+
+    The search is performed on the exact transition scales in ``log(C)``.
+    It tests only bandwidths at which a new consecutive transition cluster
+    can fit inside a window.  An aggregate is accepted when it remains the
+    unique dominant cluster under a relative ``perturbation`` of the log
+    half-width, contains meaningful mass beyond its largest member, and is
+    separated from the nearest transition outside the cluster.
+
+    If no multi-jump cluster meets those conditions, the method conservatively
+    returns the dominant window at the minimum bandwidth.  With the default
+    numerical minimum, this is normally the last largest individual jump.
+    """
+
+    if len(path.dimensions) < 2:
+        raise ValueError("Window is undefined because the path has no transition.")
+
+    perturbation = _positive_float(perturbation, "perturbation")
+    if perturbation >= 1.0:
+        raise ValueError("perturbation must be less than one.")
+    aggregation_ratio = _positive_float(
+        aggregation_ratio,
+        "aggregation_ratio",
+    )
+    separation_ratio = _positive_float(separation_ratio, "separation_ratio")
+
+    if minimum_eta is None:
+        # The exact path has no sampling-grid resolution.  This is the
+        # smallest practical multiplicative window distinguishable from one.
+        minimum_eta = 8.0 * np.finfo(float).eps
+    else:
+        minimum_eta = _positive_float(minimum_eta, "minimum_eta")
+    minimum_log_width = log1p(minimum_eta)
+
+    transition_scales = np.asarray(path.transition_scales, dtype=float)
+    log_transitions = np.log(transition_scales)
+    jumps = np.asarray(path.dimensions[:-1], dtype=float) - np.asarray(
+        path.dimensions[1:],
+        dtype=float,
+    )
+    if np.any(jumps <= 0.0):
+        raise ValueError(
+            "Window requires every dimension-path transition to be downward."
+        )
+
+    critical_widths = {0.0}
+    for first in range(len(log_transitions) - 1):
+        for last in range(first + 1, len(log_transitions)):
+            critical_widths.add(
+                float((log_transitions[last] - log_transitions[first]) / 2.0)
+            )
+
+    # At a cluster's entry event, move far enough into its plateau that a
+    # negative perturbation remains beyond the event.  Testing all pairwise
+    # events also detects plateaus whose start is caused by a competing cluster.
+    candidate_widths = sorted(
+        {
+            max(width, minimum_log_width)
+            / (1.0 - perturbation)
+            * (1.0 + 1e-12)
+            for width in critical_widths
+        }
+    )
+
+    for log_half_width in candidate_widths:
+        probes = (
+            (1.0 - perturbation) * log_half_width,
+            log_half_width,
+            (1.0 + perturbation) * log_half_width,
+        )
+        clusters = [
+            _dominant_cluster(log_transitions, jumps, probe)
+            for probe in probes
+        ]
+        cluster = clusters[1]
+        signature = (cluster.first, cluster.last)
+        if any(
+            (candidate.first, candidate.last) != signature
+            or candidate.num_tied != 1
+            for candidate in clusters
+        ):
+            continue
+        if cluster.last == cluster.first:
+            continue
+
+        member_jumps = jumps[cluster.first : cluster.last + 1]
+        if cluster.strength < aggregation_ratio * float(np.max(member_jumps)):
+            continue
+        if not _cluster_is_separated(
+            cluster,
+            log_transitions,
+            separation_ratio,
+        ):
+            continue
+
+        eta = expm1(log_half_width)
+        return AdaptiveWindowSelection(
+            center=float(np.exp(cluster.center)),
+            eta=float(eta),
+            largest_jump=float(cluster.strength),
+            transition_scales=tuple(
+                float(value)
+                for value in transition_scales[cluster.first : cluster.last + 1]
+            ),
+        )
+
+    fallback = _dominant_cluster(
+        log_transitions,
+        jumps,
+        minimum_log_width,
+    )
+    return AdaptiveWindowSelection(
+        center=float(np.exp(fallback.center)),
+        eta=float(minimum_eta),
+        largest_jump=float(fallback.strength),
+        transition_scales=tuple(
+            float(value)
+            for value in transition_scales[fallback.first : fallback.last + 1]
+        ),
+    )
+
+
 def median_jump(
     path: DimensionPath,
     *,
@@ -410,6 +644,7 @@ def select_minimal_scale(
     num_samples=None,
     threshold_value: float | None = None,
     eta: float | None = None,
+    recommendation_factor: float = DEFAULT_RECOMMENDATION_FACTOR,
 ) -> ScalingSelection:
     """Estimate a minimal-penalty scale and report the recommended scale.
 
@@ -423,24 +658,31 @@ def select_minimal_scale(
         ``"median_jump"``.  Hyphens may be used in place of underscores.
     num_samples
         Number of observations.  It is used only to obtain the default
-        ``eta = sqrt(log(num_samples) / num_samples)`` for ``window`` and
-        ``median_jump``.
+        ``eta = sqrt(log(num_samples) / num_samples)`` for ``median_jump``.
     threshold_value
         Dimension threshold.  The default is half the largest candidate
         dimension having a finite objective.
     eta
-        Positive window width.  If omitted, it is computed from
-        ``num_samples``.
+        For ``window``, an optional positive lower bound for the adaptively
+        selected window width.  For ``median_jump``, a fixed positive window
+        width; if omitted, it is computed from ``num_samples``.
+    recommendation_factor
+        Positive multiplier applied to the estimated minimal scale. The
+        default is 2, as prescribed by the slope heuristic.
 
     Returns
     -------
     ScalingSelection
         ``minimal_scale`` is the estimated minimal-penalty constant.
-        ``recommended_scale`` is twice that value, and ``selected_dimension``
-        is the dimension selected at the recommended scale.
+        ``recommended_scale`` is ``recommendation_factor * minimal_scale``,
+        and ``selected_dimension`` is the dimension selected at that scale.
     """
 
     normalized_method = _normalize_method(method)
+    recommendation_factor = _positive_float(
+        recommendation_factor,
+        "recommendation_factor",
+    )
     path = build_dimension_path(
         d_m_values,
         objective_values,
@@ -455,7 +697,7 @@ def select_minimal_scale(
             if threshold_value is None
             else _finite_nonnegative_float(threshold_value, "threshold_value")
         )
-    if normalized_method in {"window", "median_jump"}:
+    if normalized_method == "median_jump":
         resolved_eta = _default_eta(num_samples) if eta is None else _positive_float(
             eta,
             "eta",
@@ -468,7 +710,10 @@ def select_minimal_scale(
         minimal_scale = threshold(path, resolved_threshold)
         component_scales = {"threshold": minimal_scale}
     elif normalized_method == "window":
-        minimal_scale = window(path, resolved_eta)
+        window_result = adaptive_window(path, minimum_eta=eta)
+        minimal_scale = window_result.center
+        resolved_eta = window_result.eta
+        largest_jump = window_result.largest_jump
         component_scales = {"window": minimal_scale}
     else:
         minimal_scale, component_scales = median_jump(
@@ -477,7 +722,7 @@ def select_minimal_scale(
             eta=resolved_eta,
         )
 
-    recommended_scale = 2.0 * minimal_scale
+    recommended_scale = recommendation_factor * minimal_scale
     if not np.isfinite(recommended_scale):
         raise ValueError("The recommended scale is not finite.")
 
@@ -489,4 +734,6 @@ def select_minimal_scale(
         component_scales=dict(component_scales),
         threshold=resolved_threshold,
         eta=resolved_eta,
+        largest_jump=(largest_jump if normalized_method == "window" else None),
+        recommendation_factor=recommendation_factor,
     )

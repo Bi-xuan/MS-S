@@ -9,7 +9,7 @@ import numpy as np
 from admm import admm_solve
 from objective import frobenius_objective
 from supports.common import off_diagonal_edges, support_mask_from_edges
-from supports.exact import get_all_supports
+from supports.exact import get_all_supports, get_upper_triangular_supports
 from supports.preselected import (
     count_preselected_supports,
     get_preselected_supports,
@@ -17,6 +17,7 @@ from supports.preselected import (
 )
 
 PRESELECT_DIRECTION_POLICIES = ("directed", "both_per_pair")
+SUPPORT_SCOPES = ("all", "upper")
 
 
 def support_edges_from_mask(mask):
@@ -204,6 +205,11 @@ def validate_preselect_direction_policy(direction_policy):
         )
 
 
+def validate_support_scope(support_scope):
+    if support_scope not in SUPPORT_SCOPES:
+        raise ValueError(f"support_scope must be one of {SUPPORT_SCOPES}.")
+
+
 def select_preselected_edge_scores(
     edge_scores,
     preselect_k,
@@ -340,13 +346,16 @@ def optimize_lambda(
     preselect_edges=None,
     preselect_direction_policy="directed",
     return_metadata=False,
+    support_scope="all",
 ):
     """
     Optimize Lambda over a support iterator.
 
-    By default this uses exact exhaustive support enumeration. For larger
-    problems, pass either a support_iterator(n, n_edge) callable or an iterable
-    that yields support masks.
+    By default this uses exact exhaustive support enumeration over all directed
+    off-diagonal positions. Set support_scope="upper" to enumerate only strict
+    upper-triangular positions. For larger problems, pass either a
+    support_iterator(n, n_edge) callable or an iterable that yields support
+    masks.
     """
     metadata = {
         "preselect_k": preselect_k,
@@ -355,6 +364,7 @@ def optimize_lambda(
         "preselected_scores": None,
         "selected_support_mask": None,
         "selected_support_edges": None,
+        "support_scope": support_scope,
     }
 
     def result_tuple(Lambda, omega, obj):
@@ -367,6 +377,26 @@ def optimize_lambda(
     lambda_min_sigma = np.min(np.linalg.eigvalsh(Sigma))
     omega_upper = lambda_min_sigma - omega_upper_gap
     validate_preselect_direction_policy(preselect_direction_policy)
+    validate_support_scope(support_scope)
+
+    if support_scope == "upper" and (
+        support_iterator is not None
+        or preselect_k is not None
+        or preselect_edges is not None
+    ):
+        raise ValueError(
+            "support_scope='upper' applies only to exhaustive support search "
+            "and cannot be combined with support_iterator or preselection "
+            "arguments."
+        )
+
+    if support_scope == "upper":
+        max_upper_edges = n * (n - 1) // 2
+        if not (0 <= n_edge <= max_upper_edges):
+            raise ValueError(
+                "For support_scope='upper', D_m - 1 must be between 0 and "
+                f"{max_upper_edges}."
+            )
 
     if refine_after_fixed_omega and omega_ref is None:
         raise ValueError(
@@ -444,7 +474,10 @@ def optimize_lambda(
     best_omega = None
     best_mask = None
     if support_iterator is None:
-        support_iterator = get_all_supports
+        if support_scope == "upper":
+            support_iterator = get_upper_triangular_supports
+        else:
+            support_iterator = get_all_supports
 
     def iter_support_masks():
         if callable(support_iterator):
@@ -481,6 +514,8 @@ def optimize_lambda(
     support_count = None
     if support_iterator is get_all_supports:
         support_count = comb(n * (n - 1), n_edge)
+    elif support_iterator is get_upper_triangular_supports:
+        support_count = comb(n * (n - 1) // 2, n_edge)
     elif metadata["preselected_edges"] is not None:
         support_count = count_preselected_supports(
             n_edge,

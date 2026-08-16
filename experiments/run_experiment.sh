@@ -17,6 +17,7 @@ REFINE_AFTER_FIXED_OMEGA="${REFINE_AFTER_FIXED_OMEGA:-false}"
 OMEGA_REF="${OMEGA_REF:-1.0}"
 CURVE="${CURVE:-both}"
 RETURN_METADATA="${RETURN_METADATA:-false}"
+SUPPORT_SCOPE="${SUPPORT_SCOPE:-all}"
 PRESELECT_K="${PRESELECT_K:-}"
 PRESELECT_DIRECTION_POLICY="${PRESELECT_DIRECTION_POLICY:-both_per_pair}"
 GIVEN_OUTPUT="${GIVEN_OUTPUT:-experiments/output/objective_curve_given_sigma.npz}"
@@ -32,6 +33,7 @@ ARGS=(
     --omega-ref "${OMEGA_REF}"
     --curve "${CURVE}"
     --return-metadata "${RETURN_METADATA}"
+    --support-scope "${SUPPORT_SCOPE}"
     --num-samples "${NUM_SAMPLES}"
     --lambda-star-dims "${N}"
 )
@@ -49,4 +51,5 @@ python experiments/compute_objective_curve.py "${ARGS[@]}"
 #     --max-restarts "${MAX_RESTARTS}" \
 #     --refine-after-fixed-omega "${REFINE_AFTER_FIXED_OMEGA}" \
 #     --omega-ref "${OMEGA_REF}" \
+#     --support-scope "${SUPPORT_SCOPE}" \
 #     --lambda-star-dims "${N}"

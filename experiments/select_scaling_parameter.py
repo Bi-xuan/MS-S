@@ -13,7 +13,10 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from analyze_penalty import build_penalty_constants, scalar_value
 from penalty import pen_n
-from scaling_selection import select_minimal_scale
+from scaling_selection import (
+    DEFAULT_RECOMMENDATION_FACTOR,
+    select_minimal_scale,
+)
 
 
 METHOD_CHOICES = (
@@ -22,6 +25,30 @@ METHOD_CHOICES = (
     "window",
     "median-jump",
 )
+
+DEFAULT_OBJECTIVE_FLOOR = 1e-8
+
+
+def floor_objective_values(objective_values, objective_floor):
+    """Tie finite raw objectives at or below the numerical floor at zero."""
+
+    try:
+        objective_floor = float(objective_floor)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "objective_floor must be a finite, nonnegative number."
+        ) from exc
+    if not np.isfinite(objective_floor) or objective_floor < 0.0:
+        raise ValueError(
+            "objective_floor must be a finite, nonnegative number."
+        )
+
+    floored_values = np.asarray(objective_values, dtype=float).copy()
+    floored_mask = np.isfinite(floored_values) & (
+        floored_values <= objective_floor
+    )
+    floored_values[floored_mask] = 0.0
+    return floored_values, floored_mask
 
 
 def compute_penalty_values(d_m_values, constants):
@@ -45,14 +72,26 @@ def load_selection_inputs(input_path, args):
             )
 
         d_m_values = data["d_m_values"].copy()
-        objective_values = data["objective_values"].copy()
+        raw_objective_values = data["objective_values"].copy()
         constants = build_penalty_constants(data, args)
         curve_type = scalar_value(data, "curve_type", "objective curve")
 
+    objective_floor = getattr(
+        args,
+        "objective_floor",
+        DEFAULT_OBJECTIVE_FLOOR,
+    )
+    objective_values, floored_mask = floor_objective_values(
+        raw_objective_values,
+        objective_floor,
+    )
     penalty_values = compute_penalty_values(d_m_values, constants)
     return {
         "d_m_values": d_m_values,
+        "raw_objective_values": raw_objective_values,
         "objective_values": objective_values,
+        "objective_floor": float(objective_floor),
+        "num_floored_objectives": int(np.count_nonzero(floored_mask)),
         "penalty_values": penalty_values,
         "constants": constants,
         "curve_type": curve_type,
@@ -67,10 +106,18 @@ def report_selection(input_path, selection_data, result):
     print(f"Curve type: {selection_data['curve_type']}")
     print(f"Matrix dimension: {constants.n}")
     print(f"Number of samples: {constants.num_samples}")
+    print(f"Raw-objective floor: {selection_data['objective_floor']:.12g}")
+    print(
+        "Raw objectives tied at zero: "
+        f"{selection_data['num_floored_objectives']}"
+    )
     print(f"Method: {result.method}")
     if result.threshold is not None:
         print(f"Threshold: {result.threshold:.12g}")
-    if result.eta is not None:
+    if result.method == "window":
+        print(f"Largest jump: {result.largest_jump:.12g}")
+        print(f"Chosen window size (eta): {result.eta:.12g}")
+    elif result.eta is not None:
         print(f"Eta: {result.eta:.12g}")
 
     if len(result.component_scales) > 1:
@@ -81,6 +128,7 @@ def report_selection(input_path, selection_data, result):
                 print(f"  {method}: {value:.12g}")
 
     print(f"Minimal scale: {result.minimal_scale:.12g}")
+    print(f"Recommendation factor: {result.recommendation_factor:.12g}")
     print(f"Recommended scale: {result.recommended_scale:.12g}")
     print(
         "Selected dimension at recommended scale: "
@@ -102,6 +150,11 @@ def run(args):
         num_samples=constants.num_samples,
         threshold_value=args.threshold_value,
         eta=args.eta,
+        recommendation_factor=getattr(
+            args,
+            "recommendation_factor",
+            DEFAULT_RECOMMENDATION_FACTOR,
+        ),
     )
     report_selection(input_path, selection_data, result)
     return result
@@ -137,8 +190,30 @@ def parse_args():
         "--eta",
         type=float,
         help=(
-            "Window width for window or median-jump. By default, use "
+            "Minimum adaptive window width for window, or fixed width for "
+            "median-jump. The median-jump default is "
             "sqrt(log(num_samples) / num_samples)."
+        ),
+    )
+    parser.add_argument(
+        "--recommendation-factor",
+        type=float,
+        default=DEFAULT_RECOMMENDATION_FACTOR,
+        help=(
+            "Positive multiplier applied to the estimated minimal scale to "
+            "obtain the recommended scale. "
+            f"Default: {DEFAULT_RECOMMENDATION_FACTOR:g}."
+        ),
+    )
+    parser.add_argument(
+        "--objective-floor",
+        type=float,
+        default=DEFAULT_OBJECTIVE_FLOOR,
+        help=(
+            "Finite raw objective values at or below this numerical floor "
+            "are tied at zero before constructing the penalized dimension "
+            f"path. Default: {DEFAULT_OBJECTIVE_FLOOR:g}. Use 0 to floor "
+            "only exact zeros."
         ),
     )
     parser.add_argument(

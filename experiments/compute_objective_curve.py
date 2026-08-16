@@ -93,10 +93,21 @@ def compute_objective_curve(
     return_metadata=False,
     initial_curve_result=None,
     save_callback=None,
+    support_scope="all",
 ):
     n = Sigma.shape[0]
+    if support_scope not in ("all", "upper"):
+        raise ValueError("support_scope must be one of ('all', 'upper').")
+    if support_scope == "upper" and preselect_edges is not None:
+        raise ValueError(
+            "support_scope='upper' cannot be combined with preselect_edges."
+        )
+
     if preselect_edges is None:
-        max_dm = n * (n - 1) + 1
+        if support_scope == "upper":
+            max_dm = n * (n - 1) // 2 + 1
+        else:
+            max_dm = n * (n - 1) + 1
     else:
         max_dm = len(preselect_edges) + 1
 
@@ -172,6 +183,7 @@ def compute_objective_curve(
             preselect_edges=preselect_edges,
             preselect_direction_policy=preselect_direction_policy,
             return_metadata=True,
+            support_scope=support_scope,
         )
         Lambda, omega, obj, metadata = solve_result
 
@@ -298,6 +310,7 @@ def save_curve_result(
     preselected_edges,
     preselected_scores,
     curve_result,
+    support_scope="all",
 ):
     if len(curve_result) == 4:
         (
@@ -331,6 +344,7 @@ def save_curve_result(
         fallback_seed=fallback_seed,
         num_samples=num_samples,
         stop_obj_threshold=stop_obj_threshold,
+        support_scope=support_scope,
         preselect_k=-1 if preselect_k is None else preselect_k,
         preselect_direction_policy=preselect_direction_policy,
         preselected_edges=np.array(
@@ -378,6 +392,8 @@ def load_existing_curve_result(
                     actual_value = -1
                 elif key == "preselect_direction_policy":
                     actual_value = "directed"
+                elif key == "support_scope" and expected_value == "all":
+                    actual_value = "all"
                 else:
                     raise ValueError(
                         f"Refusing to resume from {output_path}: missing "
@@ -519,6 +535,15 @@ def parse_args():
         help="Dimensions of Lambda_star to compute.",
     )
     parser.add_argument(
+        "--support-scope",
+        choices=["all", "upper"],
+        default="all",
+        help=(
+            "Candidate positions for exhaustive support search. 'upper' uses "
+            "only entries strictly above the diagonal."
+        ),
+    )
+    parser.add_argument(
         "--preselect-k",
         type=int,
         default=None,
@@ -596,6 +621,12 @@ def preselect_edges_for_sigma(
 
 
 def run_experiment(args, n, add_output_suffix):
+    if args.support_scope == "upper" and args.preselect_k is not None:
+        raise ValueError(
+            "--support-scope upper cannot be combined with --preselect-k; "
+            "preselection continues to screen all directed positions."
+        )
+
     given_solve_seed = args.random_seed
     given_fallback_seed = args.random_seed + 1
     sigma_hat_sample_seed = args.random_seed + 2
@@ -638,6 +669,7 @@ def run_experiment(args, n, add_output_suffix):
             "--refine-after-fixed-omega false for free-omega support search."
         )
     print(f"omega_ref for support selection: {omega_ref}")
+    print(f"support_scope: {args.support_scope}")
 
     print("Given Sigma:")
     print(Sigma_given)
@@ -656,6 +688,7 @@ def run_experiment(args, n, add_output_suffix):
                 "fallback_seed": given_fallback_seed,
                 "num_samples": -1,
                 "stop_obj_threshold": args.stop_obj_threshold,
+                "support_scope": args.support_scope,
                 "preselect_k": -1 if args.preselect_k is None else args.preselect_k,
                 **(
                     {
@@ -699,6 +732,7 @@ def run_experiment(args, n, add_output_suffix):
                 given_preselected_edges,
                 given_preselected_scores,
                 curve_result,
+                support_scope=args.support_scope,
             )
 
         given_curve = compute_objective_curve(
@@ -719,6 +753,7 @@ def run_experiment(args, n, add_output_suffix):
             return_metadata=args.return_metadata,
             initial_curve_result=given_existing_curve,
             save_callback=save_given_curve,
+            support_scope=args.support_scope,
         )
         save_given_curve(given_curve)
         print(f"Saved given-Sigma curve data to {given_output}")
@@ -748,6 +783,7 @@ def run_experiment(args, n, add_output_suffix):
             "fallback_seed": sigma_hat_fallback_seed,
             "num_samples": args.num_samples,
             "stop_obj_threshold": args.stop_obj_threshold,
+            "support_scope": args.support_scope,
             "preselect_k": -1 if args.preselect_k is None else args.preselect_k,
             **(
                 {"preselect_direction_policy": args.preselect_direction_policy}
@@ -787,6 +823,7 @@ def run_experiment(args, n, add_output_suffix):
             sigma_hat_preselected_edges,
             sigma_hat_preselected_scores,
             curve_result,
+            support_scope=args.support_scope,
         )
 
     sigma_hat_curve = compute_objective_curve(
@@ -807,6 +844,7 @@ def run_experiment(args, n, add_output_suffix):
         return_metadata=args.return_metadata,
         initial_curve_result=sigma_hat_existing_curve,
         save_callback=save_sigma_hat_curve,
+        support_scope=args.support_scope,
     )
     save_sigma_hat_curve(sigma_hat_curve)
     print(f"Saved Sigma_hat curve data to {sigma_hat_output}")

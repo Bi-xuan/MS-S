@@ -42,6 +42,7 @@ METADATA_KEYS = (
     "solve_seed",
     "fallback_seed",
     "stop_obj_threshold",
+    "support_scope",
     "preselect_k",
     "preselect_direction_policy",
 )

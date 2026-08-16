@@ -117,6 +117,15 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        "--support-scope",
+        choices=["all", "upper"],
+        default="all",
+        help=(
+            "Candidate positions for exhaustive support search. 'upper' uses "
+            "only entries strictly above the diagonal."
+        ),
+    )
+    parser.add_argument(
         "--preselect-k",
         type=int,
         default=None,
@@ -139,6 +148,13 @@ def parse_args():
 
 def main():
     args = parse_args()
+
+    if args.support_scope == "upper" and args.preselect_k is not None:
+        raise SystemExit(
+            "Error: --support-scope upper cannot be combined with "
+            "--preselect-k; preselection continues to screen all directed "
+            "positions."
+        )
 
     n = args.lambda_star_dims[0]
     D_m = n
@@ -177,6 +193,7 @@ def main():
         preselect_k=args.preselect_k,
         preselect_direction_policy=args.preselect_direction_policy,
         return_metadata=True,
+        support_scope=args.support_scope,
     )
     if omega_ref is None:
         print("\nTest 7: free-omega support selection")
@@ -191,6 +208,7 @@ def main():
     print(f"Spectral radius of Lambda_star: {lambda_star_radius:.6f}")
     print(f"omega_star: {omega_star:.6f}")
     print(f"omega_ref for support selection: {omega_ref}")
+    print(f"support_scope: {args.support_scope}")
     if args.preselect_k is not None:
         print(f"preselect_k: {args.preselect_k}")
         print(f"preselect_direction_policy: {args.preselect_direction_policy}")
