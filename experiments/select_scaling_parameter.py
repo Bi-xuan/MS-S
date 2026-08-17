@@ -115,8 +115,43 @@ def report_selection(input_path, selection_data, result):
     if result.threshold is not None:
         print(f"Threshold: {result.threshold:.12g}")
     if result.method == "window":
-        print(f"Largest jump: {result.largest_jump:.12g}")
-        print(f"Chosen window size (eta): {result.eta:.12g}")
+        jump_selection = result.jump_selection
+        if jump_selection.succeeded:
+            print("Jump selection: succeeded")
+            print(f"Largest jump: {result.largest_jump:.12g}")
+            print(f"Chosen window size (eta): {result.eta:.12g}")
+        else:
+            print("Jump selection: failed")
+            print(f"Jump failure reason: {jump_selection.failure_reason}")
+            print("Largest jump: unavailable (jump selection failed)")
+            print(
+                "Chosen window size (eta): unavailable "
+                "(jump selection failed)"
+            )
+            print("Rejected jump candidates:")
+            for criterion, count in jump_selection.rejection_counts.items():
+                print(f"  {criterion}: {count}")
+
+            plateau = result.plateau_selection
+            print("Plateau comparison: succeeded")
+            print(f"Chosen plateau dimension: {plateau.dimension}")
+            print(
+                "Chosen plateau interval: "
+                f"[{plateau.left:.12g}, {plateau.right:.12g})"
+            )
+            print(f"Chosen plateau log-width: {plateau.log_width:.12g}")
+            print(
+                "Chosen plateau persistence score: "
+                f"{plateau.persistence_score:.12g}"
+            )
+            if plateau.runner_up_score is not None:
+                print(
+                    "Runner-up plateau persistence score: "
+                    f"{plateau.runner_up_score:.12g}"
+                )
+                print(f"Plateau score margin: {plateau.score_margin:.12g}")
+            print(f"Chosen plateau center: {plateau.center:.12g}")
+        print(f"Selection source: {result.selection_source}")
     elif result.eta is not None:
         print(f"Eta: {result.eta:.12g}")
 
@@ -134,6 +169,11 @@ def report_selection(input_path, selection_data, result):
         "Selected dimension at recommended scale: "
         f"{result.selected_dimension}"
     )
+    if result.recommendation_within_plateau is not None:
+        print(
+            "Recommended scale within chosen plateau: "
+            f"{result.recommendation_within_plateau}"
+        )
 
 
 def run(args):

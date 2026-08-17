@@ -77,16 +77,51 @@ class ScalingSelection:
     eta: float | None = None
     largest_jump: float | None = None
     recommendation_factor: float = DEFAULT_RECOMMENDATION_FACTOR
+    selection_source: str | None = None
+    jump_selection: AdaptiveWindowSelection | None = None
+    plateau_selection: PlateauSelection | None = None
+    recommendation_within_plateau: bool | None = None
 
 
 @dataclass(frozen=True)
 class AdaptiveWindowSelection:
     """Adaptive window bandwidth and its dominant jump cluster."""
 
-    center: float
-    eta: float
-    largest_jump: float
+    succeeded: bool
+    center: float | None
+    eta: float | None
+    largest_jump: float | None
     transition_scales: tuple[float, ...]
+    failure_reason: str | None
+    rejection_counts: Mapping[str, int]
+
+
+@dataclass(frozen=True)
+class PlateauCandidate:
+    """One bounded dimension plateau and its local persistence score."""
+
+    dimension: int | float
+    left: float
+    right: float
+    center: float
+    log_width: float
+    persistence_score: float
+
+
+@dataclass(frozen=True)
+class PlateauSelection:
+    """Result of comparing locally persistent bounded plateaus."""
+
+    succeeded: bool
+    dimension: int | float | None
+    left: float | None
+    right: float | None
+    center: float | None
+    log_width: float | None
+    persistence_score: float | None
+    runner_up_score: float | None
+    score_margin: float | None
+    failure_reason: str | None
 
 
 @dataclass(frozen=True)
@@ -466,9 +501,9 @@ def adaptive_window(
     half-width, contains meaningful mass beyond its largest member, and is
     separated from the nearest transition outside the cluster.
 
-    If no multi-jump cluster meets those conditions, the method conservatively
-    returns the dominant window at the minimum bandwidth.  With the default
-    numerical minimum, this is normally the last largest individual jump.
+    If no multi-jump cluster meets those conditions, the returned result has
+    ``succeeded=False`` and records why candidates were rejected.  It does not
+    silently substitute a machine-precision singleton window.
     """
 
     if len(path.dimensions) < 2:
@@ -521,6 +556,13 @@ def adaptive_window(
         }
     )
 
+    rejection_counts = {
+        "singleton": 0,
+        "unstable_or_tied": 0,
+        "insufficient_aggregation": 0,
+        "insufficient_separation": 0,
+    }
+
     for log_half_width in candidate_widths:
         probes = (
             (1.0 - perturbation) * log_half_width,
@@ -533,27 +575,32 @@ def adaptive_window(
         ]
         cluster = clusters[1]
         signature = (cluster.first, cluster.last)
+        if cluster.last == cluster.first:
+            rejection_counts["singleton"] += 1
+            continue
         if any(
             (candidate.first, candidate.last) != signature
             or candidate.num_tied != 1
             for candidate in clusters
         ):
-            continue
-        if cluster.last == cluster.first:
+            rejection_counts["unstable_or_tied"] += 1
             continue
 
         member_jumps = jumps[cluster.first : cluster.last + 1]
         if cluster.strength < aggregation_ratio * float(np.max(member_jumps)):
+            rejection_counts["insufficient_aggregation"] += 1
             continue
         if not _cluster_is_separated(
             cluster,
             log_transitions,
             separation_ratio,
         ):
+            rejection_counts["insufficient_separation"] += 1
             continue
 
         eta = expm1(log_half_width)
         return AdaptiveWindowSelection(
+            succeeded=True,
             center=float(np.exp(cluster.center)),
             eta=float(eta),
             largest_jump=float(cluster.strength),
@@ -561,21 +608,150 @@ def adaptive_window(
                 float(value)
                 for value in transition_scales[cluster.first : cluster.last + 1]
             ),
+            failure_reason=None,
+            rejection_counts=dict(rejection_counts),
         )
 
-    fallback = _dominant_cluster(
-        log_transitions,
-        jumps,
-        minimum_log_width,
-    )
     return AdaptiveWindowSelection(
-        center=float(np.exp(fallback.center)),
-        eta=float(minimum_eta),
-        largest_jump=float(fallback.strength),
-        transition_scales=tuple(
-            float(value)
-            for value in transition_scales[fallback.first : fallback.last + 1]
+        succeeded=False,
+        center=None,
+        eta=None,
+        largest_jump=None,
+        transition_scales=(),
+        failure_reason=(
+            "No stable multi-transition cluster satisfied all jump criteria."
         ),
+        rejection_counts=dict(rejection_counts),
+    )
+
+
+def select_persistent_plateau(path: DimensionPath) -> PlateauSelection:
+    """Select the bounded plateau widest relative to its two neighbors.
+
+    Plateau widths are measured in ``log(C)``.  For a bounded plateau with
+    width ``g`` and neighboring widths ``g_left`` and ``g_right``, the local
+    persistence score is ``g / sqrt(g_left * g_right)``.  Initial and final
+    plateaus, and bounded plateaus without two bounded neighbors, are excluded.
+    """
+
+    bounded_plateaus: list[tuple[int, float, float, float]] = []
+    for path_index in range(1, len(path.dimensions) - 1):
+        left = float(path.breakpoints[path_index])
+        right = float(path.breakpoints[path_index + 1])
+        log_width = log(right) - log(left)
+        bounded_plateaus.append((path_index, left, right, log_width))
+
+    if len(bounded_plateaus) < 3:
+        return PlateauSelection(
+            succeeded=False,
+            dimension=None,
+            left=None,
+            right=None,
+            center=None,
+            log_width=None,
+            persistence_score=None,
+            runner_up_score=None,
+            score_margin=None,
+            failure_reason=(
+                "At least three bounded plateaus are required for local "
+                "plateau comparison."
+            ),
+        )
+
+    candidates: list[PlateauCandidate] = []
+    for bounded_index in range(1, len(bounded_plateaus) - 1):
+        _, _, _, previous_width = bounded_plateaus[bounded_index - 1]
+        path_index, left, right, log_width = bounded_plateaus[bounded_index]
+        _, _, _, following_width = bounded_plateaus[bounded_index + 1]
+        persistence_score = log_width / sqrt(
+            previous_width * following_width
+        )
+        candidates.append(
+            PlateauCandidate(
+                dimension=path.dimensions[path_index],
+                left=left,
+                right=right,
+                center=sqrt(left * right),
+                log_width=log_width,
+                persistence_score=float(persistence_score),
+            )
+        )
+
+    largest_score = max(candidate.persistence_score for candidate in candidates)
+    tied_candidates = [
+        candidate
+        for candidate in candidates
+        if np.isclose(
+            candidate.persistence_score,
+            largest_score,
+            rtol=1e-12,
+            atol=1e-12,
+        )
+    ]
+    if len(tied_candidates) > 1:
+        return PlateauSelection(
+            succeeded=False,
+            dimension=None,
+            left=None,
+            right=None,
+            center=None,
+            log_width=None,
+            persistence_score=float(largest_score),
+            runner_up_score=float(largest_score),
+            score_margin=0.0,
+            failure_reason=(
+                "Plateau comparison is ambiguous because multiple plateaus "
+                "have the same largest persistence score."
+            ),
+        )
+
+    winner = tied_candidates[0]
+    if winner.persistence_score <= 1.0 or np.isclose(
+        winner.persistence_score,
+        1.0,
+        rtol=1e-12,
+        atol=1e-12,
+    ):
+        return PlateauSelection(
+            succeeded=False,
+            dimension=None,
+            left=None,
+            right=None,
+            center=None,
+            log_width=None,
+            persistence_score=float(winner.persistence_score),
+            runner_up_score=None,
+            score_margin=None,
+            failure_reason=(
+                "No bounded plateau is wider than its two-plateau local "
+                "neighborhood."
+            ),
+        )
+
+    other_scores = [
+        candidate.persistence_score
+        for candidate in candidates
+        if candidate is not winner
+    ]
+    runner_up_score = max(other_scores) if other_scores else None
+    score_margin = (
+        winner.persistence_score - runner_up_score
+        if runner_up_score is not None
+        else None
+    )
+    return PlateauSelection(
+        succeeded=True,
+        dimension=winner.dimension,
+        left=winner.left,
+        right=winner.right,
+        center=winner.center,
+        log_width=winner.log_width,
+        persistence_score=winner.persistence_score,
+        runner_up_score=(
+            float(runner_up_score) if runner_up_score is not None else None
+        ),
+        score_margin=float(score_margin) if score_margin is not None else None,
+        failure_reason=None,
     )
 
 
@@ -676,6 +852,8 @@ def select_minimal_scale(
         ``minimal_scale`` is the estimated minimal-penalty constant.
         ``recommended_scale`` is ``recommendation_factor * minimal_scale``,
         and ``selected_dimension`` is the dimension selected at that scale.
+        For the window method, ``selection_source`` records whether the jump
+        criteria succeeded or the persistent-plateau fallback was used.
     """
 
     normalized_method = _normalize_method(method)
@@ -691,6 +869,11 @@ def select_minimal_scale(
 
     resolved_threshold = None
     resolved_eta = None
+    largest_jump = None
+    selection_source = None
+    jump_selection = None
+    plateau_selection = None
+    recommendation_within_plateau = None
     if normalized_method in {"threshold", "median_jump"}:
         resolved_threshold = (
             path.max_candidate_dimension / 2.0
@@ -706,25 +889,48 @@ def select_minimal_scale(
     if normalized_method == "maximal_jump":
         minimal_scale = maximal_jump(path)
         component_scales = {"maximal_jump": minimal_scale}
+        selection_source = "maximal_jump"
     elif normalized_method == "threshold":
         minimal_scale = threshold(path, resolved_threshold)
         component_scales = {"threshold": minimal_scale}
+        selection_source = "threshold"
     elif normalized_method == "window":
-        window_result = adaptive_window(path, minimum_eta=eta)
-        minimal_scale = window_result.center
-        resolved_eta = window_result.eta
-        largest_jump = window_result.largest_jump
-        component_scales = {"window": minimal_scale}
+        jump_selection = adaptive_window(path, minimum_eta=eta)
+        if jump_selection.succeeded:
+            selection_source = "jump"
+            minimal_scale = float(jump_selection.center)
+            resolved_eta = float(jump_selection.eta)
+            largest_jump = float(jump_selection.largest_jump)
+            component_scales = {"window": minimal_scale}
+        else:
+            plateau_selection = select_persistent_plateau(path)
+            if not plateau_selection.succeeded:
+                raise ValueError(
+                    "Window jump selection failed: "
+                    f"{jump_selection.failure_reason} Plateau comparison "
+                    f"also failed: {plateau_selection.failure_reason}"
+                )
+            selection_source = "plateau"
+            minimal_scale = float(plateau_selection.center)
+            component_scales = {"plateau": minimal_scale}
     else:
         minimal_scale, component_scales = median_jump(
             path,
             threshold_value=resolved_threshold,
             eta=resolved_eta,
         )
+        selection_source = "median_jump"
 
     recommended_scale = recommendation_factor * minimal_scale
     if not np.isfinite(recommended_scale):
         raise ValueError("The recommended scale is not finite.")
+
+    if selection_source == "plateau":
+        recommendation_within_plateau = bool(
+            plateau_selection.left
+            <= recommended_scale
+            < plateau_selection.right
+        )
 
     return ScalingSelection(
         method=normalized_method,
@@ -734,6 +940,10 @@ def select_minimal_scale(
         component_scales=dict(component_scales),
         threshold=resolved_threshold,
         eta=resolved_eta,
-        largest_jump=(largest_jump if normalized_method == "window" else None),
+        largest_jump=largest_jump,
         recommendation_factor=recommendation_factor,
+        selection_source=selection_source,
+        jump_selection=jump_selection,
+        plateau_selection=plateau_selection,
+        recommendation_within_plateau=recommendation_within_plateau,
     )

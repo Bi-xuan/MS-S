@@ -20,7 +20,7 @@ from scaling_selection import build_dimension_path
 
 DEFAULT_INPUT = (
     PROJECT_ROOT
-    / "experiments/output/U_NSM1e6_SD124_objective_curve_sigma_hat_from_given_sigma.npz"
+    / "experiments/output/objective_curve_sigma_hat_from_given_sigma.npz"
 )
 
 
