@@ -20,10 +20,8 @@ from scaling_selection import (
 
 
 METHOD_CHOICES = (
-    "maximal-jump",
-    "threshold",
     "window",
-    "median-jump",
+    "plateau",
 )
 
 DEFAULT_OBJECTIVE_FLOOR = 1e-8
@@ -98,6 +96,29 @@ def load_selection_inputs(input_path, args):
     }
 
 
+def _report_plateau_selection(plateau):
+    """Print the selected plateau and its comparison diagnostics."""
+
+    print("Plateau comparison: succeeded")
+    print(f"Chosen plateau dimension: {plateau.dimension}")
+    print(
+        "Chosen plateau interval: "
+        f"[{plateau.left:.12g}, {plateau.right:.12g})"
+    )
+    print(f"Chosen plateau log-width: {plateau.log_width:.12g}")
+    print(
+        "Chosen plateau persistence score: "
+        f"{plateau.persistence_score:.12g}"
+    )
+    if plateau.runner_up_score is not None:
+        print(
+            "Runner-up plateau persistence score: "
+            f"{plateau.runner_up_score:.12g}"
+        )
+        print(f"Plateau score margin: {plateau.score_margin:.12g}")
+    print(f"Chosen plateau center: {plateau.center:.12g}")
+
+
 def report_selection(input_path, selection_data, result):
     """Print the scale-selection inputs and result."""
 
@@ -112,8 +133,6 @@ def report_selection(input_path, selection_data, result):
         f"{selection_data['num_floored_objectives']}"
     )
     print(f"Method: {result.method}")
-    if result.threshold is not None:
-        print(f"Threshold: {result.threshold:.12g}")
     if result.method == "window":
         jump_selection = result.jump_selection
         if jump_selection.succeeded:
@@ -131,36 +150,11 @@ def report_selection(input_path, selection_data, result):
             print("Rejected jump candidates:")
             for criterion, count in jump_selection.rejection_counts.items():
                 print(f"  {criterion}: {count}")
-
-            plateau = result.plateau_selection
-            print("Plateau comparison: succeeded")
-            print(f"Chosen plateau dimension: {plateau.dimension}")
-            print(
-                "Chosen plateau interval: "
-                f"[{plateau.left:.12g}, {plateau.right:.12g})"
-            )
-            print(f"Chosen plateau log-width: {plateau.log_width:.12g}")
-            print(
-                "Chosen plateau persistence score: "
-                f"{plateau.persistence_score:.12g}"
-            )
-            if plateau.runner_up_score is not None:
-                print(
-                    "Runner-up plateau persistence score: "
-                    f"{plateau.runner_up_score:.12g}"
-                )
-                print(f"Plateau score margin: {plateau.score_margin:.12g}")
-            print(f"Chosen plateau center: {plateau.center:.12g}")
+            _report_plateau_selection(result.plateau_selection)
         print(f"Selection source: {result.selection_source}")
-    elif result.eta is not None:
-        print(f"Eta: {result.eta:.12g}")
-
-    if len(result.component_scales) > 1:
-        print("Component minimal-scale estimates:")
-        for method in ("maximal_jump", "threshold", "window"):
-            if method in result.component_scales:
-                value = result.component_scales[method]
-                print(f"  {method}: {value:.12g}")
+    else:
+        _report_plateau_selection(result.plateau_selection)
+        print(f"Selection source: {result.selection_source}")
 
     print(f"Minimal scale: {result.minimal_scale:.12g}")
     print(f"Recommendation factor: {result.recommendation_factor:.12g}")
@@ -181,14 +175,11 @@ def run(args):
 
     input_path = Path(args.input)
     selection_data = load_selection_inputs(input_path, args)
-    constants = selection_data["constants"]
     result = select_minimal_scale(
         selection_data["d_m_values"],
         selection_data["objective_values"],
         selection_data["penalty_values"],
         method=args.method,
-        num_samples=constants.num_samples,
-        threshold_value=args.threshold_value,
         eta=args.eta,
         recommendation_factor=getattr(
             args,
@@ -214,25 +205,14 @@ def parse_args():
     parser.add_argument(
         "--method",
         choices=METHOD_CHOICES,
-        default="median-jump",
-        help="Scale-selection procedure. Default: median-jump.",
-    )
-    parser.add_argument(
-        "--threshold",
-        dest="threshold_value",
-        type=float,
-        help=(
-            "Dimension threshold for threshold or median-jump. By default, "
-            "use half the largest candidate dimension with a finite objective."
-        ),
+        default="window",
+        help="Scale-selection procedure. Default: window.",
     )
     parser.add_argument(
         "--eta",
         type=float,
         help=(
-            "Minimum adaptive window width for window, or fixed width for "
-            "median-jump. The median-jump default is "
-            "sqrt(log(num_samples) / num_samples)."
+            "Optional minimum adaptive window width for the window method."
         ),
     )
     parser.add_argument(
@@ -262,8 +242,8 @@ def parse_args():
         dest="num_samples",
         type=int,
         help=(
-            "Sample count used by the penalty and default eta. Defaults to "
-            "the positive num_samples value stored in the NPZ."
+            "Sample count used by the penalty. Defaults to the positive "
+            "num_samples value stored in the NPZ."
         ),
     )
     parser.add_argument(

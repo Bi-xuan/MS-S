@@ -1,9 +1,8 @@
 """Data-driven selection of the multiplier in a model-selection penalty.
 
-The procedures implemented here follow the jump-based definitions in
-Appendix D.2 of Arlot (2019).  They estimate the minimal-penalty scale from
-the exact, piecewise-constant path of selected model dimensions.  The slope
-heuristic then recommends using twice that scale for final model selection.
+The window and plateau procedures estimate the minimal-penalty scale from
+the exact, piecewise-constant path of selected model dimensions. The slope
+heuristic then recommends a rescaled value for final model selection.
 """
 
 from __future__ import annotations
@@ -33,7 +32,6 @@ class DimensionPath:
 
     breakpoints: tuple[float, ...]
     dimensions: tuple[int | float, ...]
-    max_candidate_dimension: float
 
     def __post_init__(self) -> None:
         if not self.breakpoints or self.breakpoints[0] != 0.0:
@@ -72,8 +70,6 @@ class ScalingSelection:
     minimal_scale: float
     recommended_scale: float
     selected_dimension: int | float
-    component_scales: Mapping[str, float]
-    threshold: float | None = None
     eta: float | None = None
     largest_jump: float | None = None
     recommendation_factor: float = DEFAULT_RECOMMENDATION_FACTOR
@@ -243,8 +239,6 @@ def build_dimension_path(
     ) = _validate_inputs(d_m_values, objective_values, penalty_values)
 
     eligible_indices = np.flatnonzero(finite_objectives)
-    max_candidate_dimension = float(np.max(dimensions[eligible_indices]))
-
     # For identical penalty slopes, only the smallest-intercept line can be
     # selected.  If the criteria are identical, retain the smaller dimension,
     # matching the convention used by model_selection.select_dimension.
@@ -308,59 +302,20 @@ def build_dimension_path(
     return DimensionPath(
         breakpoints=tuple(breakpoints),
         dimensions=tuple(selected_dimensions),
-        max_candidate_dimension=max_candidate_dimension,
-    )
-
-
-def maximal_jump(path: DimensionPath) -> float:
-    """Return the last location of the largest downward dimension jump."""
-
-    if len(path.dimensions) < 2:
-        raise ValueError(
-            "Maximal jump is undefined because the path has no transition."
-        )
-
-    jumps = np.asarray(path.dimensions[:-1], dtype=float) - np.asarray(
-        path.dimensions[1:], dtype=float
-    )
-    largest_jump = float(np.max(jumps))
-    if largest_jump <= 0.0:
-        raise ValueError("Maximal jump requires at least one downward dimension jump.")
-
-    tied_indices = np.flatnonzero(
-        np.isclose(jumps, largest_jump, rtol=1e-12, atol=1e-12)
-    )
-    transition_index = int(tied_indices[-1])
-    return float(path.transition_scales[transition_index])
-
-
-def threshold(
-    path: DimensionPath,
-    threshold_value: float | None = None,
-) -> float:
-    """Return the first scale selecting a dimension at most the threshold.
-
-    By default, the threshold is half the largest candidate dimension having
-    a finite objective value.
-    """
-
-    if threshold_value is None:
-        threshold_value = path.max_candidate_dimension / 2.0
-    threshold_value = _finite_nonnegative_float(
-        threshold_value,
-        "threshold_value",
-    )
-
-    for breakpoint, dimension in zip(path.breakpoints, path.dimensions):
-        if float(dimension) <= threshold_value:
-            return float(breakpoint)
-    raise ValueError(
-        "The selected dimension never reaches the requested threshold."
     )
 
 
 def window(path: DimensionPath, eta: float) -> float:
-    """Return the geometric center of the last maximal window interval."""
+    """Return the geometric center of the last maximal fixed-width interval.
+
+    This is the standalone fixed-bandwidth window procedure: ``eta`` must
+    already be known, and the function returns only the selected center.
+    It is not called by :func:`adaptive_window`.  The adaptive procedure
+    searches for a suitable bandwidth and calls :func:`_dominant_cluster`
+    directly because its stability, aggregation, and separation tests also
+    need cluster membership, total strength, and tie information.  The two
+    procedures nevertheless use the same final-maximizer tie-breaking rule.
+    """
 
     eta = _positive_float(eta, "eta")
     if len(path.dimensions) < 2:
@@ -626,12 +581,14 @@ def adaptive_window(
 
 
 def select_persistent_plateau(path: DimensionPath) -> PlateauSelection:
-    """Select the bounded plateau widest relative to its two neighbors.
+    """Select the bounded plateau widest relative to its bounded neighbors.
 
-    Plateau widths are measured in ``log(C)``.  For a bounded plateau with
-    width ``g`` and neighboring widths ``g_left`` and ``g_right``, the local
-    persistence score is ``g / sqrt(g_left * g_right)``.  Initial and final
-    plateaus, and bounded plateaus without two bounded neighbors, are excluded.
+    Plateau widths are measured in ``log(C)``. For an interior bounded plateau
+    with width ``g`` and neighboring widths ``g_left`` and ``g_right``, the
+    local persistence score is ``g / sqrt(g_left * g_right)``. The first and
+    last bounded plateaus use the one-sided scores ``g / g_right`` and
+    ``g / g_left``, respectively. The initial plateau beginning at zero and
+    the final plateau extending to infinity remain excluded.
     """
 
     bounded_plateaus: list[tuple[int, float, float, float]] = []
@@ -641,7 +598,7 @@ def select_persistent_plateau(path: DimensionPath) -> PlateauSelection:
         log_width = log(right) - log(left)
         bounded_plateaus.append((path_index, left, right, log_width))
 
-    if len(bounded_plateaus) < 3:
+    if len(bounded_plateaus) < 2:
         return PlateauSelection(
             succeeded=False,
             dimension=None,
@@ -653,19 +610,27 @@ def select_persistent_plateau(path: DimensionPath) -> PlateauSelection:
             runner_up_score=None,
             score_margin=None,
             failure_reason=(
-                "At least three bounded plateaus are required for local "
+                "At least two bounded plateaus are required for local "
                 "plateau comparison."
             ),
         )
 
     candidates: list[PlateauCandidate] = []
-    for bounded_index in range(1, len(bounded_plateaus) - 1):
-        _, _, _, previous_width = bounded_plateaus[bounded_index - 1]
-        path_index, left, right, log_width = bounded_plateaus[bounded_index]
-        _, _, _, following_width = bounded_plateaus[bounded_index + 1]
-        persistence_score = log_width / sqrt(
-            previous_width * following_width
-        )
+    for bounded_index, bounded_plateau in enumerate(bounded_plateaus):
+        path_index, left, right, log_width = bounded_plateau
+        neighbor_widths = []
+        if bounded_index > 0:
+            neighbor_widths.append(bounded_plateaus[bounded_index - 1][3])
+        if bounded_index + 1 < len(bounded_plateaus):
+            neighbor_widths.append(bounded_plateaus[bounded_index + 1][3])
+
+        if len(neighbor_widths) == 1:
+            neighborhood_width = neighbor_widths[0]
+        else:
+            neighborhood_width = sqrt(
+                neighbor_widths[0] * neighbor_widths[1]
+            )
+        persistence_score = log_width / neighborhood_width
         candidates.append(
             PlateauCandidate(
                 dimension=path.dimensions[path_index],
@@ -723,8 +688,8 @@ def select_persistent_plateau(path: DimensionPath) -> PlateauSelection:
             runner_up_score=None,
             score_margin=None,
             failure_reason=(
-                "No bounded plateau is wider than its two-plateau local "
-                "neighborhood."
+                "No bounded plateau is wider than its available bounded "
+                "neighbors."
             ),
         )
 
@@ -755,60 +720,18 @@ def select_persistent_plateau(path: DimensionPath) -> PlateauSelection:
     )
 
 
-def median_jump(
-    path: DimensionPath,
-    *,
-    threshold_value: float | None = None,
-    eta: float,
-) -> tuple[float, dict[str, float]]:
-    """Return the median of maximal-jump, threshold, and window scales."""
-
-    component_scales = {
-        "maximal_jump": maximal_jump(path),
-        "threshold": threshold(path, threshold_value),
-        "window": window(path, eta),
-    }
-    value = float(np.median(list(component_scales.values())))
-    return value, component_scales
-
-
-def _default_eta(num_samples) -> float:
-    try:
-        numeric_samples = float(num_samples)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(
-            "A positive integer num_samples is required for the default eta."
-        ) from exc
-    if (
-        not np.isfinite(numeric_samples)
-        or numeric_samples <= 1.0
-        or not numeric_samples.is_integer()
-    ):
-        raise ValueError(
-            "A positive integer num_samples greater than one is required "
-            "for the default eta."
-        )
-    return sqrt(log(numeric_samples) / numeric_samples)
-
-
 def _normalize_method(method: str) -> str:
     if not isinstance(method, str):
         raise ValueError("method must be a string.")
     normalized = method.strip().lower().replace("-", "_")
     aliases = {
-        "maximal_jump": "maximal_jump",
-        "max_jump": "maximal_jump",
-        "threshold": "threshold",
         "window": "window",
-        "median_jump": "median_jump",
+        "plateau": "plateau",
     }
     try:
         return aliases[normalized]
     except KeyError as exc:
-        raise ValueError(
-            "method must be one of: maximal_jump, threshold, window, "
-            "or median_jump."
-        ) from exc
+        raise ValueError("method must be one of: window or plateau.") from exc
 
 
 def select_minimal_scale(
@@ -816,9 +739,7 @@ def select_minimal_scale(
     objective_values,
     penalty_values,
     *,
-    method: str = "median_jump",
-    num_samples=None,
-    threshold_value: float | None = None,
+    method: str = "window",
     eta: float | None = None,
     recommendation_factor: float = DEFAULT_RECOMMENDATION_FACTOR,
 ) -> ScalingSelection:
@@ -830,18 +751,10 @@ def select_minimal_scale(
         Candidate dimensions and the intercepts and slopes of their penalized
         criteria.
     method
-        One of ``"maximal_jump"``, ``"threshold"``, ``"window"``, or
-        ``"median_jump"``.  Hyphens may be used in place of underscores.
-    num_samples
-        Number of observations.  It is used only to obtain the default
-        ``eta = sqrt(log(num_samples) / num_samples)`` for ``median_jump``.
-    threshold_value
-        Dimension threshold.  The default is half the largest candidate
-        dimension having a finite objective.
+        One of ``"window"`` or ``"plateau"``.
     eta
         For ``window``, an optional positive lower bound for the adaptively
-        selected window width.  For ``median_jump``, a fixed positive window
-        width; if omitted, it is computed from ``num_samples``.
+        selected window width. It is ignored by ``plateau``.
     recommendation_factor
         Positive multiplier applied to the estimated minimal scale. The
         default is 2, as prescribed by the slope heuristic.
@@ -852,8 +765,10 @@ def select_minimal_scale(
         ``minimal_scale`` is the estimated minimal-penalty constant.
         ``recommended_scale`` is ``recommendation_factor * minimal_scale``,
         and ``selected_dimension`` is the dimension selected at that scale.
-        For the window method, ``selection_source`` records whether the jump
-        criteria succeeded or the persistent-plateau fallback was used.
+        ``selection_source`` is ``"jump"`` for a successful window selection
+        and ``"plateau"`` for a successful plateau selection. A failed window
+        selection raises ``ValueError``; it does not fall back to plateau
+        selection.
     """
 
     normalized_method = _normalize_method(method)
@@ -867,59 +782,30 @@ def select_minimal_scale(
         penalty_values,
     )
 
-    resolved_threshold = None
     resolved_eta = None
     largest_jump = None
     selection_source = None
     jump_selection = None
     plateau_selection = None
     recommendation_within_plateau = None
-    if normalized_method in {"threshold", "median_jump"}:
-        resolved_threshold = (
-            path.max_candidate_dimension / 2.0
-            if threshold_value is None
-            else _finite_nonnegative_float(threshold_value, "threshold_value")
-        )
-    if normalized_method == "median_jump":
-        resolved_eta = _default_eta(num_samples) if eta is None else _positive_float(
-            eta,
-            "eta",
-        )
-
-    if normalized_method == "maximal_jump":
-        minimal_scale = maximal_jump(path)
-        component_scales = {"maximal_jump": minimal_scale}
-        selection_source = "maximal_jump"
-    elif normalized_method == "threshold":
-        minimal_scale = threshold(path, resolved_threshold)
-        component_scales = {"threshold": minimal_scale}
-        selection_source = "threshold"
-    elif normalized_method == "window":
+    if normalized_method == "window":
         jump_selection = adaptive_window(path, minimum_eta=eta)
-        if jump_selection.succeeded:
-            selection_source = "jump"
-            minimal_scale = float(jump_selection.center)
-            resolved_eta = float(jump_selection.eta)
-            largest_jump = float(jump_selection.largest_jump)
-            component_scales = {"window": minimal_scale}
-        else:
-            plateau_selection = select_persistent_plateau(path)
-            if not plateau_selection.succeeded:
-                raise ValueError(
-                    "Window jump selection failed: "
-                    f"{jump_selection.failure_reason} Plateau comparison "
-                    f"also failed: {plateau_selection.failure_reason}"
-                )
-            selection_source = "plateau"
-            minimal_scale = float(plateau_selection.center)
-            component_scales = {"plateau": minimal_scale}
+        if not jump_selection.succeeded:
+            raise ValueError(
+                f"Window selection failed: {jump_selection.failure_reason}"
+            )
+        selection_source = "jump"
+        minimal_scale = float(jump_selection.center)
+        resolved_eta = float(jump_selection.eta)
+        largest_jump = float(jump_selection.largest_jump)
     else:
-        minimal_scale, component_scales = median_jump(
-            path,
-            threshold_value=resolved_threshold,
-            eta=resolved_eta,
-        )
-        selection_source = "median_jump"
+        plateau_selection = select_persistent_plateau(path)
+        if not plateau_selection.succeeded:
+            raise ValueError(
+                f"Plateau selection failed: {plateau_selection.failure_reason}"
+            )
+        selection_source = "plateau"
+        minimal_scale = float(plateau_selection.center)
 
     recommended_scale = recommendation_factor * minimal_scale
     if not np.isfinite(recommended_scale):
@@ -937,8 +823,6 @@ def select_minimal_scale(
         minimal_scale=float(minimal_scale),
         recommended_scale=float(recommended_scale),
         selected_dimension=path.dimension_at(recommended_scale),
-        component_scales=dict(component_scales),
-        threshold=resolved_threshold,
         eta=resolved_eta,
         largest_jump=largest_jump,
         recommendation_factor=recommendation_factor,

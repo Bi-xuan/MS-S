@@ -84,37 +84,35 @@ def test_loading_floors_raw_objectives_but_not_penalties(tmp_path):
 
 
 def test_recommendation_factor_controls_recommended_scale_and_dimension():
-    dimensions = np.array([1, 2])
-    objectives = np.array([1.0, 0.0])
-    penalties = np.array([1.0, 2.0])
-
     result = select_minimal_scale(
-        dimensions,
-        objectives,
-        penalties,
-        method="threshold",
-        threshold_value=1,
+        [7, 8, 9, 10, 11, 12],
+        [15.01, 7.01, 3.01, 1.98, 0.98, 0.0],
+        [7, 8, 9, 10, 11, 12],
+        method="window",
         recommendation_factor=0.5,
     )
 
-    assert result.minimal_scale == pytest.approx(1.0)
+    assert result.minimal_scale == pytest.approx(np.sqrt(0.98 * 1.03))
     assert result.recommendation_factor == pytest.approx(0.5)
-    assert result.recommended_scale == pytest.approx(0.5)
-    assert result.selected_dimension == 2
+    assert result.recommended_scale == pytest.approx(
+        0.5 * np.sqrt(0.98 * 1.03)
+    )
+    assert result.selected_dimension == 12
 
 
 def test_recommendation_factor_defaults_to_two():
     result = select_minimal_scale(
-        [1, 2],
-        [1.0, 0.0],
-        [1.0, 2.0],
-        method="threshold",
-        threshold_value=1,
+        [7, 8, 9, 10, 11, 12],
+        [15.01, 7.01, 3.01, 1.98, 0.98, 0.0],
+        [7, 8, 9, 10, 11, 12],
+        method="window",
     )
 
     assert result.recommendation_factor == pytest.approx(2.0)
-    assert result.recommended_scale == pytest.approx(2.0)
-    assert result.selected_dimension == 1
+    assert result.recommended_scale == pytest.approx(
+        2.0 * np.sqrt(0.98 * 1.03)
+    )
+    assert result.selected_dimension == 9
 
 
 @pytest.mark.parametrize(
@@ -127,8 +125,7 @@ def test_recommendation_factor_must_be_positive(recommendation_factor):
             [1, 2],
             [1.0, 0.0],
             [1.0, 2.0],
-            method="threshold",
-            threshold_value=1,
+            method="window",
             recommendation_factor=recommendation_factor,
         )
 
@@ -143,7 +140,6 @@ def fragmented_transition_path():
     return DimensionPath(
         breakpoints=(0.0, 0.98, 1.0, 1.03, 4.0, 8.0),
         dimensions=(12, 11, 10, 9, 8, 7),
-        max_candidate_dimension=12.0,
     )
 
 
@@ -170,29 +166,52 @@ def test_adaptive_window_treats_eta_as_a_minimum_bandwidth():
     assert result.largest_jump == pytest.approx(3.0)
 
 
-def test_adaptive_window_falls_back_without_merging_unseparated_transitions():
+def test_adaptive_window_reports_failure_for_unseparated_transitions():
     path = DimensionPath(
         breakpoints=(0.0, 1.0, 2.0, 4.0),
         dimensions=(5, 4, 3, 2),
-        max_candidate_dimension=5.0,
     )
 
     result = adaptive_window(path)
 
-    assert result.center == pytest.approx(4.0)
-    assert result.largest_jump == pytest.approx(1.0)
-    assert result.transition_scales == (4.0,)
+    assert not result.succeeded
+    assert result.center is None
+    assert result.eta is None
+    assert result.largest_jump is None
+    assert result.transition_scales == ()
 
 
-def test_adaptive_window_fallback_matches_a_user_supplied_minimum_window():
+def test_adaptive_window_reports_failure_at_large_minimum_window():
     result = adaptive_window(fragmented_transition_path(), minimum_eta=10.0)
 
-    assert result.eta == pytest.approx(10.0)
-    assert result.center == pytest.approx(np.sqrt(0.98 * 8.0))
-    assert result.largest_jump == pytest.approx(5.0)
-    assert window(fragmented_transition_path(), result.eta) == pytest.approx(
-        result.center
+    assert not result.succeeded
+    assert result.eta is None
+    assert result.center is None
+    assert result.largest_jump is None
+
+
+def test_window_method_reports_failure_without_falling_back_to_plateau():
+    # Window has no sufficiently separated transition cluster, while the last
+    # bounded plateau [4, 16) would be a valid persistent-plateau fallback.
+    dimensions = [2, 3, 4, 5, 6]
+    objectives = [23.0, 7.0, 3.0, 1.0, 0.0]
+    penalties = [2, 3, 4, 5, 6]
+
+    plateau_result = select_minimal_scale(
+        dimensions,
+        objectives,
+        penalties,
+        method="plateau",
     )
+    assert plateau_result.selection_source == "plateau"
+
+    with pytest.raises(ValueError, match="^Window selection failed:"):
+        select_minimal_scale(
+            dimensions,
+            objectives,
+            penalties,
+            method="window",
+        )
 
 
 def test_window_method_uses_adaptive_center_as_minimal_scale():
