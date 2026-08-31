@@ -5,7 +5,11 @@ from math import comb
 import numpy as np
 import pytest
 
-from experiments.compute_objective_curve import compute_objective_curve
+from experiments.compute_objective_curve import (
+    compute_objective_curve,
+    indexed_upper_support,
+    lambda_star_for_dimension,
+)
 from optimizers.support_search import optimize_lambda
 from supports.exact import get_upper_triangular_supports
 
@@ -37,6 +41,40 @@ def test_upper_triangular_supports_enumerate_only_strict_upper_entries():
 def test_upper_triangular_supports_reject_too_many_edges():
     with pytest.raises(ValueError, match="n_edge must be between 0 and 3"):
         list(get_upper_triangular_supports(3, 4))
+
+
+def test_indexed_true_supports_cover_all_twenty_dimension_four_cases():
+    supports = [indexed_upper_support(4, 4, index) for index in range(20)]
+
+    assert len(set(supports)) == comb(6, 3) == 20
+    assert supports[0] == ((0, 1), (0, 2), (0, 3))
+    assert supports[-1] == ((1, 2), (1, 3), (2, 3))
+
+
+def test_indexed_true_support_uses_existing_lambda_value_convention():
+    support = indexed_upper_support(4, 4, 7)
+
+    Lambda_star = lambda_star_for_dimension(4, support)
+
+    np.testing.assert_allclose(np.diag(Lambda_star), [0.10, 0.25, 0.40, 0.55])
+    np.testing.assert_allclose(
+        [Lambda_star[edge] for edge in support],
+        [0.60, 0.20, -0.45],
+    )
+    assert np.all(
+        np.abs([Lambda_star[edge] for edge in support]) >= 0.20
+    )
+    recovered_support = {
+        (int(i), int(j))
+        for i, j in np.argwhere(Lambda_star)
+        if i != j
+    }
+    assert recovered_support == set(support)
+
+
+def test_indexed_true_support_rejects_out_of_range_index():
+    with pytest.raises(ValueError, match="support_index must be between 0 and 19"):
+        indexed_upper_support(4, 4, 20)
 
 
 def test_optimize_lambda_upper_scope_returns_upper_triangular_support():

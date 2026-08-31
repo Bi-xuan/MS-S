@@ -15,6 +15,7 @@ from analyze_penalty import build_penalty_constants, scalar_value
 from penalty import pen_n
 from scaling_selection import (
     DEFAULT_RECOMMENDATION_FACTOR,
+    build_dimension_path,
     select_minimal_scale,
 )
 
@@ -175,6 +176,15 @@ def run(args):
 
     input_path = Path(args.input)
     selection_data = load_selection_inputs(input_path, args)
+    if getattr(args, "validate_only", False):
+        build_dimension_path(
+            selection_data["d_m_values"],
+            selection_data["objective_values"],
+            selection_data["penalty_values"],
+        )
+        print(f"Scaling-selection input is valid: {input_path}")
+        return None
+
     result = select_minimal_scale(
         selection_data["d_m_values"],
         selection_data["objective_values"],
@@ -207,6 +217,14 @@ def parse_args():
         choices=METHOD_CHOICES,
         default="window",
         help="Scale-selection procedure. Default: window.",
+    )
+    parser.add_argument(
+        "--validate-only",
+        action="store_true",
+        help=(
+            "Validate that the curve can form a scaling-selection dimension "
+            "path, then exit without selecting a scale."
+        ),
     )
     parser.add_argument(
         "--eta",

@@ -1,4 +1,4 @@
-"""Plot the selected model dimension over a grid of penalty scales."""
+"""Plot an exact dimension path and its selected scaling feature."""
 
 from __future__ import annotations
 
@@ -21,262 +21,247 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from analyze_penalty import build_penalty_constants, scalar_value
-from model_selection import select_dimension_path
-from penalty import pen_n
+from experiments import select_scaling_parameter as scaling_parameter_selection
+from scaling_selection import build_dimension_path
 
 
-DEFAULT_INPUT = (
-    PROJECT_ROOT
-    / "experiments"
-    / "output"
-    / "objective_curve_sigma_hat_from_given_sigma.npz"
-)
+def _selection_feature_bounds(result):
+    """Return the finite bounds of the feature selected by the method."""
 
-METADATA_KEYS = (
-    "curve_type",
-    "n",
-    "omega_star",
-    "omega_ref",
-    "random_seed",
-    "solve_seed",
-    "fallback_seed",
-    "stop_obj_threshold",
-    "support_scope",
-    "preselect_k",
-    "preselect_direction_policy",
-)
-
-
-def load_curve_data(input_path):
-    """Load the objective curve and relevant experiment metadata."""
-
-    with np.load(input_path) as data:
-        required_keys = (
-            "d_m_values",
-            "objective_values",
-            "Sigma",
-            "num_samples",
+    if result.method == "window":
+        factor = 1.0 + result.eta
+        return (
+            result.minimal_scale / factor,
+            result.minimal_scale * factor,
         )
-        missing_keys = [key for key in required_keys if key not in data]
-        if missing_keys:
-            raise ValueError(
-                f"The input NPZ is missing required fields: {missing_keys}."
-            )
 
-        d_m_values = data["d_m_values"].copy()
-        objective_values = data["objective_values"].copy()
-        sigma = data["Sigma"].copy()
-        num_samples = int(scalar_value(data, "num_samples"))
-        metadata = {
-            key: scalar_value(data, key)
-            for key in METADATA_KEYS
-            if key in data
-        }
-
-    return {
-        "d_m_values": d_m_values,
-        "objective_values": objective_values,
-        "Sigma": sigma,
-        "num_samples": num_samples,
-        "metadata": metadata,
-    }
+    plateau = result.plateau_selection
+    return plateau.left, plateau.right
 
 
-def compute_penalty_values(d_m_values, constants):
-    """Compute the unscaled penalty vector once for all candidate dimensions."""
+def resolve_plot_bounds(path, result, C_min, C_max):
+    """Choose finite positive bounds for displaying the exact path."""
 
-    return np.asarray(
-        [pen_n(float(d_m), constants) for d_m in d_m_values],
+    anchors = list(path.transition_scales)
+    anchors.extend(_selection_feature_bounds(result))
+    anchors.append(result.minimal_scale)
+    positive_anchors = np.asarray(
+        [value for value in anchors if np.isfinite(value) and value > 0.0],
         dtype=float,
     )
+    if len(positive_anchors) == 0:
+        raise ValueError("The dimension path has no positive scale to plot.")
 
-
-def reference_scale(objective_values, penalty_values):
-    """Estimate a data-dependent scale from the two curve spans."""
-
-    finite_objectives = objective_values[np.isfinite(objective_values)]
-    if len(finite_objectives) == 0:
-        raise ValueError("At least one objective value must be finite.")
-
-    objective_span = float(np.ptp(finite_objectives))
-    penalty_span = float(np.ptp(penalty_values))
-    if objective_span > 0.0 and penalty_span > 0.0:
-        return objective_span / penalty_span
-    return 1.0
-
-
-def construct_C_grid(
-    objective_values,
-    penalty_values,
-    grid_type,
-    C_min,
-    C_max,
-    num_C,
-):
-    """Construct a user-specified or data-adaptive grid of penalty scales."""
-
-    if num_C < 2:
-        raise ValueError("num_C must be at least 2.")
-
-    scale_reference = reference_scale(objective_values, penalty_values)
     if C_min is None:
-        C_min = scale_reference * (1e-4 if grid_type == "log" else 0.0)
+        C_min = float(np.min(positive_anchors) / 2.0)
     if C_max is None:
-        C_max = scale_reference * (1e4 if grid_type == "log" else 10.0)
+        C_max = float(np.max(positive_anchors) * 2.0)
 
-    if not np.isfinite(C_min) or not np.isfinite(C_max):
-        raise ValueError("C grid bounds must be finite.")
-    if C_min < 0.0:
-        raise ValueError("C_min must be nonnegative.")
-    if C_max <= C_min:
-        raise ValueError("C_max must be greater than C_min.")
-
-    if grid_type == "log":
-        if C_min <= 0.0:
-            raise ValueError("C_min must be positive for a logarithmic grid.")
-        C_values = np.geomspace(C_min, C_max, num=num_C)
-    else:
-        C_values = np.linspace(C_min, C_max, num=num_C)
-
-    return C_values, scale_reference
+    if not np.isfinite(C_min) or C_min <= 0.0:
+        raise ValueError("C_min must be a finite, positive number.")
+    if not np.isfinite(C_max) or C_max <= C_min:
+        raise ValueError("C_max must be finite and greater than C_min.")
+    return float(C_min), float(C_max)
 
 
-def plot_dimension_path(
-    C_values,
-    selected_dimensions,
-    output_path,
-    title,
-):
-    """Draw and save the dimension path on a linear x-axis."""
+def _plot_window_selection(ax, result, C_min, C_max):
+    """Highlight the adaptive window and its dominant transition cluster."""
 
-    plt.figure(figsize=(8, 5))
-    plt.step(
-        C_values,
-        selected_dimensions,
+    jump_selection = result.jump_selection
+    factor = 1.0 + result.eta
+    window_left = result.minimal_scale / factor
+    window_right = result.minimal_scale * factor
+    visible_left = max(window_left, C_min)
+    visible_right = min(window_right, C_max)
+    if visible_left < visible_right:
+        ax.axvspan(
+            visible_left,
+            visible_right,
+            color="tab:orange",
+            alpha=0.18,
+            label="Selected window",
+        )
+    if C_min <= result.minimal_scale <= C_max:
+        ax.axvline(
+            result.minimal_scale,
+            color="tab:orange",
+            linewidth=1.8,
+            label=r"Selected minimal scale $C_\star$",
+        )
+
+    first_transition = True
+    for transition in jump_selection.transition_scales:
+        if C_min <= transition <= C_max:
+            ax.axvline(
+                transition,
+                color="tab:red",
+                linestyle="--",
+                linewidth=1.4,
+                alpha=0.9,
+                label=(
+                    "Dominant-cluster transitions"
+                    if first_transition
+                    else None
+                ),
+            )
+            first_transition = False
+
+
+def _plot_plateau_selection(ax, result, C_min, C_max):
+    """Highlight the plateau selected by the persistent-plateau method."""
+
+    plateau = result.plateau_selection
+    left = max(plateau.left, C_min)
+    right = min(plateau.right, C_max)
+    if left < right:
+        ax.axvspan(
+            left,
+            right,
+            color="tab:orange",
+            alpha=0.2,
+            label="Selected plateau",
+        )
+        ax.hlines(
+            plateau.dimension,
+            left,
+            right,
+            color="tab:orange",
+            linewidth=4.0,
+        )
+
+
+def plot_dimension_path(path, result, output_path, title, C_min, C_max):
+    """Draw and save the exact piecewise-constant dimension path."""
+
+    internal_breakpoints = [
+        value
+        for value in path.transition_scales
+        if C_min < value < C_max
+    ]
+    plot_scales = np.asarray(
+        [C_min, *internal_breakpoints, C_max],
+        dtype=float,
+    )
+    plot_dimensions = np.asarray(
+        [path.dimension_at(scale) for scale in plot_scales],
+    )
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.step(
+        plot_scales,
+        plot_dimensions,
         where="post",
         linewidth=1.7,
         color="tab:blue",
+        label="Dimension path",
     )
-    plt.xscale("linear")
-    plt.xlabel("Penalty scale C")
-    plt.ylabel(r"Selected dimension $\widehat{D}(C)$")
-    plt.title(title)
-    plt.grid(True, alpha=0.3)
-    unique_dimensions = np.unique(selected_dimensions)
+
+    if result.method == "window":
+        _plot_window_selection(ax, result, C_min, C_max)
+    else:
+        _plot_plateau_selection(ax, result, C_min, C_max)
+
+    ax.set_xscale("log")
+    ax.set_xlim(C_min, C_max)
+    ax.set_xlabel("Penalty scale C")
+    ax.set_ylabel(r"Selected dimension $\widehat{D}(C)$")
+    ax.set_title(title)
+    ax.grid(True, which="both", alpha=0.3)
+    unique_dimensions = np.unique(path.dimensions)
     if len(unique_dimensions) <= 15:
-        plt.yticks(unique_dimensions)
-    plt.tight_layout()
+        ax.set_yticks(unique_dimensions)
+    ax.legend()
+    fig.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(output_path, dpi=200)
-    plt.close()
+    fig.savefig(output_path, dpi=200)
+    plt.close(fig)
 
 
-def report_transitions(C_values, selected_dimensions):
-    """Print the observed dimension changes along the sampled path."""
+def report_transitions(path):
+    """Print the exact dimension changes in the path."""
 
-    transition_indices = np.flatnonzero(
-        selected_dimensions[1:] != selected_dimensions[:-1]
-    )
-    if len(transition_indices) == 0:
-        print("Observed dimension transitions: none")
+    if not path.transition_scales:
+        print("Exact dimension transitions: none")
         return
 
-    print("Observed dimension transitions:")
-    for index in transition_indices:
-        print(
-            f"  C in [{C_values[index]:.12g}, "
-            f"{C_values[index + 1]:.12g}]: "
-            f"{selected_dimensions[index]} -> "
-            f"{selected_dimensions[index + 1]}"
-        )
+    print("Exact dimension transitions:")
+    for scale, before, after in zip(
+        path.transition_scales,
+        path.dimensions[:-1],
+        path.dimensions[1:],
+    ):
+        print(f"  C = {scale:.12g}: {before} -> {after}")
 
 
 def run(args):
+    """Load an NPZ, select its scale, and plot its exact dimension path."""
+
     input_path = Path(args.input)
+    if input_path.suffix.lower() != ".npz":
+        raise ValueError("The input must be an .npz file.")
     output_path = (
         Path(args.output)
         if args.output
         else input_path.with_name(f"{input_path.stem}_dimension_path.png")
     )
 
-    curve_data = load_curve_data(input_path)
-    constants_args = argparse.Namespace(
-        num_samples=args.num_samples,
-        r=args.r,
-        Lm=args.Lm,
-        L=args.L,
-        xi=args.xi,
+    selection_data = scaling_parameter_selection.load_selection_inputs(
+        input_path,
+        args,
     )
-    penalty_data = {
-        "Sigma": curve_data["Sigma"],
-        "num_samples": curve_data["num_samples"],
-    }
-    if "n" in curve_data["metadata"]:
-        penalty_data["n"] = curve_data["metadata"]["n"]
-    constants = build_penalty_constants(penalty_data, constants_args)
-
-    d_m_values = curve_data["d_m_values"]
-    objective_values = curve_data["objective_values"]
-    penalty_values = compute_penalty_values(d_m_values, constants)
-    C_values, scale_reference = construct_C_grid(
-        objective_values,
-        penalty_values,
-        args.grid,
+    result = scaling_parameter_selection.select_minimal_scale(
+        selection_data["d_m_values"],
+        selection_data["objective_values"],
+        selection_data["penalty_values"],
+        method=args.method,
+        eta=args.eta,
+        recommendation_factor=args.recommendation_factor,
+    )
+    path = build_dimension_path(
+        selection_data["d_m_values"],
+        selection_data["objective_values"],
+        selection_data["penalty_values"],
+    )
+    C_min, C_max = resolve_plot_bounds(
+        path,
+        result,
         args.C_min,
         args.C_max,
-        args.num_C,
-    )
-    selected_dimensions = select_dimension_path(
-        d_m_values,
-        objective_values,
-        penalty_values,
-        C_values,
     )
 
-    metadata = curve_data["metadata"]
-    curve_type = metadata.get("curve_type", "objective curve")
-    n = int(metadata.get("n", curve_data["Sigma"].shape[0]))
-    curve_label = str(curve_type).replace("_", " ")
-    title = f"Dimension Path ({curve_label}, n={n})"
+    constants = selection_data["constants"]
+    curve_label = str(selection_data["curve_type"]).replace("_", " ")
+    title = f"Dimension Path ({curve_label}, n={constants.n})"
     plot_dimension_path(
-        C_values,
-        selected_dimensions,
+        path,
+        result,
         output_path,
         title,
+        C_min,
+        C_max,
     )
 
-    print(f"Loaded {input_path}")
-    print(f"Saved plot to {output_path}")
-    print(f"Curve type: {curve_type}")
-    print(f"Matrix dimension n: {n}")
-    print(f"Penalty num_samples: {constants.num_samples}")
-    print(f"Grid type: {args.grid}")
-    print(f"Grid points: {len(C_values)}")
-    print(f"Data-adaptive reference scale: {scale_reference:.12g}")
-    print(f"C range: [{C_values[0]:.12g}, {C_values[-1]:.12g}]")
-    print(
-        f"Selected dimension range: "
-        f"{selected_dimensions[0]} -> {selected_dimensions[-1]}"
+    scaling_parameter_selection.report_selection(
+        input_path,
+        selection_data,
+        result,
     )
-    report_transitions(C_values, selected_dimensions)
+    print(f"Saved plot to: {output_path}")
+    print(f"Plot range: [{C_min:.12g}, {C_max:.12g}]")
+    report_transitions(path)
+    return result
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description=(
-            "Evaluate the penalized model selector over a C-grid and plot "
-            "the resulting dimension path."
+            "Select a penalty scale from an objective-curve NPZ and plot "
+            "the exact resulting dimension path."
         )
     )
     parser.add_argument(
         "input",
-        nargs="?",
-        default=str(DEFAULT_INPUT),
-        help=(
-            "Objective-curve NPZ produced by compute_objective_curve.py. "
-            f"Default: {DEFAULT_INPUT}"
-        ),
+        help="Objective-curve NPZ produced by compute_objective_curve.py.",
     )
     parser.add_argument(
         "--output",
@@ -286,38 +271,47 @@ def parse_args():
         ),
     )
     parser.add_argument(
-        "--grid",
-        choices=("log", "linear"),
-        default="log",
-        help="C-grid spacing. Default: log.",
+        "--method",
+        choices=scaling_parameter_selection.METHOD_CHOICES,
+        default="window",
+        help="Scale-selection procedure. Default: window.",
+    )
+    parser.add_argument(
+        "--eta",
+        type=float,
+        help="Optional minimum adaptive window width for the window method.",
+    )
+    parser.add_argument(
+        "--recommendation-factor",
+        type=float,
+        default=scaling_parameter_selection.DEFAULT_RECOMMENDATION_FACTOR,
+        help=(
+            "Positive multiplier applied to the minimal scale. "
+            "Default: 2."
+        ),
+    )
+    parser.add_argument(
+        "--objective-floor",
+        type=float,
+        default=scaling_parameter_selection.DEFAULT_OBJECTIVE_FLOOR,
+        help=(
+            "Finite raw objectives at or below this value are tied at zero. "
+            "Default: 1e-8."
+        ),
     )
     parser.add_argument(
         "--c-min",
         "--C-min",
         dest="C_min",
         type=float,
-        help=(
-            "Smallest C. By default this is 1e-4 times the data-adaptive "
-            "reference scale."
-        ),
+        help="Smallest positive C displayed on the logarithmic axis.",
     )
     parser.add_argument(
         "--c-max",
         "--C-max",
         dest="C_max",
         type=float,
-        help=(
-            "Largest C. By default this is 1e4 times the data-adaptive "
-            "reference scale for a log grid, or 10 times it for a linear grid."
-        ),
-    )
-    parser.add_argument(
-        "--num-c",
-        "--num-C",
-        dest="num_C",
-        type=int,
-        default=1000,
-        help="Number of C-grid points. Default: 1000.",
+        help="Largest C displayed on the logarithmic axis.",
     )
     parser.add_argument(
         "--num-samples",
@@ -329,30 +323,10 @@ def parse_args():
             "num_samples value stored in the NPZ."
         ),
     )
-    parser.add_argument(
-        "--r",
-        type=float,
-        default=1.0,
-        help="Theorem radius r. Default: 1.",
-    )
-    parser.add_argument(
-        "--Lm",
-        type=float,
-        default=1.0,
-        help="Model entropy weight Lm. Default: 1.",
-    )
-    parser.add_argument(
-        "--L",
-        type=float,
-        default=1.0,
-        help="Theorem constant L. Default: 1.",
-    )
-    parser.add_argument(
-        "--xi",
-        type=float,
-        default=10.0,
-        help="Theorem tail constant xi. Default: 10.",
-    )
+    parser.add_argument("--r", type=float, default=1.0)
+    parser.add_argument("--Lm", "--lm", dest="Lm", type=float, default=1.0)
+    parser.add_argument("--L", "--l", dest="L", type=float, default=1.0)
+    parser.add_argument("--xi", type=float, default=10.0)
     return parser.parse_args()
 
 

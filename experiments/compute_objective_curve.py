@@ -1,6 +1,7 @@
 """Compute and save objective curves showing how the optimum changes with D_m."""
 
 import argparse
+from itertools import combinations
 import tempfile
 from pathlib import Path
 import sys
@@ -11,6 +12,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from optimizers.support_search import optimize_lambda, rank_preselected_edges
+from supports.common import upper_triangular_edges
+
+
+MIN_LAMBDA_STAR_EDGE_MAGNITUDE = 0.20
 
 
 def parse_bool(value):
@@ -249,17 +254,52 @@ def compute_objective_curve(
     )
 
 
-def lambda_star_for_dimension(n):
+def lambda_star_for_dimension(n, support_edges=None):
     if n < 2:
         raise ValueError("n must be at least 2.")
 
     Lambda_star = np.zeros((n, n))
     diag_values = np.linspace(0.10, 0.55, n)
-    last_col_values = np.linspace(0.60, -0.45, n - 1)
 
     np.fill_diagonal(Lambda_star, diag_values)
-    Lambda_star[:n - 1, n - 1] = last_col_values
+    if support_edges is None:
+        support_edges = tuple((i, n - 1) for i in range(n - 1))
+    else:
+        support_edges = tuple(support_edges)
+
+    edge_values = np.linspace(0.60, -0.45, len(support_edges))
+    edge_values = np.where(
+        np.abs(edge_values) < MIN_LAMBDA_STAR_EDGE_MAGNITUDE,
+        np.copysign(MIN_LAMBDA_STAR_EDGE_MAGNITUDE, edge_values),
+        edge_values,
+    )
+    for (i, j), value in zip(support_edges, edge_values):
+        if not (0 <= i < j < n):
+            raise ValueError(
+                "Lambda_star support edges must be strictly upper triangular."
+            )
+        Lambda_star[i, j] = value
     return Lambda_star
+
+
+def indexed_upper_support(n, true_dimension, support_index):
+    """Return one lexicographically indexed strict-upper true support."""
+
+    if not (1 <= true_dimension <= n * (n - 1) // 2 + 1):
+        raise ValueError(
+            "true_dimension must be between 1 and "
+            f"{n * (n - 1) // 2 + 1}."
+        )
+
+    supports = tuple(
+        combinations(upper_triangular_edges(n), true_dimension - 1)
+    )
+    if not (0 <= support_index < len(supports)):
+        raise ValueError(
+            f"support_index must be between 0 and {len(supports) - 1} "
+            f"for n={n} and true_dimension={true_dimension}."
+        )
+    return supports[support_index]
 
 
 def output_path_for_dimension(output_path, n, add_suffix):
@@ -311,6 +351,9 @@ def save_curve_result(
     preselected_scores,
     curve_result,
     support_scope="all",
+    lambda_star_support_index=-1,
+    lambda_star_dimension=None,
+    lambda_star_support_edges=None,
 ):
     if len(curve_result) == 4:
         (
@@ -336,6 +379,17 @@ def save_curve_result(
         curve_type=curve_type,
         n=n,
         Lambda_star=Lambda_star,
+        lambda_star_min_edge_magnitude=MIN_LAMBDA_STAR_EDGE_MAGNITUDE,
+        lambda_star_support_index=lambda_star_support_index,
+        lambda_star_dimension=(
+            1 + np.count_nonzero(Lambda_star - np.diag(np.diag(Lambda_star)))
+            if lambda_star_dimension is None
+            else lambda_star_dimension
+        ),
+        lambda_star_support_edges=np.array(
+            [] if lambda_star_support_edges is None else lambda_star_support_edges,
+            dtype=int,
+        ),
         Sigma=Sigma,
         omega_star=omega_star,
         omega_ref=omega_ref,
@@ -535,6 +589,25 @@ def parse_args():
         help="Dimensions of Lambda_star to compute.",
     )
     parser.add_argument(
+        "--lambda-star-dimension",
+        type=int,
+        default=None,
+        help=(
+            "True model dimension D_m for an indexed upper-triangular "
+            "Lambda_star support. Defaults to the matrix dimension."
+        ),
+    )
+    parser.add_argument(
+        "--lambda-star-support-index",
+        type=int,
+        default=None,
+        help=(
+            "Zero-based lexicographic index of the upper-triangular true "
+            "support. When omitted, use the project's original last-column "
+            "support."
+        ),
+    )
+    parser.add_argument(
         "--support-scope",
         choices=["all", "upper"],
         default="all",
@@ -633,7 +706,27 @@ def run_experiment(args, n, add_output_suffix):
     sigma_hat_solve_seed = args.random_seed + 3
     sigma_hat_fallback_seed = args.random_seed + 4
 
-    Lambda_star = lambda_star_for_dimension(n)
+    true_dimension = (
+        n if args.lambda_star_dimension is None else args.lambda_star_dimension
+    )
+    if args.lambda_star_support_index is None:
+        if args.lambda_star_dimension is not None and true_dimension != n:
+            raise ValueError(
+                "--lambda-star-dimension requires "
+                "--lambda-star-support-index unless it equals n."
+            )
+        lambda_star_support_index = -1
+        lambda_star_support_edges = tuple(
+            (i, n - 1) for i in range(n - 1)
+        )
+    else:
+        lambda_star_support_index = args.lambda_star_support_index
+        lambda_star_support_edges = indexed_upper_support(
+            n,
+            true_dimension,
+            lambda_star_support_index,
+        )
+    Lambda_star = lambda_star_for_dimension(n, lambda_star_support_edges)
     omega_star = 1.0
     omega_ref = args.omega_ref
 
@@ -660,6 +753,9 @@ def run_experiment(args, n, add_output_suffix):
     print(f"\n=== Lambda_star dimension n = {n} ===")
     print("Lambda_star:")
     print(Lambda_star)
+    print(f"Lambda_star true dimension: {true_dimension}")
+    print(f"Lambda_star support index: {lambda_star_support_index}")
+    print(f"Lambda_star support edges: {lambda_star_support_edges}")
     print(f"Spectral radius of Lambda_star: {lambda_star_radius:.6f}")
     print(f"omega_star: {omega_star:.6f}")
     if omega_ref is None and args.refine_after_fixed_omega:
@@ -689,6 +785,17 @@ def run_experiment(args, n, add_output_suffix):
                 "num_samples": -1,
                 "stop_obj_threshold": args.stop_obj_threshold,
                 "support_scope": args.support_scope,
+                "lambda_star_min_edge_magnitude": (
+                    MIN_LAMBDA_STAR_EDGE_MAGNITUDE
+                ),
+                **(
+                    {
+                        "lambda_star_support_index": lambda_star_support_index,
+                        "lambda_star_dimension": true_dimension,
+                    }
+                    if args.lambda_star_support_index is not None
+                    else {}
+                ),
                 "preselect_k": -1 if args.preselect_k is None else args.preselect_k,
                 **(
                     {
@@ -733,6 +840,9 @@ def run_experiment(args, n, add_output_suffix):
                 given_preselected_scores,
                 curve_result,
                 support_scope=args.support_scope,
+                lambda_star_support_index=lambda_star_support_index,
+                lambda_star_dimension=true_dimension,
+                lambda_star_support_edges=lambda_star_support_edges,
             )
 
         given_curve = compute_objective_curve(
@@ -784,6 +894,17 @@ def run_experiment(args, n, add_output_suffix):
             "num_samples": args.num_samples,
             "stop_obj_threshold": args.stop_obj_threshold,
             "support_scope": args.support_scope,
+            "lambda_star_min_edge_magnitude": (
+                MIN_LAMBDA_STAR_EDGE_MAGNITUDE
+            ),
+            **(
+                {
+                    "lambda_star_support_index": lambda_star_support_index,
+                    "lambda_star_dimension": true_dimension,
+                }
+                if args.lambda_star_support_index is not None
+                else {}
+            ),
             "preselect_k": -1 if args.preselect_k is None else args.preselect_k,
             **(
                 {"preselect_direction_policy": args.preselect_direction_policy}
@@ -824,6 +945,9 @@ def run_experiment(args, n, add_output_suffix):
             sigma_hat_preselected_scores,
             curve_result,
             support_scope=args.support_scope,
+            lambda_star_support_index=lambda_star_support_index,
+            lambda_star_dimension=true_dimension,
+            lambda_star_support_edges=lambda_star_support_edges,
         )
 
     sigma_hat_curve = compute_objective_curve(
