@@ -9,7 +9,11 @@ import numpy as np
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from admm import covariance_from_lambda_star, lambda_star_spectral_radius
+from admm import (
+    DEFAULT_OMEGA_STAR,
+    covariance_from_lambda_star,
+    lambda_star_spectral_radius,
+)
 from optimizers.support_search import optimize_lambda, print_optimization_result
 
 
@@ -63,7 +67,7 @@ def lambda_star_for_dimension(n):
     return Lambda_star
 
 
-def parse_args():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description="Run the active Lambda optimization experiment."
     )
@@ -108,6 +112,15 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        "--omega-star",
+        type=float,
+        default=DEFAULT_OMEGA_STAR,
+        help=(
+            "Omega used to generate the population covariance from Lambda_star "
+            f"(default: {DEFAULT_OMEGA_STAR})."
+        ),
+    )
+    parser.add_argument(
         "--omega-ref",
         type=parse_omega_ref,
         default=1.0,
@@ -143,11 +156,14 @@ def parse_args():
             "preselected positions."
         ),
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def main():
     args = parse_args()
+
+    if args.omega_star < 0.0:
+        raise SystemExit("Error: --omega-star must be nonnegative.")
 
     if args.support_scope == "upper" and args.preselect_k is not None:
         raise SystemExit(
@@ -159,7 +175,7 @@ def main():
     n = args.lambda_star_dims[0]
     D_m = n
     Lambda_star = lambda_star_for_dimension(n)
-    omega_star = 1.0
+    omega_star = args.omega_star
     omega_ref = args.omega_ref
     if omega_ref is None and args.refine_after_fixed_omega:
         raise SystemExit(

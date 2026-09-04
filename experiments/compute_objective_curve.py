@@ -11,6 +11,7 @@ import numpy as np
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from admm import DEFAULT_OMEGA_STAR
 from optimizers.support_search import optimize_lambda, rank_preselected_edges
 from supports.common import upper_triangular_edges
 
@@ -498,7 +499,7 @@ def load_existing_curve_result(
         )
 
 
-def parse_args():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description="Compute objective curves and save NPZ data for later plotting."
     )
@@ -573,6 +574,15 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        "--omega-star",
+        type=float,
+        default=DEFAULT_OMEGA_STAR,
+        help=(
+            "Omega used to generate the population covariance from Lambda_star "
+            f"(default: {DEFAULT_OMEGA_STAR})."
+        ),
+    )
+    parser.add_argument(
         "--omega-ref",
         type=parse_omega_ref,
         default=1.0,
@@ -643,7 +653,7 @@ def parse_args():
             "automatically."
         ),
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def preselect_edges_for_sigma(
@@ -727,7 +737,7 @@ def run_experiment(args, n, add_output_suffix):
             lambda_star_support_index,
         )
     Lambda_star = lambda_star_for_dimension(n, lambda_star_support_edges)
-    omega_star = 1.0
+    omega_star = args.omega_star
     omega_ref = args.omega_ref
 
     lambda_star_radius = lambda_star_spectral_radius(Lambda_star)
@@ -778,6 +788,7 @@ def run_experiment(args, n, add_output_suffix):
             "given_sigma",
             n,
             expected_metadata={
+                "omega_star": omega_star,
                 "omega_ref": omega_ref,
                 "random_seed": args.random_seed,
                 "solve_seed": given_solve_seed,
@@ -887,6 +898,7 @@ def run_experiment(args, n, add_output_suffix):
         "sigma_hat_from_given_sigma",
         n,
         expected_metadata={
+            "omega_star": omega_star,
             "omega_ref": omega_ref,
             "random_seed": args.random_seed,
             "solve_seed": sigma_hat_solve_seed,
@@ -976,6 +988,8 @@ def run_experiment(args, n, add_output_suffix):
 
 if __name__ == "__main__":
     args = parse_args()
+    if args.omega_star < 0.0:
+        raise SystemExit("Error: --omega-star must be nonnegative.")
     if args.omega_ref is None and args.refine_after_fixed_omega:
         raise SystemExit(
             "Error: --omega-ref none conflicts with "

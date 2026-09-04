@@ -25,7 +25,7 @@ DEFAULT_INPUT = (
 
 
 def report_candidate_results(input_path):
-    """Print candidate objectives, recovered supports, and covariance data."""
+    """Print candidates, recovered supports, Lambda_star, and covariance data."""
 
     with np.load(input_path, allow_pickle=True) as data:
         d_m_values = data["d_m_values"]
@@ -56,8 +56,14 @@ def report_candidate_results(input_path):
         print("\nCurve type:", data["curve_type"].item())
         if "random_seed" in data:
             print("Random seed:", data["random_seed"].item())
+        lambda_star = data["Lambda_star"].copy() if "Lambda_star" in data else None
         sigma_hat = data["Sigma"].copy()
 
+    if lambda_star is None:
+        print("\nLambda_star: unavailable (not stored in this result file)")
+    else:
+        print("\nLambda_star:")
+        print(lambda_star)
     print("Shape:", sigma_hat.shape)
     print("Sigma_hat:")
     print(sigma_hat)

@@ -14,6 +14,7 @@ MAX_RESTARTS="${MAX_RESTARTS:-10}"
 N="${N:-4}"
 NUM_SAMPLES="${NUM_SAMPLES:-100}"
 REFINE_AFTER_FIXED_OMEGA="${REFINE_AFTER_FIXED_OMEGA:-false}"
+OMEGA_STAR="${OMEGA_STAR:-0.1}"
 OMEGA_REF="${OMEGA_REF:-1.0}"
 CURVE="${CURVE:-both}"
 RETURN_METADATA="${RETURN_METADATA:-false}"
@@ -30,6 +31,7 @@ ARGS=(
     --random-seed "${RANDOM_SEED}"
     --max-restarts "${MAX_RESTARTS}"
     --refine-after-fixed-omega "${REFINE_AFTER_FIXED_OMEGA}"
+    --omega-star "${OMEGA_STAR}"
     --omega-ref "${OMEGA_REF}"
     --curve "${CURVE}"
     --return-metadata "${RETURN_METADATA}"
@@ -50,6 +52,7 @@ python experiments/compute_objective_curve.py "${ARGS[@]}"
 #     --random-seed "${RANDOM_SEED}" \
 #     --max-restarts "${MAX_RESTARTS}" \
 #     --refine-after-fixed-omega "${REFINE_AFTER_FIXED_OMEGA}" \
+#     --omega-star "${OMEGA_STAR}" \
 #     --omega-ref "${OMEGA_REF}" \
 #     --support-scope "${SUPPORT_SCOPE}" \
 #     --lambda-star-dims "${N}"

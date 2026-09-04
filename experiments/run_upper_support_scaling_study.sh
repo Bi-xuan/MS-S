@@ -24,6 +24,7 @@ N_JOBS="${N_JOBS:-${SLURM_CPUS_PER_TASK:-8}}"
 NUM_SUPPORTS="${NUM_SUPPORTS:-20}"
 MAX_RESTARTS="${MAX_RESTARTS:-10}"
 REFINE_AFTER_FIXED_OMEGA="${REFINE_AFTER_FIXED_OMEGA:-false}"
+OMEGA_STAR="${OMEGA_STAR:-0.1}"
 OMEGA_REF="${OMEGA_REF:-1.0}"
 RECOMMENDATION_FACTOR="${RECOMMENDATION_FACTOR:-2.0}"
 OBJECTIVE_FLOOR="${OBJECTIVE_FLOOR:-1e-8}"
@@ -146,6 +147,7 @@ run_trial() {
         --random-seed "${random_seed}" \
         --max-restarts "${MAX_RESTARTS}" \
         --refine-after-fixed-omega "${REFINE_AFTER_FIXED_OMEGA}" \
+        --omega-star "${OMEGA_STAR}" \
         --omega-ref "${OMEGA_REF}" \
         2>&1 | tee "${compute_log}"
 

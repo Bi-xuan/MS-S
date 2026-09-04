@@ -1,6 +1,26 @@
 """ADMM solver and simulation helpers for Lambda/omega covariance models."""
 
+import argparse
 import numpy as np
+
+
+DEFAULT_OMEGA_STAR = 0.1
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Run the standalone ADMM demonstration."
+    )
+    parser.add_argument(
+        "--omega-star",
+        type=float,
+        default=DEFAULT_OMEGA_STAR,
+        help=(
+            "Omega used to generate the synthetic covariance in Test 6 "
+            f"(default: {DEFAULT_OMEGA_STAR})."
+        ),
+    )
+    return parser.parse_args(argv)
 
 
 def van_der_corput(index, base):
@@ -208,6 +228,9 @@ def admm_solve(
 
 # Example usage and test case
 if __name__ == "__main__":
+    args = parse_args()
+    if args.omega_star < 0.0:
+        raise SystemExit("Error: --omega-star must be nonnegative.")
 
     np.random.seed(42)
     n = 3
@@ -321,7 +344,7 @@ if __name__ == "__main__":
         target_spectral_radius=0.9,
         seed=0,
     )
-    omega_star = 1.0
+    omega_star = args.omega_star
 
     lambda_star_radius = lambda_star_spectral_radius(Lambda_star)
     if lambda_star_radius >= 1.0:
