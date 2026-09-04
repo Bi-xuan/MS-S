@@ -335,7 +335,7 @@ def optimize_lambda(
     obj_tol=1e-8,
     max_restarts=3,
     min_omega=1e-8,
-    omega_upper_gap=1e-3,
+    omega_upper_gap=1e-6,
     omega_ref=None,
     support_iterator=None,
     n_jobs=1,
