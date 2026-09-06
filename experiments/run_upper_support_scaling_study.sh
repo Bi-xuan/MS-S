@@ -25,11 +25,11 @@ N_JOBS="${N_JOBS:-${SLURM_CPUS_PER_TASK:-8}}"
 NUM_SUPPORTS="${NUM_SUPPORTS:-20}"
 MAX_RESTARTS="${MAX_RESTARTS:-10}"
 REFINE_AFTER_FIXED_OMEGA="${REFINE_AFTER_FIXED_OMEGA:-false}"
-OMEGA_STAR="${OMEGA_STAR:-0.1}"
-OMEGA_REF="${OMEGA_REF:-0.1}"
+OMEGA_STAR="${OMEGA_STAR:-1}"
+OMEGA_REF="${OMEGA_REF:-1}"
 RECOMMENDATION_FACTOR="${RECOMMENDATION_FACTOR:-2.0}"
 OBJECTIVE_FLOOR="${OBJECTIVE_FLOOR:-1e-8}"
-OUTPUT_ROOT="${OUTPUT_ROOT:-experiments/output/upper_support_scaling_n4_dm4_nsm100_minabs02_10seeds}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-experiments/output/upper_support_scaling_n4_dm4_nsm100_omega1_minabs02_10seeds}"
 
 if [[ ! "${NUM_SUPPORTS}" =~ ^[1-9][0-9]*$ ]] || ((NUM_SUPPORTS > 20)); then
     echo "Error: NUM_SUPPORTS must be an integer between 1 and 20." >&2
