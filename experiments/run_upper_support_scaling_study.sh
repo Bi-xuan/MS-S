@@ -46,7 +46,7 @@ TOTAL_TRIALS="$((NUM_SUPPORTS * SEED_COUNT))"
 
 usage() {
     cat <<EOF
-Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate]
+Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect]
 
   no command  Run one trial when SLURM_ARRAY_TASK_ID is set; otherwise run all
               ${TOTAL_TRIALS} trials sequentially and aggregate their results.
@@ -55,6 +55,10 @@ Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate]
               from 0 to $((TOTAL_TRIALS - 1)) in support-major, seed-minor order.
   aggregate   Validate all per-trial result files, create selection_summary.csv,
               and draw the PNG and PDF coverage plots.
+  reselect    Discover existing support_*/seed_* directories under OUTPUT_ROOT,
+              rerun both selection methods from saved curves, and aggregate.
+              Refresh selection logs, CSVs, and coverage plots without computing
+              objective curves. Ignore the configured SEEDS and NUM_SAMPLES.
 
 Example for 100 CPUs (20 concurrent trials x 5 CPUs):
   array_job=\$(sbatch --parsable --array=0-$((TOTAL_TRIALS - 1))%20 \\
@@ -108,6 +112,7 @@ trial_result_path() {
 run_trial() {
     local support_index="$1"
     local random_seed="$2"
+    local selection_only="${3:-false}"
     local support_dir
     local scenario_dir
     local curve_path
@@ -135,22 +140,30 @@ run_trial() {
 
     echo
     echo "=== Support $((support_index + 1))/${NUM_SUPPORTS}; seed ${random_seed}; N_JOBS=${N_JOBS} ==="
-    python experiments/compute_objective_curve.py \
-        --curve sigma_hat \
-        --sigma-hat-output "${curve_path}" \
-        --given-output "${scenario_dir}/sigma_hat.npz" \
-        --lambda-star-dims "${N}" \
-        --lambda-star-dimension "${TRUE_DIMENSION}" \
-        --lambda-star-support-index "${support_index}" \
-        --support-scope upper \
-        --num-samples "${NUM_SAMPLES}" \
-        --n-jobs "${N_JOBS}" \
-        --random-seed "${random_seed}" \
-        --max-restarts "${MAX_RESTARTS}" \
-        --refine-after-fixed-omega "${REFINE_AFTER_FIXED_OMEGA}" \
-        --omega-star "${OMEGA_STAR}" \
-        --omega-ref "${OMEGA_REF}" \
-        2>&1 | tee "${compute_log}"
+    if [[ "${selection_only}" == "true" ]]; then
+        if [[ ! -f "${curve_path}" ]]; then
+            echo "Error: missing saved curve: ${curve_path}" >&2
+            return 1
+        fi
+        echo "Reusing saved objective curve: ${curve_path}"
+    else
+        python experiments/compute_objective_curve.py \
+            --curve sigma_hat \
+            --sigma-hat-output "${curve_path}" \
+            --given-output "${scenario_dir}/sigma_hat.npz" \
+            --lambda-star-dims "${N}" \
+            --lambda-star-dimension "${TRUE_DIMENSION}" \
+            --lambda-star-support-index "${support_index}" \
+            --support-scope upper \
+            --num-samples "${NUM_SAMPLES}" \
+            --n-jobs "${N_JOBS}" \
+            --random-seed "${random_seed}" \
+            --max-restarts "${MAX_RESTARTS}" \
+            --refine-after-fixed-omega "${REFINE_AFTER_FIXED_OMEGA}" \
+            --omega-star "${OMEGA_STAR}" \
+            --omega-ref "${OMEGA_REF}" \
+            2>&1 | tee "${compute_log}"
+    fi
 
     if python experiments/select_scaling_parameter.py \
         "${curve_path}" \
@@ -224,34 +237,38 @@ aggregate_results() {
     local missing_count=0
     local result_paths=()
 
-    for ((support_index = 0; support_index < NUM_SUPPORTS; support_index++)); do
-        for random_seed in "${SEEDS[@]}"; do
-            result_path="$(trial_result_path "${support_index}" "${random_seed}")"
-            if [[ ! -f "${result_path}" ]]; then
-                echo "Missing trial result: ${result_path}" >&2
-                missing_count="$((missing_count + 1))"
-                continue
-            fi
+    if (($# > 0)); then
+        result_paths=("$@")
+    else
+        for ((support_index = 0; support_index < NUM_SUPPORTS; support_index++)); do
+            for random_seed in "${SEEDS[@]}"; do
+                result_path="$(trial_result_path "${support_index}" "${random_seed}")"
+                if [[ ! -f "${result_path}" ]]; then
+                    echo "Missing trial result: ${result_path}" >&2
+                    missing_count="$((missing_count + 1))"
+                    continue
+                fi
 
-            IFS= read -r result_header < "${result_path}"
-            result_header="${result_header%$'\r'}"
-            if [[ "${result_header}" != "${CSV_HEADER}" ]]; then
-                echo "Invalid CSV header: ${result_path}" >&2
-                exit 1
-            fi
-            result_row="$(tail -n 1 "${result_path}")"
-            IFS=',' read -r row_support row_seed _ <<< "${result_row}"
-            if [[ "${row_support}" != "${support_index}" || "${row_seed}" != "${random_seed}" ]]; then
-                echo "Mismatched support or seed in ${result_path}" >&2
-                exit 1
-            fi
-            result_paths+=("${result_path}")
+                IFS= read -r result_header < "${result_path}"
+                result_header="${result_header%$'\r'}"
+                if [[ "${result_header}" != "${CSV_HEADER}" ]]; then
+                    echo "Invalid CSV header: ${result_path}" >&2
+                    exit 1
+                fi
+                result_row="$(tail -n 1 "${result_path}")"
+                IFS=',' read -r row_support row_seed _ <<< "${result_row}"
+                if [[ "${row_support}" != "${support_index}" || "${row_seed}" != "${random_seed}" ]]; then
+                    echo "Mismatched support or seed in ${result_path}" >&2
+                    exit 1
+                fi
+                result_paths+=("${result_path}")
+            done
         done
-    done
 
-    if ((missing_count > 0)); then
-        echo "Error: cannot aggregate; ${missing_count} of ${TOTAL_TRIALS} trial results are missing." >&2
-        exit 1
+        if ((missing_count > 0)); then
+            echo "Error: cannot aggregate; ${missing_count} of ${TOTAL_TRIALS} trial results are missing." >&2
+            exit 1
+        fi
     fi
 
     summary_tmp="${SUMMARY_PATH}.tmp.${SLURM_JOB_ID:-local_$$}"
@@ -269,7 +286,7 @@ aggregate_results() {
         --pdf-output "${COVERAGE_PDF_PATH}"
 
     echo
-    echo "Aggregated ${TOTAL_TRIALS} trials across ${NUM_SUPPORTS} supports."
+    echo "Aggregated ${#result_paths[@]} trials."
     echo "Selection summary: ${SUMMARY_PATH}"
     echo "Coverage plot: ${COVERAGE_PLOT_PATH}"
     echo "Coverage PDF: ${COVERAGE_PDF_PATH}"
@@ -286,6 +303,45 @@ aggregate_results() {
         }
         printf "Invalid trials excluded from coverage: %d\n", invalid + 0
     }' "${SUMMARY_PATH}"
+}
+
+reselect_all() {
+    local scenario_dir
+    local support_dir
+    local support_index
+    local random_seed
+    local scenario_dirs=()
+    local result_paths=()
+
+    # Preflight every discovered trial before replacing selection outputs.
+    for scenario_dir in "${OUTPUT_ROOT}"/support_*/seed_*; do
+        [[ -d "${scenario_dir}" ]] || continue
+        support_dir="${scenario_dir%/*}"
+        support_index="${support_dir##*/support_}"
+        random_seed="${scenario_dir##*/seed_}"
+        if [[ ! "${support_index}" =~ ^[0-9]+$ || ! "${random_seed}" =~ ^[0-9]+$ ]]; then
+            echo "Error: invalid support/seed directory: ${scenario_dir}" >&2
+            return 1
+        fi
+        if [[ ! -f "${scenario_dir}/objective_curve_sigma_hat.npz" ]]; then
+            echo "Error: missing saved curve in ${scenario_dir}" >&2
+            return 1
+        fi
+        scenario_dirs+=("${scenario_dir}")
+    done
+    if ((${#scenario_dirs[@]} == 0)); then
+        echo "Error: no saved support/seed trials found under ${OUTPUT_ROOT}." >&2
+        return 1
+    fi
+
+    for scenario_dir in "${scenario_dirs[@]}"; do
+        support_dir="${scenario_dir%/*}"
+        support_index="$((10#${support_dir##*/support_}))"
+        random_seed="${scenario_dir##*/seed_}"
+        run_trial "${support_index}" "${random_seed}" true
+        result_paths+=("$(trial_result_path "${support_index}" "${random_seed}")")
+    done
+    aggregate_results "${result_paths[@]}"
 }
 
 run_all() {
@@ -334,6 +390,13 @@ case "${command}" in
             exit 2
         fi
         aggregate_results
+        ;;
+    reselect)
+        if (($# != 1)); then
+            usage >&2
+            exit 2
+        fi
+        reselect_all
         ;;
     -h|--help|help)
         usage

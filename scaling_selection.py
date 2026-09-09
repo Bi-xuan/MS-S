@@ -94,7 +94,7 @@ class AdaptiveWindowSelection:
 
 @dataclass(frozen=True)
 class PlateauCandidate:
-    """One bounded dimension plateau and its local persistence score."""
+    """One bounded dimension plateau, scored by its absolute log-width."""
 
     dimension: int | float
     left: float
@@ -106,7 +106,11 @@ class PlateauCandidate:
 
 @dataclass(frozen=True)
 class PlateauSelection:
-    """Result of comparing locally persistent bounded plateaus."""
+    """Result of comparing absolute log-widths of bounded plateaus.
+
+    ``persistence_score`` is the absolute log-width, ``runner_up_score`` is
+    the next largest log-width, and ``score_margin`` is their difference.
+    """
 
     succeeded: bool
     dimension: int | float | None
@@ -581,24 +585,31 @@ def adaptive_window(
 
 
 def select_persistent_plateau(path: DimensionPath) -> PlateauSelection:
-    """Select the bounded plateau widest relative to its bounded neighbors.
+    """Select the bounded plateau with the largest absolute log-width.
 
-    Plateau widths are measured in ``log(C)``. For an interior bounded plateau
-    with width ``g`` and neighboring widths ``g_left`` and ``g_right``, the
-    local persistence score is ``g / sqrt(g_left * g_right)``. The first and
-    last bounded plateaus use the one-sided scores ``g / g_right`` and
-    ``g / g_left``, respectively. The initial plateau beginning at zero and
-    the final plateau extending to infinity remain excluded.
+    Each plateau is scored by ``log(right) - log(left)``, without normalizing
+    by neighboring widths. The initial plateau beginning at zero and the
+    final plateau extending to infinity are excluded. A single bounded
+    plateau is sufficient; tied maximum widths produce an ambiguous result.
     """
 
-    bounded_plateaus: list[tuple[int, float, float, float]] = []
+    candidates: list[PlateauCandidate] = []
     for path_index in range(1, len(path.dimensions) - 1):
         left = float(path.breakpoints[path_index])
         right = float(path.breakpoints[path_index + 1])
         log_width = log(right) - log(left)
-        bounded_plateaus.append((path_index, left, right, log_width))
+        candidates.append(
+            PlateauCandidate(
+                dimension=path.dimensions[path_index],
+                left=left,
+                right=right,
+                center=sqrt(left * right),
+                log_width=log_width,
+                persistence_score=log_width,
+            )
+        )
 
-    if len(bounded_plateaus) < 2:
+    if not candidates:
         return PlateauSelection(
             succeeded=False,
             dimension=None,
@@ -610,36 +621,8 @@ def select_persistent_plateau(path: DimensionPath) -> PlateauSelection:
             runner_up_score=None,
             score_margin=None,
             failure_reason=(
-                "At least two bounded plateaus are required for local "
-                "plateau comparison."
+                "At least one bounded plateau is required for plateau selection."
             ),
-        )
-
-    candidates: list[PlateauCandidate] = []
-    for bounded_index, bounded_plateau in enumerate(bounded_plateaus):
-        path_index, left, right, log_width = bounded_plateau
-        neighbor_widths = []
-        if bounded_index > 0:
-            neighbor_widths.append(bounded_plateaus[bounded_index - 1][3])
-        if bounded_index + 1 < len(bounded_plateaus):
-            neighbor_widths.append(bounded_plateaus[bounded_index + 1][3])
-
-        if len(neighbor_widths) == 1:
-            neighborhood_width = neighbor_widths[0]
-        else:
-            neighborhood_width = sqrt(
-                neighbor_widths[0] * neighbor_widths[1]
-            )
-        persistence_score = log_width / neighborhood_width
-        candidates.append(
-            PlateauCandidate(
-                dimension=path.dimensions[path_index],
-                left=left,
-                right=right,
-                center=sqrt(left * right),
-                log_width=log_width,
-                persistence_score=float(persistence_score),
-            )
         )
 
     largest_score = max(candidate.persistence_score for candidate in candidates)
@@ -666,33 +649,11 @@ def select_persistent_plateau(path: DimensionPath) -> PlateauSelection:
             score_margin=0.0,
             failure_reason=(
                 "Plateau comparison is ambiguous because multiple plateaus "
-                "have the same largest persistence score."
+                "have the same largest absolute log-width."
             ),
         )
 
     winner = tied_candidates[0]
-    if winner.persistence_score <= 1.0 or np.isclose(
-        winner.persistence_score,
-        1.0,
-        rtol=1e-12,
-        atol=1e-12,
-    ):
-        return PlateauSelection(
-            succeeded=False,
-            dimension=None,
-            left=None,
-            right=None,
-            center=None,
-            log_width=None,
-            persistence_score=float(winner.persistence_score),
-            runner_up_score=None,
-            score_margin=None,
-            failure_reason=(
-                "No bounded plateau is wider than its available bounded "
-                "neighbors."
-            ),
-        )
-
     other_scores = [
         candidate.persistence_score
         for candidate in candidates
@@ -751,7 +712,9 @@ def select_minimal_scale(
         Candidate dimensions and the intercepts and slopes of their penalized
         criteria.
     method
-        One of ``"window"`` or ``"plateau"``.
+        One of ``"window"`` or ``"plateau"``. The plateau method selects
+        the bounded interval with the largest absolute log-width and uses
+        its geometric center as the minimal scale.
     eta
         For ``window``, an optional positive lower bound for the adaptively
         selected window width. It is ignored by ``plateau``.

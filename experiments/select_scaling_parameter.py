@@ -107,16 +107,12 @@ def _report_plateau_selection(plateau):
         f"[{plateau.left:.12g}, {plateau.right:.12g})"
     )
     print(f"Chosen plateau log-width: {plateau.log_width:.12g}")
-    print(
-        "Chosen plateau persistence score: "
-        f"{plateau.persistence_score:.12g}"
-    )
     if plateau.runner_up_score is not None:
         print(
-            "Runner-up plateau persistence score: "
+            "Runner-up plateau log-width: "
             f"{plateau.runner_up_score:.12g}"
         )
-        print(f"Plateau score margin: {plateau.score_margin:.12g}")
+        print(f"Plateau log-width margin: {plateau.score_margin:.12g}")
     print(f"Chosen plateau center: {plateau.center:.12g}")
 
 

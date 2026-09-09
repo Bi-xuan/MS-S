@@ -108,7 +108,7 @@ def _plot_window_selection(ax, result, C_min, C_max):
 
 
 def _plot_plateau_selection(ax, result, C_min, C_max):
-    """Highlight the plateau selected by the persistent-plateau method."""
+    """Highlight the bounded plateau with the largest absolute log-width."""
 
     plateau = result.plateau_selection
     left = max(plateau.left, C_min)

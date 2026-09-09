@@ -1,4 +1,4 @@
-"""Regression tests for preprocessing objective curves before scale selection."""
+"""Regression tests for objective preprocessing and scale selection."""
 
 from argparse import Namespace
 from pathlib import Path
@@ -11,6 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from experiments.select_scaling_parameter import (
+    _report_plateau_selection,
     floor_objective_values,
     load_selection_inputs,
 )
@@ -19,6 +20,7 @@ from scaling_selection import (
     adaptive_window,
     build_dimension_path,
     select_minimal_scale,
+    select_persistent_plateau,
     window,
 )
 
@@ -228,3 +230,104 @@ def test_window_method_uses_adaptive_center_as_minimal_scale():
     assert result.eta == pytest.approx(
         np.expm1(0.5 * np.log(1.03 / 0.98) / 0.8 * (1.0 + 1e-12))
     )
+
+
+@pytest.mark.parametrize("scale", [1e-10, 1.0, 1e10])
+def test_plateau_prefers_absolute_width_despite_tiny_neighbor(scale):
+    # Seed-89 geometry: the former relative score favors dimension 2 because
+    # its sole bounded neighbor (dimension 3) has a tiny log-width.
+    widths = [2.7, 0.72, 7.4, 0.013, 2.14]
+    transitions = scale * np.exp(np.r_[0.0, np.cumsum(widths)])
+    path = DimensionPath(
+        breakpoints=(0.0, *transitions),
+        dimensions=(7, 6, 5, 4, 3, 2, 1),
+    )
+
+    result = select_persistent_plateau(path)
+
+    assert result.succeeded
+    assert result.dimension == 4
+    assert result.log_width == pytest.approx(7.4)
+    assert result.persistence_score == pytest.approx(7.4)
+    assert result.runner_up_score == pytest.approx(2.7)
+    assert result.score_margin == pytest.approx(4.7)
+    assert result.center == pytest.approx(np.sqrt(transitions[2] * transitions[3]))
+
+
+def test_plateau_accepts_single_bounded_interval_and_applies_recommendation():
+    result = select_minimal_scale(
+        [1, 2, 3], [17.0, 1.0, 0.0], [1, 2, 3], method="plateau",
+    )
+
+    assert result.plateau_selection.dimension == 2
+    assert result.plateau_selection.runner_up_score is None
+    assert result.plateau_selection.score_margin is None
+    assert result.minimal_scale == pytest.approx(4.0)
+    assert result.recommended_scale == pytest.approx(8.0)
+    assert result.selected_dimension == 2
+    assert result.recommendation_within_plateau
+
+
+def test_plateau_accepts_widest_log_width_below_one():
+    path = DimensionPath(
+        breakpoints=(0.0, 1.0, 1.2, 2.0),
+        dimensions=(4, 3, 2, 1),
+    )
+
+    result = select_persistent_plateau(path)
+
+    assert result.succeeded
+    assert result.dimension == 2
+    assert result.log_width == pytest.approx(np.log(2.0 / 1.2))
+
+
+def test_plateau_recommendation_can_leave_a_narrow_winning_interval():
+    result = select_minimal_scale(
+        [1, 2, 3], [3.0, 1.0, 0.0], [1, 2, 3], method="plateau",
+    )
+
+    assert result.plateau_selection.dimension == 2
+    assert result.minimal_scale == pytest.approx(np.sqrt(2.0))
+    assert result.recommended_scale == pytest.approx(2.0 * np.sqrt(2.0))
+    assert result.selected_dimension == 1
+    assert not result.recommendation_within_plateau
+
+
+def test_plateau_rejects_tied_largest_log_widths():
+    path = DimensionPath(
+        breakpoints=(0.0, 1.0, 2.0, 4.0),
+        dimensions=(4, 3, 2, 1),
+    )
+
+    result = select_persistent_plateau(path)
+
+    assert not result.succeeded
+    assert result.dimension is None
+    assert result.score_margin == 0.0
+    assert "same largest absolute log-width" in result.failure_reason
+
+
+@pytest.mark.parametrize(
+    "path",
+    [DimensionPath((0.0,), (2,)), DimensionPath((0.0, 1.0), (2, 1))],
+)
+def test_plateau_requires_a_bounded_interval(path):
+    result = select_persistent_plateau(path)
+
+    assert not result.succeeded
+    assert result.dimension is None
+    assert "At least one bounded plateau" in result.failure_reason
+
+
+def test_plateau_report_labels_scores_as_log_widths(capsys):
+    result = select_persistent_plateau(
+        DimensionPath((0.0, 1.0, 2.0, 16.0), (4, 3, 2, 1)),
+    )
+
+    _report_plateau_selection(result)
+
+    output = capsys.readouterr().out
+    assert "Chosen plateau log-width:" in output
+    assert "Runner-up plateau log-width:" in output
+    assert "Plateau log-width margin:" in output
+    assert "persistence score" not in output
