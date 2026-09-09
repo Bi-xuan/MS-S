@@ -21,7 +21,7 @@ NUM_SAMPLES=100
 # SEEDS=(124 17 43 89 733 2027 4093 211 347 509)
 SEEDS=(124 139 141 147 153 156 173 192 237 243)
 
-N_JOBS="${N_JOBS:-${SLURM_CPUS_PER_TASK:-8}}"
+N_JOBS="${N_JOBS:-${SLURM_CPUS_PER_TASK:-${NSLOTS:-8}}}"
 NUM_SUPPORTS="${NUM_SUPPORTS:-20}"
 MAX_RESTARTS="${MAX_RESTARTS:-10}"
 REFINE_AFTER_FIXED_OMEGA="${REFINE_AFTER_FIXED_OMEGA:-false}"
@@ -56,9 +56,11 @@ Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect]
   aggregate   Validate all per-trial result files, create selection_summary.csv,
               and draw the PNG and PDF coverage plots.
   reselect    Discover existing support_*/seed_* directories under OUTPUT_ROOT,
-              rerun both selection methods from saved curves, and aggregate.
+              rerun both selection methods with up to N_JOBS concurrent trials,
+              and aggregate after all workers finish. Each trial uses one CPU.
               Refresh selection logs, CSVs, and coverage plots without computing
               objective curves. Ignore the configured SEEDS and NUM_SAMPLES.
+              N_JOBS defaults to SLURM_CPUS_PER_TASK, then SGE NSLOTS, then 8.
 
 Example for 100 CPUs (20 concurrent trials x 5 CPUs):
   array_job=\$(sbatch --parsable --array=0-$((TOTAL_TRIALS - 1))%20 \\
@@ -310,8 +312,19 @@ reselect_all() {
     local support_dir
     local support_index
     local random_seed
+    local worker_count
+    local worker_index
+    local trial_index
+    local worker_pid
+    local worker_failed=0
     local scenario_dirs=()
     local result_paths=()
+    local worker_pids=()
+
+    if [[ ! "${N_JOBS}" =~ ^[1-9][0-9]*$ ]]; then
+        echo "Error: reselect requires N_JOBS to be a positive integer." >&2
+        return 2
+    fi
 
     # Preflight every discovered trial before replacing selection outputs.
     for scenario_dir in "${OUTPUT_ROOT}"/support_*/seed_*; do
@@ -338,9 +351,37 @@ reselect_all() {
         support_dir="${scenario_dir%/*}"
         support_index="$((10#${support_dir##*/support_}))"
         random_seed="${scenario_dir##*/seed_}"
-        run_trial "${support_index}" "${random_seed}" true
         result_paths+=("$(trial_result_path "${support_index}" "${random_seed}")")
     done
+
+    worker_count="${N_JOBS}"
+    if ((worker_count > ${#scenario_dirs[@]})); then
+        worker_count="${#scenario_dirs[@]}"
+    fi
+    echo "Reselecting ${#scenario_dirs[@]} trials with ${worker_count} workers."
+    for ((worker_index = 0; worker_index < worker_count; worker_index++)); do
+        (
+            # Disjoint trial lists keep per-trial logs and CSV writes isolated.
+            # Fixed workers also work on Bash versions without wait -n.
+            for ((trial_index = worker_index; trial_index < ${#scenario_dirs[@]}; trial_index += worker_count)); do
+                scenario_dir="${scenario_dirs[trial_index]}"
+                support_dir="${scenario_dir%/*}"
+                support_index="$((10#${support_dir##*/support_}))"
+                random_seed="${scenario_dir##*/seed_}"
+                N_JOBS=1 run_trial "${support_index}" "${random_seed}" true
+            done
+        ) &
+        worker_pids+=("$!")
+    done
+    for worker_pid in "${worker_pids[@]}"; do
+        if ! wait "${worker_pid}"; then
+            worker_failed=1
+        fi
+    done
+    if ((worker_failed)); then
+        echo "Error: a reselect worker failed; aggregation was skipped." >&2
+        return 1
+    fi
     aggregate_results "${result_paths[@]}"
 }
 
