@@ -122,7 +122,7 @@ def plot_penalized_curve(
         marker="o",
         linewidth=1.5,
         color="tab:blue",
-        label="Exact support search",
+        label="Selected support at each dimension",
     )
 
     if fallback_d_m_values is not None and len(fallback_d_m_values) > 0:

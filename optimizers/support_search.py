@@ -8,7 +8,10 @@ import numpy as np
 
 from admm import admm_solve
 from objective import frobenius_objective
-from supports.common import off_diagonal_edges, support_mask_from_edges
+from supports.common import (
+    off_diagonal_edges, support_mask_from_edges, upper_triangular_edges,
+    validate_support_mask,
+)
 from supports.exact import get_all_supports, get_upper_triangular_supports
 from supports.preselected import (
     count_preselected_supports,
@@ -347,6 +350,7 @@ def optimize_lambda(
     preselect_direction_policy="directed",
     return_metadata=False,
     support_scope="all",
+    previous_support_mask=None,
 ):
     """
     Optimize Lambda over a support iterator.
@@ -355,7 +359,8 @@ def optimize_lambda(
     off-diagonal positions. Set support_scope="upper" to enumerate only strict
     upper-triangular positions. For larger problems, pass either a
     support_iterator(n, n_edge) callable or an iterable that yields support
-    masks.
+    masks. With previous_support_mask, enumerate only its one-edge extensions
+    within the selected scope and choose the strict minimum fitted objective.
     """
     metadata = {
         "preselect_k": preselect_k,
@@ -378,6 +383,9 @@ def optimize_lambda(
     omega_upper = lambda_min_sigma - omega_upper_gap
     validate_preselect_direction_policy(preselect_direction_policy)
     validate_support_scope(support_scope)
+
+    if previous_support_mask is not None and support_iterator is not None:
+        raise ValueError("previous_support_mask cannot be combined with support_iterator.")
 
     if support_scope == "upper" and (
         support_iterator is not None
@@ -469,6 +477,27 @@ def optimize_lambda(
             selected_edges,
         )
 
+    nested_edges = None
+    if previous_support_mask is not None:
+        allowed_edges = metadata["preselected_edges"]
+        if allowed_edges is None:
+            allowed_edges = (
+                upper_triangular_edges(n) if support_scope == "upper"
+                else off_diagonal_edges(n)
+            )
+        previous_support_mask = validate_support_mask(
+            previous_support_mask, n, n_edge - 1, allowed_edges,
+        )
+        nested_edges = [edge for edge in allowed_edges if not previous_support_mask[edge]]
+
+        def nested_supports(n_arg, n_edge_arg):
+            for edge in nested_edges:
+                mask = previous_support_mask.copy()
+                mask[edge] = True
+                yield mask
+
+        support_iterator = nested_supports
+
     best_obj = np.inf
     best_Lambda = None
     best_omega = None
@@ -512,7 +541,9 @@ def optimize_lambda(
         raise ValueError("n_jobs must be positive or None.")
 
     support_count = None
-    if support_iterator is get_all_supports:
+    if nested_edges is not None:
+        support_count = len(nested_edges)
+    elif support_iterator is get_all_supports:
         support_count = comb(n * (n - 1), n_edge)
     elif support_iterator is get_upper_triangular_supports:
         support_count = comb(n * (n - 1) // 2, n_edge)
@@ -530,7 +561,17 @@ def optimize_lambda(
             max_workers,
         )
 
-    for _, mask, result in support_results:
+    best_index = None
+    for support_index, mask, result in support_results:
+        if previous_support_mask is not None:
+            # Break exact ties by enumeration order, including parallel runs.
+            if result is not None and (
+                best_index is None or (result[2], support_index) < (best_obj, best_index)
+            ):
+                best_Lambda, best_omega, best_obj = result
+                best_Lambda, best_mask = best_Lambda.copy(), mask.copy()
+                best_index = support_index
+            continue
         best_Lambda, best_omega, best_obj, best_mask = update_best_support(
             best_Lambda,
             best_omega,

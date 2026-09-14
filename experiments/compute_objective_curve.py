@@ -1,6 +1,7 @@
 """Compute and save objective curves showing how the optimum changes with D_m."""
 
 import argparse
+import json
 from itertools import combinations
 import tempfile
 from pathlib import Path
@@ -13,7 +14,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from admm import DEFAULT_OMEGA_STAR
 from optimizers.support_search import optimize_lambda, rank_preselected_edges
-from supports.common import upper_triangular_edges
+from supports.common import off_diagonal_edges, upper_triangular_edges, validate_support_mask
+from supports.preselected import normalize_preselected_edges
 
 
 MIN_LAMBDA_STAR_EDGE_MAGNITUDE = 0.20
@@ -100,7 +102,9 @@ def compute_objective_curve(
     initial_curve_result=None,
     save_callback=None,
     support_scope="all",
+    nested_supports=True,
 ):
+    """Fit each dimension, by default along a greedy forward-nested path."""
     n = Sigma.shape[0]
     if support_scope not in ("all", "upper"):
         raise ValueError("support_scope must be one of ('all', 'upper').")
@@ -108,6 +112,13 @@ def compute_objective_curve(
         raise ValueError(
             "support_scope='upper' cannot be combined with preselect_edges."
         )
+
+    if preselect_edges is not None:
+        preselect_edges = normalize_preselected_edges(n, preselect_edges)
+    allowed_edges = (
+        preselect_edges if preselect_edges is not None else
+        upper_triangular_edges(n) if support_scope == "upper" else off_diagonal_edges(n)
+    )
 
     if preselect_edges is None:
         if support_scope == "upper":
@@ -162,6 +173,29 @@ def compute_objective_curve(
             for valid in initial_selected_support_valid
         ]
 
+    if nested_supports:
+        count = len(exact_d_m_values)
+        if count > max_dm or not np.array_equal(exact_d_m_values, np.arange(1, count + 1)):
+            raise ValueError("Nested recovery requires a contiguous saved dimension prefix starting at D_m=1.")
+        if not (len(exact_objective_values) == len(selected_support_masks) == len(selected_support_valid) == count):
+            raise ValueError("Nested recovery requires one objective and support mask per saved dimension.")
+        previous = np.eye(n, dtype=bool)
+        failed = False
+        for index, (mask, valid, obj) in enumerate(zip(
+            selected_support_masks, selected_support_valid, exact_objective_values,
+        )):
+            if not valid:
+                if not np.isposinf(obj):
+                    raise ValueError("Nested recovery requires saved support masks for every finite objective.")
+                failed = True
+                continue
+            if failed or not np.isfinite(obj):
+                raise ValueError("A valid nested support cannot follow a failed dimension.")
+            mask = validate_support_mask(mask, n, index, allowed_edges)
+            if np.any(previous & ~mask):
+                raise ValueError("Saved supports are not nested; use nested_supports=False for unrestricted curves.")
+            previous = mask
+
     completed_d_m_values = set(int(d_m) for d_m in exact_d_m_values)
 
     for d_m in range(1, max_dm + 1):
@@ -171,26 +205,35 @@ def compute_objective_curve(
 
         print(f"Solving for D_m = {d_m}...")
         np.random.seed(random_seed)
-        solve_result = optimize_lambda(
-            Sigma,
-            d_m,
-            beta=beta,
-            max_iter=max_iter,
-            tol=tol,
-            zero_tol=zero_tol,
-            obj_tol=obj_tol,
-            max_restarts=max_restarts,
-            min_omega=min_omega,
-            omega_ref=omega_ref,
-            n_jobs=n_jobs,
-            random_seed=random_seed,
-            init_strategy=init_strategy,
-            refine_after_fixed_omega=refine_after_fixed_omega,
-            preselect_edges=preselect_edges,
-            preselect_direction_policy=preselect_direction_policy,
-            return_metadata=True,
-            support_scope=support_scope,
-        )
+        previous_mask = None
+        blocked = nested_supports and d_m > 1 and not selected_support_valid[-1]
+        if nested_supports and d_m > 1 and not blocked:
+            previous_mask = selected_support_masks[-1]
+        if blocked:
+            print("  No valid preceding support to extend.")
+            solve_result = (None, None, np.inf, {})
+        else:
+            solve_result = optimize_lambda(
+                Sigma,
+                d_m,
+                beta=beta,
+                max_iter=max_iter,
+                tol=tol,
+                zero_tol=zero_tol,
+                obj_tol=obj_tol,
+                max_restarts=max_restarts,
+                min_omega=min_omega,
+                omega_ref=omega_ref,
+                n_jobs=n_jobs,
+                random_seed=random_seed,
+                init_strategy=init_strategy,
+                refine_after_fixed_omega=refine_after_fixed_omega,
+                preselect_edges=preselect_edges,
+                preselect_direction_policy=preselect_direction_policy,
+                return_metadata=True,
+                support_scope=support_scope,
+                previous_support_mask=previous_mask,
+            )
         Lambda, omega, obj, metadata = solve_result
 
         if (
@@ -222,6 +265,10 @@ def compute_objective_curve(
                 )
             continue
 
+        if nested_supports:
+            chosen = validate_support_mask(metadata["selected_support_mask"], n, d_m - 1, allowed_edges)
+            if previous_mask is not None and np.any(previous_mask & ~chosen):
+                raise ValueError("Selected support does not extend the previous dimension.")
         print(f"  Objective = {obj:.6f}")
         exact_d_m_values.append(d_m)
         exact_objective_values.append(obj)
@@ -355,6 +402,8 @@ def save_curve_result(
     lambda_star_support_index=-1,
     lambda_star_dimension=None,
     lambda_star_support_edges=None,
+    nested_supports=True,
+    fit_settings=None,
 ):
     if len(curve_result) == 4:
         (
@@ -400,6 +449,7 @@ def save_curve_result(
         num_samples=num_samples,
         stop_obj_threshold=stop_obj_threshold,
         support_scope=support_scope,
+        nested_supports=nested_supports,
         preselect_k=-1 if preselect_k is None else preselect_k,
         preselect_direction_policy=preselect_direction_policy,
         preselected_edges=np.array(
@@ -416,6 +466,8 @@ def save_curve_result(
         selected_support_valid=selected_support_valid,
         fallback_d_m_values=fallback_d_m_values,
         fallback_objective_values=fallback_objective_values,
+        **({"fit_settings_json": json.dumps(fit_settings, sort_keys=True)}
+           if fit_settings is not None else {}),
     )
 
 
@@ -449,6 +501,13 @@ def load_existing_curve_result(
                     actual_value = "directed"
                 elif key == "support_scope" and expected_value == "all":
                     actual_value = "all"
+                elif key == "nested_supports":
+                    # Files predating this option used independent support searches.
+                    actual_value = False
+                elif key == "fit_settings_json":
+                    # Legacy curves have no fitting metadata. Bootstrap selection
+                    # independently verifies every observed candidate refit.
+                    continue
                 else:
                     raise ValueError(
                         f"Refusing to resume from {output_path}: missing "
@@ -622,8 +681,17 @@ def parse_args(argv=None):
         choices=["all", "upper"],
         default="all",
         help=(
-            "Candidate positions for exhaustive support search. 'upper' uses "
+            "Candidate positions for support search. 'upper' uses "
             "only entries strictly above the diagonal."
+        ),
+    )
+    parser.add_argument(
+        "--nested-supports",
+        type=parse_bool,
+        default=True,
+        help=(
+            "Require each support to extend the preceding dimension's selected "
+            "support by one edge (default: true). Use false for independent searches."
         ),
     )
     parser.add_argument(
@@ -775,7 +843,14 @@ def run_experiment(args, n, add_output_suffix):
             "--refine-after-fixed-omega false for free-omega support search."
         )
     print(f"omega_ref for support selection: {omega_ref}")
+    fit_settings = dict(
+        omega_fixed=None if args.refine_after_fixed_omega else omega_ref,
+        beta=1.0, max_iter=800, tol=1e-7, zero_tol=1e-5,
+        max_restarts=args.max_restarts, min_omega=0.0,
+        init_strategy=args.init_strategy,
+    )
     print(f"support_scope: {args.support_scope}")
+    print(f"nested_supports: {args.nested_supports}")
 
     print("Given Sigma:")
     print(Sigma_given)
@@ -796,6 +871,8 @@ def run_experiment(args, n, add_output_suffix):
                 "num_samples": -1,
                 "stop_obj_threshold": args.stop_obj_threshold,
                 "support_scope": args.support_scope,
+                "nested_supports": args.nested_supports,
+                "fit_settings_json": json.dumps(fit_settings, sort_keys=True),
                 "lambda_star_min_edge_magnitude": (
                     MIN_LAMBDA_STAR_EDGE_MAGNITUDE
                 ),
@@ -851,6 +928,8 @@ def run_experiment(args, n, add_output_suffix):
                 given_preselected_scores,
                 curve_result,
                 support_scope=args.support_scope,
+                nested_supports=args.nested_supports,
+                fit_settings=fit_settings,
                 lambda_star_support_index=lambda_star_support_index,
                 lambda_star_dimension=true_dimension,
                 lambda_star_support_edges=lambda_star_support_edges,
@@ -875,6 +954,7 @@ def run_experiment(args, n, add_output_suffix):
             initial_curve_result=given_existing_curve,
             save_callback=save_given_curve,
             support_scope=args.support_scope,
+            nested_supports=args.nested_supports,
         )
         save_given_curve(given_curve)
         print(f"Saved given-Sigma curve data to {given_output}")
@@ -906,6 +986,8 @@ def run_experiment(args, n, add_output_suffix):
             "num_samples": args.num_samples,
             "stop_obj_threshold": args.stop_obj_threshold,
             "support_scope": args.support_scope,
+            "nested_supports": args.nested_supports,
+            "fit_settings_json": json.dumps(fit_settings, sort_keys=True),
             "lambda_star_min_edge_magnitude": (
                 MIN_LAMBDA_STAR_EDGE_MAGNITUDE
             ),
@@ -957,7 +1039,9 @@ def run_experiment(args, n, add_output_suffix):
             sigma_hat_preselected_scores,
             curve_result,
             support_scope=args.support_scope,
+            nested_supports=args.nested_supports,
             lambda_star_support_index=lambda_star_support_index,
+            fit_settings=fit_settings,
             lambda_star_dimension=true_dimension,
             lambda_star_support_edges=lambda_star_support_edges,
         )
@@ -981,6 +1065,7 @@ def run_experiment(args, n, add_output_suffix):
         initial_curve_result=sigma_hat_existing_curve,
         save_callback=save_sigma_hat_curve,
         support_scope=args.support_scope,
+        nested_supports=args.nested_supports,
     )
     save_sigma_hat_curve(sigma_hat_curve)
     print(f"Saved Sigma_hat curve data to {sigma_hat_output}")

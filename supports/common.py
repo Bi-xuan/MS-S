@@ -26,6 +26,21 @@ def support_mask_from_edges(n, edges):
     return mask
 
 
+def validate_support_mask(mask, n, n_edge, allowed_edges):
+    """Return a mask with the expected dimension and allowed edge positions."""
+    mask = np.asarray(mask, dtype=bool)
+    if mask.shape != (n, n):
+        raise ValueError(f"Support mask must have shape ({n}, {n}).")
+    if not np.all(np.diag(mask)) or np.count_nonzero(mask) != n + n_edge:
+        raise ValueError(
+            f"Support mask must contain all diagonal entries and {n_edge} off-diagonal edges."
+        )
+    allowed = support_mask_from_edges(n, allowed_edges)
+    if np.any(mask & ~allowed):
+        raise ValueError("Support mask contains edges outside the allowed support scope.")
+    return mask.copy()
+
+
 def validate_n_edge(n, n_edge, max_edges=None):
     if n < 1:
         raise ValueError("n must be positive.")

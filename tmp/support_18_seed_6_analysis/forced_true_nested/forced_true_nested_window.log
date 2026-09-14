@@ -1,0 +1,15 @@
+Loaded: /Users/liubixuan/Documents/LPSM/model_selection/MS-S/tmp/support_18_seed_6_analysis/forced_true_nested/objective_curve_sigma_hat.npz
+Curve type: sigma_hat_from_given_sigma
+Matrix dimension: 4
+Number of samples: 10000
+Raw-objective floor: 1e-08
+Raw objectives tied at zero: 1
+Method: window
+Jump selection: succeeded
+Largest jump: 2
+Chosen window size (eta): 0.224434567396
+Selection source: jump
+Minimal scale: 5.2297973111e-09
+Recommendation factor: 2
+Recommended scale: 1.04595946222e-08
+Selected dimension at recommended scale: 2

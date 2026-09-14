@@ -1,0 +1,16 @@
+Lm rule: 1
+Loaded: /Users/liubixuan/Documents/LPSM/model_selection/MS-S/experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_4/objective_curve_sigma_hat.npz
+Curve type: sigma_hat_from_given_sigma
+Matrix dimension: 4
+Number of samples: 10000
+Raw-objective floor: 1e-08
+Raw objectives tied at zero: 0
+Method: window
+Jump selection: succeeded
+Largest jump: 3
+Chosen window size (eta): 1.75631074761
+Selection source: jump
+Minimal scale: 1.94528502861e-08
+Recommendation factor: 2
+Recommended scale: 3.89057005722e-08
+Selected dimension at recommended scale: 2

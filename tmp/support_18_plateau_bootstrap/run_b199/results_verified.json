@@ -1,0 +1,1853 @@
+{
+  "config": {
+    "replicates": 199,
+    "alpha": 0.05,
+    "bootstrap_seed": 20260913,
+    "sample_size": 10000,
+    "Lm": 1,
+    "objective_floor": 1e-08,
+    "settings": {
+      "beta": 1.0,
+      "max_iter": 800,
+      "tol": 1e-07,
+      "zero_tol": 1e-05,
+      "max_restarts": 10,
+      "min_omega": 0.0,
+      "omega_fixed": 1.0,
+      "omega_upper": null,
+      "init_strategy": "halton"
+    },
+    "statistic": "Raw objective on original smaller support minus raw objective on original larger support; both refitted on each bootstrap sample.",
+    "reconstruction_in_bootstrap": false,
+    "nested_input_sha256": "db6a1d7ab88602dfb8e8ea12f9c879813ec67363ef63ef5f5a32cc05246bf7b0",
+    "candidates": [
+      {
+        "seed": 3,
+        "ranked_plateaus": [
+          {
+            "dimension": 2,
+            "log_width": 2.6636296689174968
+          },
+          {
+            "dimension": 5,
+            "log_width": 2.116419421646989
+          },
+          {
+            "dimension": 4,
+            "log_width": 0.8997390415234827
+          },
+          {
+            "dimension": 3,
+            "log_width": 0.5450243493722935
+          }
+        ],
+        "small_dimension": 2,
+        "large_dimension": 5,
+        "small_edges": [
+          [
+            3,
+            4
+          ]
+        ],
+        "large_edges": [
+          [
+            1,
+            2
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "small_Lambda": [
+          [
+            -0.1477839361360797,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            -0.2683939965844467,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -0.3945509298442494,
+            0.4399695079291643
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.6788751693474843
+          ]
+        ],
+        "large_Lambda": [
+          [
+            -0.14873131441772472,
+            -0.12241136120331964,
+            0.0,
+            -0.20968618954342882
+          ],
+          [
+            0.0,
+            -0.2369642252520928,
+            0.0,
+            -0.06504142172183927
+          ],
+          [
+            0.0,
+            0.0,
+            -0.3944506930141721,
+            0.4474252383781445
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.6592339853451947
+          ]
+        ],
+        "small_objective": 0.006924367209423386,
+        "large_objective": 0.0001490827599514247,
+        "observed_gain": 0.006775284449471961,
+        "null_covariance": [
+          [
+            1.0223277314847359,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0776272419694741,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.1843716516900127,
+            -0.2808109760713471
+          ],
+          [
+            0.0,
+            0.0,
+            -0.2808109760713471,
+            2.591238011713178
+          ]
+        ],
+        "null_spectral_radius": 0.6788751693474843,
+        "true_edges": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ]
+      },
+      {
+        "seed": 4,
+        "ranked_plateaus": [
+          {
+            "dimension": 4,
+            "log_width": 3.125034337626176
+          },
+          {
+            "dimension": 2,
+            "log_width": 1.6398857793848483
+          },
+          {
+            "dimension": 5,
+            "log_width": 1.1566048983416515
+          }
+        ],
+        "small_dimension": 2,
+        "large_dimension": 4,
+        "small_edges": [
+          [
+            3,
+            4
+          ]
+        ],
+        "large_edges": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "small_Lambda": [
+          [
+            -0.1147659085076759,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            -0.2662084431162409,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -0.4156591563302842,
+            0.43055016661626594
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.685933050995223
+          ]
+        ],
+        "large_Lambda": [
+          [
+            -0.07069300196262591,
+            0.0,
+            0.0,
+            -1.0371314464198367
+          ],
+          [
+            0.0,
+            -0.26376344669530016,
+            0.0,
+            -0.3198332086375175
+          ],
+          [
+            0.0,
+            0.0,
+            -0.41532500257923743,
+            0.5936732138810239
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.023954057210905367
+          ]
+        ],
+        "small_objective": 0.02385305055719838,
+        "large_objective": 0.0006355364089323506,
+        "observed_gain": 0.023217514148266026,
+        "null_covariance": [
+          [
+            1.013347010078332,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0762721055466775,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.2088573474560875,
+            -0.30262136815473073
+          ],
+          [
+            0.0,
+            0.0,
+            -0.30262136815473073,
+            2.6493796635591518
+          ]
+        ],
+        "null_spectral_radius": 0.685933050995223,
+        "true_edges": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ]
+      },
+      {
+        "seed": 6,
+        "ranked_plateaus": [
+          {
+            "dimension": 6,
+            "log_width": 5.577167203738071
+          },
+          {
+            "dimension": 4,
+            "log_width": 5.146973793694761
+          },
+          {
+            "dimension": 2,
+            "log_width": 1.8062108557547456
+          },
+          {
+            "dimension": 5,
+            "log_width": 1.4452325884250055
+          },
+          {
+            "dimension": 3,
+            "log_width": 0.2729686347617917
+          }
+        ],
+        "small_dimension": 4,
+        "large_dimension": 6,
+        "small_edges": [
+          [
+            1,
+            2
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "large_edges": [
+          [
+            1,
+            2
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "small_Lambda": [
+          [
+            -0.11035483019470833,
+            -0.11412444167929005,
+            0.0,
+            -0.5771171395070369
+          ],
+          [
+            0.0,
+            0.22531799414519094,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -0.37125351702331305,
+            0.4735032263655953
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.5602934311507
+          ]
+        ],
+        "large_Lambda": [
+          [
+            -0.10015625243914245,
+            -0.12307250400099733,
+            -0.020756963552441506,
+            -0.6564210324741204
+          ],
+          [
+            0.0,
+            0.22091227852499473,
+            0.0,
+            -0.0728902806644126
+          ],
+          [
+            0.0,
+            0.0,
+            -0.3705716269202194,
+            0.5218881419863346
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.5005722204996266
+          ]
+        ],
+        "small_objective": 3.32576847793522e-05,
+        "large_objective": 2.0311665416338104e-08,
+        "observed_gain": 3.323737311393586e-05,
+        "null_covariance": [
+          [
+            1.012328325216259,
+            0.012440125728373283,
+            0.0,
+            0.06872198090883543
+          ],
+          [
+            0.012440125728373283,
+            1.0666995958819478,
+            0.0,
+            0.06166673786991465
+          ],
+          [
+            0.0,
+            0.0,
+            1.1598629525960573,
+            -0.2574429451764278
+          ],
+          [
+            0.06872198090883543,
+            0.06166673786991465,
+            -0.2574429451764278,
+            2.591947243500958
+          ]
+        ],
+        "null_spectral_radius": 0.5602934311507,
+        "true_edges": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ]
+      },
+      {
+        "seed": 8,
+        "ranked_plateaus": [
+          {
+            "dimension": 6,
+            "log_width": 6.279414543814802
+          },
+          {
+            "dimension": 4,
+            "log_width": 3.589242985960331
+          },
+          {
+            "dimension": 2,
+            "log_width": 2.0301144401073374
+          },
+          {
+            "dimension": 5,
+            "log_width": 0.2413649873038528
+          }
+        ],
+        "small_dimension": 4,
+        "large_dimension": 6,
+        "small_edges": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "large_edges": [
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "small_Lambda": [
+          [
+            -0.13514325767452243,
+            0.0,
+            0.0,
+            -0.4697411444017171
+          ],
+          [
+            0.0,
+            -0.2499116356227087,
+            0.0,
+            -0.22430086619680495
+          ],
+          [
+            0.0,
+            0.0,
+            -0.38664574094906545,
+            0.49164457842772774
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.591069681187069
+          ]
+        ],
+        "large_Lambda": [
+          [
+            0.12198122454444703,
+            0.0,
+            0.08158197614391649,
+            0.5898916336521776
+          ],
+          [
+            0.0,
+            0.2510703243804101,
+            -0.032452408216833546,
+            0.305578903199424
+          ],
+          [
+            0.0,
+            0.0,
+            -0.3787007026462748,
+            0.6002661602049397
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.5217721670742176
+          ]
+        ],
+        "small_objective": 0.00028252307905590876,
+        "large_objective": 2.0209562909565015e-07,
+        "observed_gain": 0.0002823209834268131,
+        "null_covariance": [
+          [
+            1.0186034682599059,
+            0.0,
+            0.0,
+            0.07027700286449808
+          ],
+          [
+            0.0,
+            1.0666164084064564,
+            0.0,
+            0.0701521426559112
+          ],
+          [
+            0.0,
+            0.0,
+            1.1757719431551823,
+            -0.28971508619767344
+          ],
+          [
+            0.07027700286449808,
+            0.0701521426559112,
+            -0.28971508619767344,
+            2.749047963409869
+          ]
+        ],
+        "null_spectral_radius": 0.591069681187069,
+        "true_edges": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ]
+      },
+      {
+        "seed": 12,
+        "ranked_plateaus": [
+          {
+            "dimension": 4,
+            "log_width": 4.224461211577502
+          },
+          {
+            "dimension": 5,
+            "log_width": 1.8632565026086931
+          },
+          {
+            "dimension": 2,
+            "log_width": 1.5388879098323394
+          }
+        ],
+        "small_dimension": 4,
+        "large_dimension": 5,
+        "small_edges": [
+          [
+            1,
+            2
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "large_edges": [
+          [
+            1,
+            2
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "small_Lambda": [
+          [
+            -0.10165306655978301,
+            -0.08428840256360945,
+            0.0,
+            -0.7358501394160549
+          ],
+          [
+            0.0,
+            -0.2843728445850008,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -0.37445393283125505,
+            0.46546452309411446
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.49063864587353284
+          ]
+        ],
+        "large_Lambda": [
+          [
+            0.11514255093991174,
+            0.10018245912790064,
+            -0.04418114579512462,
+            0.728323948336175
+          ],
+          [
+            0.0,
+            -0.28126695493999376,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -0.3727654560766188,
+            0.3853178074690953
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.5708666160870389
+          ]
+        ],
+        "small_objective": 0.00014094185331801212,
+        "large_objective": 2.9901340514226747e-05,
+        "observed_gain": 0.00011104051280378538,
+        "null_covariance": [
+          [
+            1.010441238874349,
+            0.008915356477200632,
+            0.0,
+            0.07954999247110212
+          ],
+          [
+            0.008915356477200632,
+            1.0962582216425707,
+            0.0,
+            0.07882457185238603
+          ],
+          [
+            0.0,
+            0.0,
+            1.1630824796524235,
+            -0.24834600328815773
+          ],
+          [
+            0.07954999247110212,
+            0.07882457185238603,
+            -0.24834600328815773,
+            2.5945744661117067
+          ]
+        ],
+        "null_spectral_radius": 0.49063864587353284,
+        "true_edges": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ]
+      },
+      {
+        "seed": 13,
+        "ranked_plateaus": [
+          {
+            "dimension": 4,
+            "log_width": 3.0393458138612157
+          },
+          {
+            "dimension": 2,
+            "log_width": 1.5415794621746657
+          },
+          {
+            "dimension": 3,
+            "log_width": 0.3299941514604168
+          },
+          {
+            "dimension": 6,
+            "log_width": 0.3093939549534106
+          },
+          {
+            "dimension": 5,
+            "log_width": 0.1758511616425782
+          }
+        ],
+        "small_dimension": 2,
+        "large_dimension": 4,
+        "small_edges": [
+          [
+            3,
+            4
+          ]
+        ],
+        "large_edges": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "small_Lambda": [
+          [
+            -0.14050293963610988,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            -0.2515393682612566,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            -0.4129573051825083,
+            0.34705349225069543
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.7210053650187588
+          ]
+        ],
+        "large_Lambda": [
+          [
+            -0.14360337573755566,
+            0.0,
+            0.0,
+            -0.36264824413461483
+          ],
+          [
+            0.0,
+            -0.25148959915954733,
+            0.0,
+            -0.26229551454326444
+          ],
+          [
+            0.0,
+            0.0,
+            -0.4130894829200557,
+            0.3704907738209149
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.646647991126765
+          ]
+        ],
+        "small_objective": 0.015227238190125775,
+        "large_objective": 0.000530907940725509,
+        "observed_gain": 0.014696330249400267,
+        "null_covariance": [
+          [
+            1.0201386343587344,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0675458163076603,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.2055945410744031,
+            -0.2460410965519055
+          ],
+          [
+            0.0,
+            0.0,
+            -0.2460410965519055,
+            2.641546010929585
+          ]
+        ],
+        "null_spectral_radius": 0.7210053650187588,
+        "true_edges": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ]
+      },
+      {
+        "seed": 18,
+        "ranked_plateaus": [
+          {
+            "dimension": 6,
+            "log_width": 3.2902694238911163
+          },
+          {
+            "dimension": 4,
+            "log_width": 2.3762601960839014
+          },
+          {
+            "dimension": 2,
+            "log_width": 2.0053022971181935
+          },
+          {
+            "dimension": 3,
+            "log_width": 0.7992854655528028
+          },
+          {
+            "dimension": 5,
+            "log_width": 0.4932727591529984
+          }
+        ],
+        "small_dimension": 4,
+        "large_dimension": 6,
+        "small_edges": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "large_edges": [
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "small_Lambda": [
+          [
+            -0.12020632961576483,
+            0.0,
+            0.0,
+            -0.4214992575023063
+          ],
+          [
+            0.0,
+            -0.24850057713172524,
+            0.0,
+            -0.11798854219686104
+          ],
+          [
+            0.0,
+            0.0,
+            -0.414467574050238,
+            0.34134199951251987
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.6668012190255451
+          ]
+        ],
+        "large_Lambda": [
+          [
+            0.11189736824021011,
+            0.0,
+            0.0630038734546973,
+            0.5212249718354198
+          ],
+          [
+            0.0,
+            0.2476892862063044,
+            0.04137762456348141,
+            0.15574760386628406
+          ],
+          [
+            0.0,
+            0.0,
+            -0.4090515479022318,
+            0.42266951123254304
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.6302746955848335
+          ]
+        ],
+        "small_objective": 0.00024989316171016615,
+        "large_objective": 3.0075826450696145e-06,
+        "observed_gain": 0.0002468855790650965,
+        "null_covariance": [
+          [
+            1.0146614126663274,
+            0.0,
+            0.0,
+            0.055889476549312554
+          ],
+          [
+            0.0,
+            1.0658168972037259,
+            0.0,
+            0.03745655646778736
+          ],
+          [
+            0.0,
+            0.0,
+            1.20741357237231,
+            -0.23605775203407045
+          ],
+          [
+            0.055889476549312554,
+            0.03745655646778736,
+            -0.23605775203407045,
+            2.66585426486457
+          ]
+        ],
+        "null_spectral_radius": 0.6668012190255451,
+        "true_edges": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ]
+      },
+      {
+        "seed": 21,
+        "ranked_plateaus": [
+          {
+            "dimension": 5,
+            "log_width": 3.3772711045997896
+          },
+          {
+            "dimension": 6,
+            "log_width": 2.879748340332295
+          },
+          {
+            "dimension": 2,
+            "log_width": 2.7084148531440864
+          },
+          {
+            "dimension": 4,
+            "log_width": 0.6864611642918925
+          }
+        ],
+        "small_dimension": 5,
+        "large_dimension": 6,
+        "small_edges": [
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "large_edges": [
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "small_Lambda": [
+          [
+            -0.1249793582021195,
+            0.0,
+            0.17412017161670268,
+            -0.37838770017943035
+          ],
+          [
+            0.0,
+            -0.26491134738592204,
+            0.0,
+            -0.138288018020139
+          ],
+          [
+            0.0,
+            0.0,
+            -0.3326572315743678,
+            0.35275103287443765
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.6648080052539541
+          ]
+        ],
+        "large_Lambda": [
+          [
+            0.12513402512616553,
+            0.0,
+            -0.18830134925909073,
+            0.4639450887045363
+          ],
+          [
+            0.0,
+            0.26444464941076806,
+            0.01974349226367424,
+            0.19329018280845348
+          ],
+          [
+            0.0,
+            0.0,
+            -0.33245680329487837,
+            0.36261326308158576
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.661726393533983
+          ]
+        ],
+        "small_objective": 4.6572585253912655e-05,
+        "large_objective": 2.2866693700786145e-06,
+        "observed_gain": 4.428591588383404e-05,
+        "null_covariance": [
+          [
+            1.0158676907671957,
+            0.0,
+            -0.02306569374190004,
+            0.053503383838938504
+          ],
+          [
+            0.0,
+            1.0754746861574496,
+            0.0,
+            0.04782101697765425
+          ],
+          [
+            -0.02306569374190004,
+            0.0,
+            1.1620661554216551,
+            -0.27451698530973984
+          ],
+          [
+            0.053503383838938504,
+            0.04782101697765425,
+            -0.27451698530973984,
+            2.654406136142854
+          ]
+        ],
+        "null_spectral_radius": 0.6648080052539541,
+        "true_edges": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ]
+      },
+      {
+        "seed": 22,
+        "ranked_plateaus": [
+          {
+            "dimension": 4,
+            "log_width": 2.6904380260728686
+          },
+          {
+            "dimension": 5,
+            "log_width": 2.1232699437476175
+          },
+          {
+            "dimension": 6,
+            "log_width": 1.929321046510939
+          },
+          {
+            "dimension": 2,
+            "log_width": 1.7093061687261766
+          },
+          {
+            "dimension": 3,
+            "log_width": 0.9149154731528428
+          }
+        ],
+        "small_dimension": 4,
+        "large_dimension": 5,
+        "small_edges": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "large_edges": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "small_Lambda": [
+          [
+            -0.1528447543179899,
+            0.0,
+            0.0,
+            -0.4404923665957463
+          ],
+          [
+            0.0,
+            -0.23607613969353183,
+            0.0,
+            -0.1581917229867898
+          ],
+          [
+            0.0,
+            0.0,
+            -0.4213795423647184,
+            0.388901644037473
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.63400950627933
+          ]
+        ],
+        "large_Lambda": [
+          [
+            -0.15286754919597254,
+            0.0,
+            0.0,
+            -0.4409934707762879
+          ],
+          [
+            0.0,
+            -0.23469423890330451,
+            -0.038205595537686876,
+            -0.1597373198740242
+          ],
+          [
+            0.0,
+            0.0,
+            -0.41937040420238547,
+            0.4074034885879592
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.6271116571182651
+          ]
+        ],
+        "small_objective": 0.0002055559797057903,
+        "large_objective": 2.245050857139191e-05,
+        "observed_gain": 0.0001831054711343984,
+        "null_covariance": [
+          [
+            1.02392033426407,
+            0.0,
+            0.0,
+            0.07633464111716398
+          ],
+          [
+            0.0,
+            1.0590213164182456,
+            0.0,
+            0.046510965893003374
+          ],
+          [
+            0.0,
+            0.0,
+            1.2158952311323326,
+            -0.27189386401952187
+          ],
+          [
+            0.07633464111716398,
+            0.046510965893003374,
+            -0.27189386401952187,
+            2.6672835710914455
+          ]
+        ],
+        "null_spectral_radius": 0.63400950627933,
+        "true_edges": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ]
+      },
+      {
+        "seed": 27,
+        "ranked_plateaus": [
+          {
+            "dimension": 5,
+            "log_width": 4.00260443527063
+          },
+          {
+            "dimension": 4,
+            "log_width": 1.9334424815579152
+          },
+          {
+            "dimension": 2,
+            "log_width": 1.7587651840095213
+          },
+          {
+            "dimension": 3,
+            "log_width": 0.465184389231605
+          }
+        ],
+        "small_dimension": 4,
+        "large_dimension": 5,
+        "small_edges": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "large_edges": [
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "small_Lambda": [
+          [
+            -0.1571300208740133,
+            0.0,
+            0.0,
+            -0.458688367650965
+          ],
+          [
+            0.0,
+            -0.24323764797387912,
+            0.0,
+            -0.20349484310937763
+          ],
+          [
+            0.0,
+            0.0,
+            -0.38130163054234634,
+            0.5035586664031676
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.5672513151563932
+          ]
+        ],
+        "large_Lambda": [
+          [
+            0.13442603531419856,
+            0.0,
+            0.14936664642530376,
+            0.5867955523741756
+          ],
+          [
+            0.0,
+            -0.24314090198632132,
+            0.0,
+            -0.21813419399995312
+          ],
+          [
+            0.0,
+            0.0,
+            -0.35630449487886606,
+            0.7935228809178411
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            -0.34647456649804526
+          ]
+        ],
+        "small_objective": 0.0007177308156219933,
+        "large_objective": 2.205510049819594e-05,
+        "observed_gain": 0.0006956757151237974,
+        "null_covariance": [
+          [
+            1.0253148634763056,
+            0.0,
+            0.0,
+            0.08112950076260646
+          ],
+          [
+            0.0,
+            1.0628851236474588,
+            0.0,
+            0.06103115875602828
+          ],
+          [
+            0.0,
+            0.0,
+            1.1701256623006693,
+            -0.2866803903548094
+          ],
+          [
+            0.08112950076260646,
+            0.06103115875602828,
+            -0.2866803903548094,
+            2.6193798176609207
+          ]
+        ],
+        "null_spectral_radius": 0.5672513151563932,
+        "true_edges": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ]
+      }
+    ]
+  },
+  "rows": [
+    {
+      "seed": 3,
+      "small_dimension": 2,
+      "large_dimension": 5,
+      "observed_gain": 0.006775284449471961,
+      "bootstrap_exceedances": 0,
+      "bootstrap_replicates": 199,
+      "p_value": 0.005,
+      "alpha": 0.05,
+      "selected_dimension": 5,
+      "true_positive_edges": 3,
+      "selected_edges": 4,
+      "precision": 0.75,
+      "exact_support_recovery": false,
+      "mc_interval_lower": 0.0,
+      "mc_interval_upper": 0.018366327694415267,
+      "bootstrap_gain_q95": 0.0022805862220959885,
+      "negative_bootstrap_gains": 0,
+      "draws_below_original_omega_cap": 15,
+      "larger_feasible_fallback_count": 0,
+      "monte_carlo_interval_crosses_alpha": false
+    },
+    {
+      "seed": 4,
+      "small_dimension": 2,
+      "large_dimension": 4,
+      "observed_gain": 0.023217514148266026,
+      "bootstrap_exceedances": 0,
+      "bootstrap_replicates": 199,
+      "p_value": 0.005,
+      "alpha": 0.05,
+      "selected_dimension": 4,
+      "true_positive_edges": 3,
+      "selected_edges": 3,
+      "precision": 1.0,
+      "exact_support_recovery": true,
+      "mc_interval_lower": 0.0,
+      "mc_interval_upper": 0.018366327694415267,
+      "bootstrap_gain_q95": 0.0024934660248056924,
+      "negative_bootstrap_gains": 0,
+      "draws_below_original_omega_cap": 43,
+      "larger_feasible_fallback_count": 0,
+      "monte_carlo_interval_crosses_alpha": false
+    },
+    {
+      "seed": 6,
+      "small_dimension": 4,
+      "large_dimension": 6,
+      "observed_gain": 3.323737311393586e-05,
+      "bootstrap_exceedances": 176,
+      "bootstrap_replicates": 199,
+      "p_value": 0.885,
+      "alpha": 0.05,
+      "selected_dimension": 4,
+      "true_positive_edges": 2,
+      "selected_edges": 3,
+      "precision": 0.6666666666666666,
+      "exact_support_recovery": false,
+      "mc_interval_lower": 0.8316366569439464,
+      "mc_interval_upper": 0.9253057252147976,
+      "bootstrap_gain_q95": 0.0019362810513551024,
+      "negative_bootstrap_gains": 11,
+      "draws_below_original_omega_cap": 94,
+      "larger_feasible_fallback_count": 11,
+      "monte_carlo_interval_crosses_alpha": false
+    },
+    {
+      "seed": 8,
+      "small_dimension": 4,
+      "large_dimension": 6,
+      "observed_gain": 0.0002823209834268131,
+      "bootstrap_exceedances": 120,
+      "bootstrap_replicates": 199,
+      "p_value": 0.605,
+      "alpha": 0.05,
+      "selected_dimension": 4,
+      "true_positive_edges": 3,
+      "selected_edges": 3,
+      "precision": 1.0,
+      "exact_support_recovery": true,
+      "mc_interval_lower": 0.5314035548618248,
+      "mc_interval_upper": 0.6715092395816504,
+      "bootstrap_gain_q95": 0.0012798790335235885,
+      "negative_bootstrap_gains": 1,
+      "draws_below_original_omega_cap": 41,
+      "larger_feasible_fallback_count": 1,
+      "monte_carlo_interval_crosses_alpha": false
+    },
+    {
+      "seed": 12,
+      "small_dimension": 4,
+      "large_dimension": 5,
+      "observed_gain": 0.00011104051280378538,
+      "bootstrap_exceedances": 94,
+      "bootstrap_replicates": 199,
+      "p_value": 0.475,
+      "alpha": 0.05,
+      "selected_dimension": 4,
+      "true_positive_edges": 2,
+      "selected_edges": 3,
+      "precision": 0.6666666666666666,
+      "exact_support_recovery": false,
+      "mc_interval_lower": 0.40135998627226227,
+      "mc_interval_upper": 0.5441992549269474,
+      "bootstrap_gain_q95": 0.001026344381140436,
+      "negative_bootstrap_gains": 34,
+      "draws_below_original_omega_cap": 79,
+      "larger_feasible_fallback_count": 34,
+      "monte_carlo_interval_crosses_alpha": false
+    },
+    {
+      "seed": 13,
+      "small_dimension": 2,
+      "large_dimension": 4,
+      "observed_gain": 0.014696330249400267,
+      "bootstrap_exceedances": 0,
+      "bootstrap_replicates": 199,
+      "p_value": 0.005,
+      "alpha": 0.05,
+      "selected_dimension": 4,
+      "true_positive_edges": 3,
+      "selected_edges": 3,
+      "precision": 1.0,
+      "exact_support_recovery": true,
+      "mc_interval_lower": 0.0,
+      "mc_interval_upper": 0.018366327694415267,
+      "bootstrap_gain_q95": 0.0030768985851274927,
+      "negative_bootstrap_gains": 0,
+      "draws_below_original_omega_cap": 17,
+      "larger_feasible_fallback_count": 0,
+      "monte_carlo_interval_crosses_alpha": false
+    },
+    {
+      "seed": 18,
+      "small_dimension": 4,
+      "large_dimension": 6,
+      "observed_gain": 0.0002468855790650965,
+      "bootstrap_exceedances": 108,
+      "bootstrap_replicates": 199,
+      "p_value": 0.545,
+      "alpha": 0.05,
+      "selected_dimension": 4,
+      "true_positive_edges": 3,
+      "selected_edges": 3,
+      "precision": 1.0,
+      "exact_support_recovery": true,
+      "mc_interval_lower": 0.47079405298066135,
+      "mc_interval_upper": 0.6133415450905649,
+      "bootstrap_gain_q95": 0.0011584532438983382,
+      "negative_bootstrap_gains": 0,
+      "draws_below_original_omega_cap": 58,
+      "larger_feasible_fallback_count": 0,
+      "monte_carlo_interval_crosses_alpha": false
+    },
+    {
+      "seed": 21,
+      "small_dimension": 5,
+      "large_dimension": 6,
+      "observed_gain": 4.428591588383404e-05,
+      "bootstrap_exceedances": 136,
+      "bootstrap_replicates": 199,
+      "p_value": 0.685,
+      "alpha": 0.05,
+      "selected_dimension": 5,
+      "true_positive_edges": 3,
+      "selected_edges": 4,
+      "precision": 0.75,
+      "exact_support_recovery": false,
+      "mc_interval_lower": 0.6138922186311799,
+      "mc_interval_upper": 0.7473787871566694,
+      "bootstrap_gain_q95": 0.0008598706666229832,
+      "negative_bootstrap_gains": 0,
+      "draws_below_original_omega_cap": 58,
+      "larger_feasible_fallback_count": 0,
+      "monte_carlo_interval_crosses_alpha": false
+    },
+    {
+      "seed": 22,
+      "small_dimension": 4,
+      "large_dimension": 5,
+      "observed_gain": 0.0001831054711343984,
+      "bootstrap_exceedances": 76,
+      "bootstrap_replicates": 199,
+      "p_value": 0.385,
+      "alpha": 0.05,
+      "selected_dimension": 4,
+      "true_positive_edges": 3,
+      "selected_edges": 3,
+      "precision": 1.0,
+      "exact_support_recovery": true,
+      "mc_interval_lower": 0.3141129520549138,
+      "mc_interval_upper": 0.45328081315297925,
+      "bootstrap_gain_q95": 0.0007391509975040896,
+      "negative_bootstrap_gains": 3,
+      "draws_below_original_omega_cap": 22,
+      "larger_feasible_fallback_count": 3,
+      "monte_carlo_interval_crosses_alpha": false
+    },
+    {
+      "seed": 27,
+      "small_dimension": 4,
+      "large_dimension": 5,
+      "observed_gain": 0.0006956757151237974,
+      "bootstrap_exceedances": 19,
+      "bootstrap_replicates": 199,
+      "p_value": 0.1,
+      "alpha": 0.05,
+      "selected_dimension": 4,
+      "true_positive_edges": 3,
+      "selected_edges": 3,
+      "precision": 1.0,
+      "exact_support_recovery": true,
+      "mc_interval_lower": 0.05846702402586655,
+      "mc_interval_upper": 0.14508194882057968,
+      "bootstrap_gain_q95": 0.0010836161576471114,
+      "negative_bootstrap_gains": 17,
+      "draws_below_original_omega_cap": 25,
+      "larger_feasible_fallback_count": 17,
+      "monte_carlo_interval_crosses_alpha": false
+    }
+  ],
+  "mean_precision": 0.8833333333333332,
+  "correct_dimension_count": 8,
+  "exact_support_recovery_count": 6,
+  "protected_file_sha256": {
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_12/compute.log": "8e192a89b813bc612f50080e2cbe835613355ca205d1d6c4ded4e9fdf43063d3",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_12/objective_curve_sigma_hat.npz": "ab08412a75773bf1b415dea487d092acf012f4f04407b0ba664577b31d9ec69e",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_12/result.csv": "fffae13e828dc146274b8ecf322e88a5f7e8984fd1a5dca2f0df513052abdd82",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_12/scaling_input_validation.log": "6f08cb9a2996e12e921be6b03a9898dbcba154df879eab1de3c3d067fe907ff1",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_12/selection_plateau.log": "9b54536ad1a37c933d33f65b941a238fa00a20744a1a353800eefaa25d556c31",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_12/selection_window.log": "cb3dbf0aba26182c48cdcbbe3c057c9519b84155a7e21a3a6d1fbf7fe0691d18",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_13/compute.log": "21f1f8bc6668ef392edfb6fdb96b1c55910a10ec71df9e0ffeb51d4f1efbba01",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_13/objective_curve_sigma_hat.npz": "3dc8f85bc68e14b040898e1ecce592d244f00af28252441f61eee7fef752e112",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_13/result.csv": "1ae185bbbe1d243e9c21cb773709ea8f8ffc7cbe551541d0985c1372327adece",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_13/scaling_input_validation.log": "0ee0018c5e200015ac366c81c74a86c53b3248f100c20b487590c9313bb15878",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_13/selection_plateau.log": "253709154b9ac1f8015eb479bc00d1415bbcf2e5cf5ebaefa0ed7e34a2c7fd08",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_13/selection_window.log": "d8c7dc1761d06bfb808b77fb7e8dabd40b4468ca14d0b9b45080c4468d673017",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_18/compute.log": "52262bca50adfba7a79cd0609718ffe16a589e659d907295ee54608170246337",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_18/objective_curve_sigma_hat.npz": "7bc3a72cb7874364682dd7a8b49be3305ba214ceea53d98edf31bd9c7e15d09d",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_18/result.csv": "defbba3ba01576ea2d1503ef587e30c8a12e59d051de189444f79cbbcaacc2cd",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_18/scaling_input_validation.log": "2063073e29aaede8c37a6f9c3e33d903862b90966b09b256864a0bdac2f33211",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_18/selection_plateau.log": "ddd12f586216957d01596f659ffdaf0f6dbc4fc968a7e084142d3ceda40c3223",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_18/selection_window.log": "cb3dbf0aba26182c48cdcbbe3c057c9519b84155a7e21a3a6d1fbf7fe0691d18",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_21/compute.log": "48960b92b250679407a3f6891595ea6abde45a56be2d15a89b717c6103cccfce",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_21/objective_curve_sigma_hat.npz": "acffba9ca6f4cf7b2a5faf18a3230c3af4fb034290135f5b5b110e6c1ff2f574",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_21/result.csv": "b4e22f8439dafc0b00c9e10471aa6f54746080fdfd1e6b3ce8601191b0bd06c2",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_21/scaling_input_validation.log": "450a89512bbd6b1c7922c52c34e746cfd111b5667fab18daad4e293e5a54da60",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_21/selection_plateau.log": "86f18dc1c3b3896f336088643578756deb2d48778d6670ca9df39001f0f60c96",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_21/selection_window.log": "0284459467268c3af6244f68d2aeca841b00fa751f4361d570659c96e0d5fcc7",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_22/compute.log": "967ee60279809b8fc276cbaf9ad5461d3ab5db3332d2db8eebedd33f72705277",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_22/objective_curve_sigma_hat.npz": "0491f830cf63f99a0c300c66f094d3dcd5bcb75443ee83d2507095678dd4bbb5",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_22/result.csv": "bba6f11a24cdf0fe3d3e4dc8ed189b1f2bc0c793ed48305b8fc7f01c2f0670d7",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_22/scaling_input_validation.log": "bb1ee305eaf3dba8af2f57a42aed07412600cad78d2f13fb3f31ed63546c94ca",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_22/selection_plateau.log": "682d391de9df8a6f92fd4fd00227a17de252b64131574e910346d098b791158a",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_22/selection_window.log": "cb3dbf0aba26182c48cdcbbe3c057c9519b84155a7e21a3a6d1fbf7fe0691d18",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_27/compute.log": "5a5b45d6063717811bf6d4d0bb8c05c4b48ad951e1e002fcc806f8e3b5faf394",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_27/objective_curve_sigma_hat.npz": "ae8b832d2a28b69a532ef37a2ec770feeee6cf298641cbc28d00450889e55028",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_27/result.csv": "29b7fff071414d606bac986dae0665c284fea731c5a1706916cfdd39eedd9d1a",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_27/scaling_input_validation.log": "7124b392002b96cdd529e7e42a3f478861f4197c8c7cf607119b194fff0c5132",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_27/selection_plateau.log": "8e4bb9630cd6d883023044a94f5ed5b8e38f74b75ea11ef51cbfcea40a4c7f8b",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_27/selection_window.log": "cb3dbf0aba26182c48cdcbbe3c057c9519b84155a7e21a3a6d1fbf7fe0691d18",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_3/compute.log": "f05fc7ed5ee4cb0bd611567c45eb878313b6debcc9637557462f9bd5ea9c470a",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_3/objective_curve_sigma_hat.npz": "f2ba058635f796ae0c7c292191deb4a70d95e349826c118c05137d2ed8e02bfa",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_3/result.csv": "72327ea003281c8ac4c9292880ab882b56682c395939b58849de1aab6598caf9",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_3/scaling_input_validation.log": "930b53bc4c375effebfb9c978cd28f13d039281c9d8f051f7efea0d645a9a462",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_3/selection_plateau.log": "4fe7d945bc5aa82b07aff314691493f447590641aab6b90aa884a30e8f3c7d0c",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_3/selection_window.log": "67ee54bea3d874a12138551a39439c81eb7136ec9b6991b45bde8d7d3aa5e2cf",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_4/compute.log": "09fc5359fd7339f04472bbbdd2670dd87fa3ebd3aba270e3217d4f3df4bf1bf8",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_4/objective_curve_sigma_hat.npz": "c9d8512fd6d916d2efb62201c334bd7e71420d0008069400e9fee488e2c84fe1",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_4/result.csv": "9b8cbbaf0df9934b964d1db75f1dd335e4b562f85b4c5d40f36b2a3afe6105a0",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_4/scaling_input_validation.log": "f1bb611050029026a0ab065f226e7c5cedd87a5bae32319114e81ec214f0562f",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_4/selection_plateau.log": "cb1d9533316da66b2250fdcdf25707596cd691d600134e712a8b425f2ae08adc",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_4/selection_window.log": "ec5c3b32ba9d9a67bab92ae1fceefdc27d2e208e1cbc5f488613d98079b0b08e",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_6/compute.log": "2f685070ae83a0cbd4b55e80db90f26895f7fd3d1ecd91aea1c9855ba7de68a2",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_6/objective_curve_sigma_hat.npz": "c1efd11700ed54e65d213679397cd48eaef904bbd3b5244826356848701c4d8e",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_6/result.csv": "d2c55727fcf67832eb1ca56035d1a07fd598265dd68dfe45c391679a834da8e3",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_6/scaling_input_validation.log": "229503cd70539eff42cece0dc4ea4bc72c607991224c0d691674d0a956414f75",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_6/selection_plateau.log": "ac72b7ccac79b93d0d13b882476230d882518368e2b68b8645ee9e7e8b7dc974",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_6/selection_window.log": "ae9534d7a653188e5f6b5a6ee898f2ad2f9ccb8e1e95d0ef29857e905738848a",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_8/compute.log": "31494f321052a1439886e78be1f6be15156079bb624c5987ba4f22dcbb916013",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_8/objective_curve_sigma_hat.npz": "32273149891f9c8d2c4e4f0289da6cda2d3dc4a522ad6512c2d2ed9ae04c004a",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_8/result.csv": "4c3f773d77b1d708694c7364959e4a9472c93335e386ed66f1b02941203298bc",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_8/scaling_input_validation.log": "a103229970702ca7fc29dfb2a062fd0337692036b35431d5492110a697c236e1",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_8/selection_plateau.log": "38f5e3e1ce245ee7bb52ae94e735da950825c12d0d3e19cff79a3d5ad22cc946",
+    "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_8/selection_window.log": "cb3dbf0aba26182c48cdcbbe3c057c9519b84155a7e21a3a6d1fbf7fe0691d18",
+    "admm.py": "56dbbff54ba3cbf1156aaf001905cefce9510f746f35c76aaff56e3666a18e2b",
+    "analyze_penalty.py": "45938929856668a3f8aed502057b7d13caab14347dc90ad682b46ff1cfca4fa0",
+    "experiments/compute_objective_curve.py": "437622c62856a0f12345e73482f512ab8e962ebb70073fd1b25424e35eee7b50",
+    "experiments/inspect_result.py": "211a040479089d61c5ccf912090a77bbe428bff6085c117a1e31ff39969bf109",
+    "experiments/plot_dimension_path.py": "b24bba166b7f22b3a49f49bc797af3f32cd9fafb0127827c960a7e6e1a75e585",
+    "experiments/plot_objective_curve.py": "9db68cfa4a33c5ed29f82b9c81bd096ec8b380dd3ffd4445910c74a93ef8490e",
+    "experiments/plot_sigma_estimation_vs_omega.py": "c517b10fe89db876f3576aecc4fe55edfbd2474305f828e19e921024e41be8b5",
+    "experiments/plot_upper_support_coverage.py": "74e5095be16fa2b8b02e05fc00d722fd8a39dea01fdf94dfbac010eef1cf7956",
+    "experiments/run_synthetic.py": "310f1409081e1fe2c6b66940411760ba9ea42f9ee6197e3297c7fd1ed6e4595b",
+    "experiments/select_scaling_parameter.py": "b9371f1b6c848ca9274e62e49a9eb47e53fc7487d71958a412a977b66459872a",
+    "model_selection.py": "ffb0f782456fb6fa8748d4a3cbaead449b155a5a08caac3e52786d611e2f3ff5",
+    "objective.py": "a9996a9e26d267f5c5a8ab615a227f5b6b8c43b0744f6b2a5b064b137ba1a346",
+    "optimizers/__init__.py": "66b0f67e17dcb109b85d307094d311cb7223f501ac69a829c918755411c69bf5",
+    "optimizers/support_search.py": "226c4aa6b4eddd1f54d51b3247fcc6a25335622c43dc2129b03aa6afc6e0f40c",
+    "penalty.py": "90388ec2bc8b5650e364a994791441d22cf6e2bc337161d0f260d11a2fb75c9e",
+    "scaling_selection.py": "81d6da654fc4a9c12e93d2370cfa6f1cc06f0a725f24ea3bd2b674834aa4eaf5",
+    "supports/__init__.py": "5884cb84cab167974a7a0973e03d8d45570f7a6f6f5ed69c6019455a8b62e997",
+    "supports/common.py": "dbaf2f5f1be8c7ff6ef3fca45541359d984aabd8cd1cb6f5048213f26bf11a96",
+    "supports/exact.py": "697ab8d5cead45db5ab32568d32ac77d7ec5f0e9e23d0137b2dda9fda992cfbd",
+    "supports/preselected.py": "897ee7f396d49c105a9dbd31cc4c3fb7eb9dbaadf61d9348caa2a38f1f3d6dc1",
+    "tests/test_admm_initialization.py": "bc7fba782fd2d3cc24cd6d6eaaae9cdcca25e4fcd1b2fbced972f20ca312a7b3",
+    "tests/test_covariance_vector_omega.py": "a367c4dc59e9291e4889e96463a8386b84dc454ce9cee137b160f242105a9989",
+    "tests/test_omega_star_configuration.py": "a11bcaa2c23f29293bfc82f5a0eab25ead798dd0af8267c1682b1967d0c58b4f",
+    "tests/test_penalty.py": "14f0f7edaab8e01657e30bf9f458c0a8ed58afee4be778a942462b5bf5b41ca1",
+    "tests/test_preselected_supports.py": "01af01a976a847ef5fb4176392fa4dafae589bd3bdb1719ce4c4acd049c459e5",
+    "tests/test_reselect_parallel.py": "13955f322cd249c6e11549f66a36ab79534bd02680ed57483d3ed35a90db0a22",
+    "tests/test_scaling_parameter_selection.py": "64abe158b140d6220ab5b520e57d64986489efb7be1b4785b212b05199e20873",
+    "tests/test_support_streaming.py": "73a273ac29b4cda1663c05e8afefb637f808415c872ebb389928400789d113be",
+    "tests/test_upper_triangular_supports.py": "9b927c6acc331568c16e7408fd408b130c0d7ea11bd67fcaf96e229bddeb6e14"
+  },
+  "verification": {
+    "all_3980_fit_objectives_recomputed": true,
+    "feasible_fallback_tail_counts_unchanged": true,
+    "larger_feasible_fallback_count": 66
+  }
+}

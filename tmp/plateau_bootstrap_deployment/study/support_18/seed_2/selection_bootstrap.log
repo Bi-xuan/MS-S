@@ -1,0 +1,9 @@
+Loaded: tmp/plateau_bootstrap_deployment/study/support_18/seed_2/objective_curve_sigma_hat.npz
+Method: plateau-bootstrap
+Top plateaus requested: 1
+Candidate dimensions (decreasing): 4
+Bootstrap replicates: 1; alpha: 0.05; seed: 20260913
+Selected dimension: 4
+Selected edges (zero-based): ((0, 3), (1, 3), (2, 3))
+Selected support precision: 1
+Saved bootstrap report: tmp/plateau_bootstrap_deployment/study/support_18/seed_2/selection_bootstrap.json

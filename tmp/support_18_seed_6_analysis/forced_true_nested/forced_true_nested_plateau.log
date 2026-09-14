@@ -1,0 +1,20 @@
+Loaded: /Users/liubixuan/Documents/LPSM/model_selection/MS-S/tmp/support_18_seed_6_analysis/forced_true_nested/objective_curve_sigma_hat.npz
+Curve type: sigma_hat_from_given_sigma
+Matrix dimension: 4
+Number of samples: 10000
+Raw-objective floor: 1e-08
+Raw objectives tied at zero: 1
+Method: plateau
+Plateau comparison: succeeded
+Chosen plateau dimension: 6
+Chosen plateau interval: [2.42768734538e-14, 2.55771399557e-11)
+Chosen plateau log-width: 6.95993007359
+Runner-up plateau log-width: 2.78687443391
+Plateau log-width margin: 4.17305563968
+Chosen plateau center: 7.87993013938e-13
+Selection source: plateau
+Minimal scale: 7.87993013938e-13
+Recommendation factor: 2
+Recommended scale: 1.57598602788e-12
+Selected dimension at recommended scale: 6
+Recommended scale within chosen plateau: True

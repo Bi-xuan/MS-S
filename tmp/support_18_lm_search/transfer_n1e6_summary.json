@@ -1,0 +1,170 @@
+[
+  {
+    "form": "D^1",
+    "method": "plateau",
+    "successful": 10,
+    "precision_n": 10,
+    "mean_precision": 1.0,
+    "mean_recall": 1.0,
+    "mean_dimension": 4.0,
+    "dimensions": [
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0
+    ]
+  },
+  {
+    "form": "D^1",
+    "method": "window",
+    "successful": 9,
+    "precision_n": 9,
+    "mean_precision": 1.0,
+    "mean_recall": 0.48148148148148145,
+    "mean_dimension": 2.4444444444444446,
+    "dimensions": [
+      2.0,
+      2.0,
+      2.0,
+      4.0,
+      2.0,
+      2.0,
+      2.0,
+      null,
+      4.0,
+      2.0
+    ]
+  },
+  {
+    "form": "D^8",
+    "method": "plateau",
+    "successful": 10,
+    "precision_n": 10,
+    "mean_precision": 1.0,
+    "mean_recall": 1.0,
+    "mean_dimension": 4.0,
+    "dimensions": [
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0
+    ]
+  },
+  {
+    "form": "D^8",
+    "method": "window",
+    "successful": 10,
+    "precision_n": 10,
+    "mean_precision": 0.85,
+    "mean_recall": 0.8,
+    "mean_dimension": 4.0,
+    "dimensions": [
+      5.0,
+      5.0,
+      2.0,
+      4.0,
+      5.0,
+      2.0,
+      2.0,
+      5.0,
+      5.0,
+      5.0
+    ]
+  },
+  {
+    "form": "D^32",
+    "method": "plateau",
+    "successful": 10,
+    "precision_n": 10,
+    "mean_precision": 1.0,
+    "mean_recall": 1.0,
+    "mean_dimension": 4.0,
+    "dimensions": [
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0,
+      4.0
+    ]
+  },
+  {
+    "form": "D^32",
+    "method": "window",
+    "successful": 6,
+    "precision_n": 6,
+    "mean_precision": 0.75,
+    "mean_recall": 1.0,
+    "mean_dimension": 5.0,
+    "dimensions": [
+      5.0,
+      null,
+      null,
+      5.0,
+      5.0,
+      null,
+      5.0,
+      null,
+      5.0,
+      5.0
+    ]
+  },
+  {
+    "form": "D^64",
+    "method": "plateau",
+    "successful": 10,
+    "precision_n": 10,
+    "mean_precision": 1.0,
+    "mean_recall": 0.5333333333333332,
+    "mean_dimension": 2.6,
+    "dimensions": [
+      2.0,
+      2.0,
+      2.0,
+      4.0,
+      4.0,
+      2.0,
+      4.0,
+      2.0,
+      2.0,
+      2.0
+    ]
+  },
+  {
+    "form": "D^64",
+    "method": "window",
+    "successful": 1,
+    "precision_n": 1,
+    "mean_precision": 0.75,
+    "mean_recall": 1.0,
+    "mean_dimension": 5.0,
+    "dimensions": [
+      null,
+      null,
+      null,
+      null,
+      5.0,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  }
+]

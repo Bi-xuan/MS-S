@@ -1,8 +1,10 @@
-"""Estimate a penalty scaling parameter from an objective-curve NPZ file."""
+"""Select a dimension or penalty scaling parameter from an objective curve."""
 
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict
+import json
 from pathlib import Path
 import sys
 
@@ -13,6 +15,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from analyze_penalty import build_penalty_constants, scalar_value
 from penalty import pen_n
+from plateau_bootstrap import FitSettings, select_plateau_bootstrap
 from scaling_selection import (
     DEFAULT_RECOMMENDATION_FACTOR,
     build_dimension_path,
@@ -23,6 +26,7 @@ from scaling_selection import (
 METHOD_CHOICES = (
     "window",
     "plateau",
+    "plateau-bootstrap",
 )
 
 DEFAULT_OBJECTIVE_FLOOR = 1e-8
@@ -181,6 +185,10 @@ def run(args):
         print(f"Scaling-selection input is valid: {input_path}")
         return None
 
+    if args.method == "plateau-bootstrap":
+        result = run_bootstrap(input_path, selection_data, args)
+        return result
+
     result = select_minimal_scale(
         selection_data["d_m_values"],
         selection_data["objective_values"],
@@ -197,11 +205,62 @@ def run(args):
     return result
 
 
-def parse_args():
+def run_bootstrap(input_path, selection_data, args):
+    """Load model masks and reproduce the curve's final fitting configuration."""
+    with np.load(input_path) as data:
+        for key in ("selected_support_masks", "selected_support_valid", "num_samples"):
+            if key not in data:
+                raise ValueError(f"Bootstrap selection requires saved {key}.")
+        # A penalty sample-count override must not change the bootstrap size.
+        num_samples = int(data["num_samples"].item())
+        if num_samples < 1:
+            raise ValueError("Bootstrap selection requires a sampled curve with original num_samples > 0.")
+        if "fit_settings_json" in data:
+            settings = FitSettings(**json.loads(str(data["fit_settings_json"].item())))
+        else:
+            if "omega_ref" not in data:
+                raise ValueError("Legacy curves require a numeric omega_ref for bootstrap refitting.")
+            settings = FitSettings(omega_fixed=float(data["omega_ref"].item()))
+            print("Legacy curve: using 800 iterations, tol=1e-7 and 10 Halton restarts; verifying refit objectives.")
+        if args.fit_max_restarts is not None:
+            settings = FitSettings(**{**asdict(settings), "max_restarts": args.fit_max_restarts})
+        result = select_plateau_bootstrap(
+            selection_data["d_m_values"], selection_data["objective_values"],
+            selection_data["penalty_values"], selection_data["raw_objective_values"],
+            data["Sigma"], data["selected_support_masks"], data["selected_support_valid"],
+            num_samples, top_plateaus=args.top_plateaus,
+            bootstrap_replicates=args.bootstrap_replicates, alpha=args.bootstrap_alpha,
+            seed=args.bootstrap_seed, n_jobs=args.n_jobs, fit_settings=settings,
+            true_support=(np.abs(data["Lambda_star"]) > 1e-10) if "Lambda_star" in data else None,
+            progress=lambda message: print(message, flush=True),
+        )
+    print(f"Loaded: {input_path}")
+    print(f"Method: {result.method}")
+    print(f"Top plateaus requested: {result.top_plateaus}")
+    print(f"Candidate dimensions (decreasing): {', '.join(map(str, result.candidate_dimensions))}")
+    print(f"Bootstrap replicates: {result.bootstrap_replicates}; alpha: {result.alpha}; seed: {result.seed}")
+    print(f"Selected dimension: {result.selected_dimension}")
+    print(f"Selected edges (zero-based): {result.selected_edges}")
+    if result.precision is not None:
+        print(f"Selected support precision: {result.precision:.12g}")
+    if args.output_json:
+        output = Path(args.output_json)
+        if output.resolve() == input_path.resolve():
+            raise ValueError("The JSON output must not overwrite the input curve.")
+        payload = asdict(result)
+        payload.update(input=str(input_path), objective_floor=selection_data["objective_floor"],
+                       Lm=selection_data["constants"].Lm)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(payload, indent=2, allow_nan=False) + "\n")
+        print(f"Saved bootstrap report: {output}")
+    return result
+
+
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description=(
-            "Estimate the minimal penalty scale from an objective-curve NPZ "
-            "and report the slope-heuristic recommended scale."
+            "Select a model from an objective-curve NPZ using penalty-scale "
+            "selection or plateau screening plus bootstrap calibration."
         )
     )
     parser.add_argument(
@@ -212,7 +271,7 @@ def parse_args():
         "--method",
         choices=METHOD_CHOICES,
         default="window",
-        help="Scale-selection procedure. Default: window.",
+        help="Dimension-selection procedure. Default: window.",
     )
     parser.add_argument(
         "--validate-only",
@@ -222,6 +281,19 @@ def parse_args():
             "path, then exit without selecting a scale."
         ),
     )
+    parser.add_argument("--top-plateaus", type=int, default=3,
+                        help="Number of longest bounded plateaus to keep for bootstrap selection. Default: 3.")
+    parser.add_argument("--bootstrap-replicates", type=int, default=199,
+                        help="Bootstrap draws per candidate pair. Default: 199.")
+    parser.add_argument("--bootstrap-alpha", type=float, default=0.05,
+                        help="Retain the larger candidate only when p < alpha. Default: 0.05.")
+    parser.add_argument("--bootstrap-seed", type=int, default=20260913,
+                        help="Reproducible bootstrap RNG seed. Default: 20260913.")
+    parser.add_argument("--n-jobs", type=int, default=1,
+                        help="Parallel bootstrap refit workers. Default: 1.")
+    parser.add_argument("--fit-max-restarts", type=int,
+                        help="Override saved restart count (legacy curves default to 10).")
+    parser.add_argument("--output-json", help="Write the plateau-bootstrap result and all bootstrap gains to JSON.")
     parser.add_argument(
         "--eta",
         type=float,
@@ -288,7 +360,7 @@ def parse_args():
         default=10.0,
         help="Theorem tail constant xi. Default: 10.",
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 if __name__ == "__main__":

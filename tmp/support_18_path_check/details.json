@@ -1,0 +1,146 @@
+[
+  {
+    "seed": 3,
+    "nested": false,
+    "passes_true_support": false,
+    "true_support_dimensions": "",
+    "nonnested_transitions": "3->4, 5->6",
+    "break_details": [
+      {
+        "from_dimension": 3,
+        "to_dimension": 4,
+        "removed_entries_1_based": [
+          [
+            2,
+            4
+          ]
+        ]
+      },
+      {
+        "from_dimension": 5,
+        "to_dimension": 6,
+        "removed_entries_1_based": [
+          [
+            2,
+            4
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "seed": 4,
+    "nested": false,
+    "passes_true_support": false,
+    "true_support_dimensions": "",
+    "nonnested_transitions": "3->4",
+    "break_details": [
+      {
+        "from_dimension": 3,
+        "to_dimension": 4,
+        "removed_entries_1_based": [
+          [
+            2,
+            4
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "seed": 6,
+    "nested": true,
+    "passes_true_support": false,
+    "true_support_dimensions": "",
+    "nonnested_transitions": "",
+    "break_details": []
+  },
+  {
+    "seed": 8,
+    "nested": true,
+    "passes_true_support": true,
+    "true_support_dimensions": "4",
+    "nonnested_transitions": "",
+    "break_details": []
+  },
+  {
+    "seed": 12,
+    "nested": true,
+    "passes_true_support": false,
+    "true_support_dimensions": "",
+    "nonnested_transitions": "",
+    "break_details": []
+  },
+  {
+    "seed": 13,
+    "nested": true,
+    "passes_true_support": true,
+    "true_support_dimensions": "4",
+    "nonnested_transitions": "",
+    "break_details": []
+  },
+  {
+    "seed": 18,
+    "nested": false,
+    "passes_true_support": true,
+    "true_support_dimensions": "4",
+    "nonnested_transitions": "4->5, 5->6",
+    "break_details": [
+      {
+        "from_dimension": 4,
+        "to_dimension": 5,
+        "removed_entries_1_based": [
+          [
+            2,
+            4
+          ]
+        ]
+      },
+      {
+        "from_dimension": 5,
+        "to_dimension": 6,
+        "removed_entries_1_based": [
+          [
+            1,
+            2
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "seed": 21,
+    "nested": false,
+    "passes_true_support": false,
+    "true_support_dimensions": "",
+    "nonnested_transitions": "2->3",
+    "break_details": [
+      {
+        "from_dimension": 2,
+        "to_dimension": 3,
+        "removed_entries_1_based": [
+          [
+            3,
+            4
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "seed": 22,
+    "nested": true,
+    "passes_true_support": true,
+    "true_support_dimensions": "4",
+    "nonnested_transitions": "",
+    "break_details": []
+  },
+  {
+    "seed": 27,
+    "nested": true,
+    "passes_true_support": true,
+    "true_support_dimensions": "4",
+    "nonnested_transitions": "",
+    "break_details": []
+  }
+]

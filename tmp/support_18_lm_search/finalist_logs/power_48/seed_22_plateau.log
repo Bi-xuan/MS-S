@@ -1,0 +1,21 @@
+Lm = D_m^48
+Loaded: /Users/liubixuan/Documents/LPSM/model_selection/MS-S/experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_22/objective_curve_sigma_hat.npz
+Curve type: sigma_hat_from_given_sigma
+Matrix dimension: 4
+Number of samples: 10000
+Raw-objective floor: 1e-08
+Raw objectives tied at zero: 1
+Method: plateau
+Plateau comparison: succeeded
+Chosen plateau dimension: 2
+Chosen plateau interval: [2.39835174846e-20, 3.56032303671e-15)
+Chosen plateau log-width: 11.9079950164
+Runner-up plateau log-width: 8.28076919314
+Plateau log-width margin: 3.62722582328
+Chosen plateau center: 9.24062063943e-18
+Selection source: plateau
+Minimal scale: 9.24062063943e-18
+Recommendation factor: 2
+Recommended scale: 1.84812412789e-17
+Selected dimension at recommended scale: 2
+Recommended scale within chosen plateau: True

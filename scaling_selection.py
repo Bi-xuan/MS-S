@@ -584,15 +584,8 @@ def adaptive_window(
     )
 
 
-def select_persistent_plateau(path: DimensionPath) -> PlateauSelection:
-    """Select the bounded plateau with the largest absolute log-width.
-
-    Each plateau is scored by ``log(right) - log(left)``, without normalizing
-    by neighboring widths. The initial plateau beginning at zero and the
-    final plateau extending to infinity are excluded. A single bounded
-    plateau is sufficient; tied maximum widths produce an ambiguous result.
-    """
-
+def ranked_plateaus(path: DimensionPath) -> list[PlateauCandidate]:
+    """Rank bounded plateaus by log-width, breaking exact ties by smaller D."""
     candidates: list[PlateauCandidate] = []
     for path_index in range(1, len(path.dimensions) - 1):
         left = float(path.breakpoints[path_index])
@@ -609,6 +602,12 @@ def select_persistent_plateau(path: DimensionPath) -> PlateauSelection:
             )
         )
 
+    return sorted(candidates, key=lambda candidate: (-candidate.log_width, candidate.dimension))
+
+
+def select_persistent_plateau(path: DimensionPath) -> PlateauSelection:
+    """Select the widest bounded log plateau; tied maxima remain ambiguous."""
+    candidates = ranked_plateaus(path)
     if not candidates:
         return PlateauSelection(
             succeeded=False,

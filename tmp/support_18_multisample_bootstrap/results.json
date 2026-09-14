@@ -1,0 +1,7011 @@
+{
+  "config": {
+    "sample_sizes": [
+      1000000,
+      100,
+      1000
+    ],
+    "Lm": 1,
+    "top_plateaus": 3,
+    "B": 199,
+    "alpha_per_comparison": 0.05,
+    "objective_floor": 1e-08,
+    "bootstrap_screening": false,
+    "multiplicity_adjustment": "none",
+    "master_seed": 20260913,
+    "bootstrap_sampler": "Wishart(df=N,scale=fitted_null_covariance)/N; exact Gaussian X.T X/N distribution",
+    "settings": {
+      "beta": 1,
+      "max_iter": 800,
+      "tol": 1e-07,
+      "zero_tol": 1e-05,
+      "max_restarts": 10,
+      "omega_fixed": 1,
+      "omega_upper": null,
+      "init_strategy": "halton"
+    },
+    "sources": [
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_2/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_3/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_124/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_139/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_147/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_153/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_156/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_173/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_192/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_237/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_124/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_139/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_141/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_147/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_153/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_156/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_173/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_192/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_237/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_243/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_6/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_15/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_23/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_46/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_51/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_53/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_59/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_61/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_74/objective_curve_sigma_hat.npz",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_85/objective_curve_sigma_hat.npz"
+    ],
+    "protected_sha256": {
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_156/scaling_input_validation.log": "45e7e6ab8a7ec94510418c711f15e9c408db7072d6d1f8348c835039cab74eb5",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_156/selection_plateau.log": "c30281d0319d2d104a1d76750716c1c2e434d4728bb9c9c7cf7dcc506167fbc8",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_156/selection_window.log": "82b892d6331ad423fef663c5f742e75e9b4487e5d96e68ec4192c96e91fa4877",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_156/result.csv": "8f68b748bd49a86a1c4d8b66796f6acf85261c60a874352ae2e9573bfd485d61",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_156/objective_curve_sigma_hat.npz": "a58d7c1222a93b94c001ead40e7403f516809e45c8d7716677a27a810451c54e",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_156/compute.log": "ae56a810f13baf47603c9cb4159f042751874db2bc170b223b5643df451a05f6",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_192/scaling_input_validation.log": "850db0f7a96a536c3477252c6c843ef0e7c314268473abc5bff59c7df71efd8a",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_192/selection_plateau.log": "73c8a0770fdd49ae61acdbceecd6914669395294dc0c36a580d7d4bfefc1c097",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_192/selection_window.log": "323435f5a2872c8da80287fdff1267a3744214b04cdb35f005cff3e582aab0e2",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_192/result.csv": "3bc7cc6a3716e5c9a5bc25d830c51099881e5149a8c3845920cff4b8ae2f2f60",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_192/objective_curve_sigma_hat.npz": "1d82c241866d42cdacaa08c65eba619edbf16fe58068a2f26ab12e3bbaa0530c",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_192/compute.log": "faea2fcfc03af8fcf09dfa247d8e0ad8e022951a213e0e2332fc0101ba0c597f",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_2/scaling_input_validation.log": "ce06091a8ea0631202bd136bf0df1cc208bc62f256e8228c7156176300798d24",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_2/selection_plateau.log": "b0f6e8dba5a9f0dc5c640895e301e7c1b21e22f54eb3fc270524d88ac7f394e8",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_2/selection_window.log": "cb3dbf0aba26182c48cdcbbe3c057c9519b84155a7e21a3a6d1fbf7fe0691d18",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_2/result.csv": "cbc3a8bd0ecf24a8c3c64499cc7b1c7b51d15a8af71e55d015e1a00e8451d75e",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_2/objective_curve_sigma_hat.npz": "bde9d14b7a42f4ca4a8d339a25f1cc52d134642afd8f26aa2b80c9b7645f1293",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_2/compute.log": "a05ea085172edb668b73da87410896c5c22845ea16dd5836023d720b031f2c4e",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_3/scaling_input_validation.log": "090acb5f7b9ddb6cc7e76731a1a580c36dd4e5e1593557ea806df8b7a6b077bf",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_3/selection_plateau.log": "7d9d744e3b74fe504d1a6ae6a1bf3d417f1b9a75ae7a8511edd736bc9ec30f7e",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_3/selection_window.log": "f9bba33ac849fc8139cf4a7de4284a29aa1a4f943f4665dbcee9d38f1b1ed0d6",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_3/result.csv": "fd0697ecb9f2dd0d7400475d193d3f75aa3ee932a443efd4ca283e8ce3348c6c",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_3/objective_curve_sigma_hat.npz": "d72006967b0525fc4b2ee9c6992d6ecf90c633c23b8782eab3361f5305f536d8",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_3/compute.log": "54d24a1f48d7eaa66a280389c14ab6efa4a939348b9550d54fc0984f0b300ccb",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_173/scaling_input_validation.log": "81f55f256f507ae33c82cd628bb249f012fc711aab62b1666938d231fd79165f",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_173/selection_plateau.log": "772218bc8774a48e31862532bfeae0b4b1bbbe26464e57c7beb1c9445562333d",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_173/selection_window.log": "cb3dbf0aba26182c48cdcbbe3c057c9519b84155a7e21a3a6d1fbf7fe0691d18",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_173/result.csv": "41379bd079b8c6ea61975f50a55b1454224b4df9d112080ffcb9754107c0b404",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_173/objective_curve_sigma_hat.npz": "ff41847be94e5896f7a287239447cc8a331540a2d6c5b62d1e18816a81f620ba",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_173/compute.log": "56d79421d6e72230d25d0924612bc2d233ce3bc692779218022fe58e35f60e64",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_139/scaling_input_validation.log": "d505ce83bb4d1fd0951cb96c9cfd4d70f111a21336a428ad6008c6b69082eefd",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_139/selection_plateau.log": "18d207a4a77f14997ce8b37355a657d1cb4702b663bcc96dfb7396d842ce8ab4",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_139/selection_window.log": "cb3dbf0aba26182c48cdcbbe3c057c9519b84155a7e21a3a6d1fbf7fe0691d18",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_139/result.csv": "24721894d55afd65eb7f66e0a35a0b0bdabe3126aa0607916a87757d748ce6fe",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_139/objective_curve_sigma_hat.npz": "85d5197c0bdcf3668cb6f72c26851b13ba132c8958d93209bd8ebd418ea721ad",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_139/compute.log": "0bd8876f73b15a81c7bead49e985f6116d99beda867f7ac5c59b764036965504",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_153/scaling_input_validation.log": "c354e91909aa94dc75c7223818b2d0f3e41fc2b5498be613b7e3cbbb5d906de6",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_153/selection_plateau.log": "65d293bc5e16d2edb8555cc95051052f47499e02780a5a1306bcc504f1efc7c8",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_153/selection_window.log": "6519536091281d208ff95d9395961368519caf83513bcb5fcd3f6b9d7877f47f",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_153/result.csv": "818f7de385620afbe7271e6e21a0dffcb791544269ec26cd50d3a6ddc7749f8b",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_153/objective_curve_sigma_hat.npz": "1c778d34da539894e5b1c509e580fe0d93376b43a49e46b3759aa0c71ef2a671",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_153/compute.log": "15c8f6d1837689124eac06d7302ed0a19bc6b6a993dbdd373e566834aa3f83e9",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_237/scaling_input_validation.log": "b334afe167558abdfc74cbf4ae305602ba8dab835fb1da82319c93f8bc1d5395",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_237/selection_plateau.log": "90f40b9f3c36c0b61bd8b0c828db9786162a6e3ce93ab5c35431c2ec87d47b19",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_237/selection_window.log": "5544867def7d70ba4d8b968af5e13c85d20bf68b25da5b83a5fc781f160c747e",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_237/result.csv": "16b52728aa6201e005b9927bdfd87671c657359b01c1941f01df612714ddbe9f",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_237/objective_curve_sigma_hat.npz": "dda6463ed3b797157dc6208425d38d96856d733d2246b82e53c2d81751049257",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_237/compute.log": "8d4c40aa888f412993538734fbd6cd36dbbcf9d5f3001c95e522ce1457c690aa",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_147/scaling_input_validation.log": "72b563f6b983b54fb1270b6ee2cc701f3bf8f62a308362288c1f220ccbacf68b",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_147/selection_plateau.log": "0c94ea4bd3cde1d2641d2fbacfb9324c91fad321b426ff088bf1bc4d2df0daaa",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_147/selection_window.log": "cb3dbf0aba26182c48cdcbbe3c057c9519b84155a7e21a3a6d1fbf7fe0691d18",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_147/result.csv": "f50c7cb755c2d875b675fcfe41ea04da93c57d8e8841ef179848ea04b525c025",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_147/objective_curve_sigma_hat.npz": "59823a8d717ac3f54973971102edb944865c1c0348796c1b345931decf969806",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_147/compute.log": "4c65c9ce87fa8bf4907fc39a7b9d63378fbc32377719f2e37a80d1ac2ed162ad",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_124/scaling_input_validation.log": "0ef30bfe94175401824706cfbc92166d34018967cc052a82bcebb59246838d62",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_124/selection_plateau.log": "65e8e698723ec8540d7a19d7aba88eed094a7811778255d131cbd98941d43d2c",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_124/selection_window.log": "447c323f03dd7b534407723b1cf6daba2822077071f3cefa7d6f565c25d88842",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_124/result.csv": "1bcdcb57ae5d77eb8ad665c92558e771d7b7f4fcc6e1e6b8f152e3beb93d7ee0",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_124/objective_curve_sigma_hat.npz": "110abd7f9a56de647bcc72b877e90d1f995669a37ec75021aeef43992627ad8c",
+      "experiments/output/upp_scal_n4_dm4_nsm1e6_omega1_minabs02_10seeds_PlaAbs/support_18/seed_124/compute.log": "b5595464b75eca90ced4dd20b6e0de2bb607df8387277f77e8bcbe2ba1ccc3ec",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_156/scaling_input_validation.log": "044440c9c522fe17885bf4d0dd25d6d07c0d3a0237ccc9fa8b672cae62d1af4e",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_156/selection_plateau.log": "8b2f16cdd860a8d3df1b677279a6b56182b4fec945ae0ce72648341222e4dcfa",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_156/selection_window.log": "cb3dbf0aba26182c48cdcbbe3c057c9519b84155a7e21a3a6d1fbf7fe0691d18",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_156/result.csv": "17eed48386775a38c3d0ad3a45dc441dac42360019dfc4a8cc34fcc81b57c8c0",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_156/objective_curve_sigma_hat.npz": "13a83aa5a8eaeb4d32129296f768e8e5a82c004ca769fcf28f452d71598391fc",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_156/compute.log": "cf44cbf5b4fc02d6cd1ea2529b89193a090ef5e63529b3c10adee735de38da14",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_192/scaling_input_validation.log": "dd6aec9d3adede7bba9e0773b5881b116ab65964d6c290f288829fb6bc5c078d",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_192/selection_plateau.log": "ea567bc55235777917c96a1b459e2bd0cc6b427ee09dd5da3013d744b74910d0",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_192/selection_window.log": "aa437b22498b1d4a545b15ef163fcf479b6d9a12e2e7b52eadca3db5a0bd762b",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_192/result.csv": "516ece89b07754815f56aab2e874288d9ad9e16aaa0519aee2b07ad2ada6a1b3",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_192/objective_curve_sigma_hat.npz": "d4897af04006b48ca2c17a47c8e3a9aa0b5eaefa201939186ff6f249bda614e2",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_192/compute.log": "1e38faa0533e5a1d26cabb2f1a0429f3bcea3b7ffba2fe9ce57e145ac9998b71",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_243/scaling_input_validation.log": "309af38f7d6fd2223dc6e3c4e0fe6560b1fd09b6d118496b8fc1a61fae0421b4",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_243/selection_plateau.log": "f20c76a507fe4678d94529a669ba4adb9cd80a620acb0828807f6b80aa3f3710",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_243/selection_window.log": "cb3dbf0aba26182c48cdcbbe3c057c9519b84155a7e21a3a6d1fbf7fe0691d18",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_243/result.csv": "a30fed80081286f51bdd1cc313732549a1525790214c1b134a3477420644b446",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_243/objective_curve_sigma_hat.npz": "d9afd06e7fd55c7c7972b2a3469ad17e416a74d000da52a9cff800a74ccc6328",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_243/compute.log": "c83561c95027c4d854647526f6781a0a14b076119168af6e9e47fb6f3da4ca77",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_173/scaling_input_validation.log": "b970cbb693d90ca26523b45b97a1e2f2119ee57e1e2326bc50c74467fbac2a32",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_173/selection_plateau.log": "70b2bdb6c2a73bdfa342bafacc722fd8fe3acb68a6779782a6e56cbdda591e69",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_173/selection_window.log": "c4f7b5b4bec9e6874b8a240402b0d55126214f2a1f58f518893c7623a829e8d4",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_173/result.csv": "8aac67c8b952d18074944d72e180c7e92bc8b4e6c9fda454fc6e734218d5e133",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_173/objective_curve_sigma_hat.npz": "30d13e3ec3c91710e55a8bcf9dd57f6dc0dc34ceb193f63d417e8dfbda6ef09c",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_173/compute.log": "7f61f266f8e03a0176e95f62e84a2b3e8d0439896d100b04cc4f351d5de92f52",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_139/scaling_input_validation.log": "9b0874e7b85a0bf18add26f0fec7f8a7972be8f3ff7c41d24534d9115f7b03c7",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_139/selection_plateau.log": "85d50dcb3d39f09f051336d5ed460bc7a7a9890eff2465de4a29d719be46ccf5",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_139/selection_window.log": "f95644f0df68745a4f1987ed2c5ab878b85271badda560b384516d6fb589d7a1",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_139/result.csv": "41f73609872da182d16e55473c1f42f642e7175dfdb159a0788666db88e22aa3",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_139/objective_curve_sigma_hat.npz": "51404b28ad233a50ad8539541028f29c47ddcd10a7a4a8299c3e526e52d86295",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_139/compute.log": "f93587f8eb764b2263bdf4c1b7eacf3ba6aba16fa082e0c1e0d7f71ebaa4f9fd",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_153/scaling_input_validation.log": "1ec27ea42555aa9faeac23bd52376721ca102cf689132501b5337f8099787d0a",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_153/selection_plateau.log": "9e74ed202cd1f76af793e33f7d2b329345b2b7caf13f9aa0fc403a37a6a8a9da",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_153/selection_window.log": "a0c9638a44ab75039ea6d1868928e1c19fd243d1992d32cdcbfc3a7573a9495e",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_153/result.csv": "9acbf46f5f35d1ca089a1de10da106f1bb87cd12fdfeabbfa415f61408e21752",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_153/objective_curve_sigma_hat.npz": "6a54318795cb5c2678ba3ae4c44c680cd02a00919992e9c5b57fca88b31b8c24",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_153/compute.log": "e9280394c293916a20e1b30fdd8f866a2b7ba4288a5935f2b5a74a70cd4446f5",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_237/scaling_input_validation.log": "ff790263de1a2335cb4bf882ed1477f4e0fa98ca182c366efb6673939466d4e3",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_237/selection_plateau.log": "63a08534bfaa0a81a3fab24fcb5b0a05dc4e256cf6324034f40df6bda13e4ef2",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_237/selection_window.log": "6da7f392d2b805ac5307d6e7efef28fc8aedfc8fb894a0942e7439b3b642ca97",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_237/result.csv": "65ffbf86fd5bf86a70e84594190ed99177f9dc96ae3ca71dbade3f3e77d3f2b6",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_237/objective_curve_sigma_hat.npz": "3636fc461f7faa75508896b1f2218b75e1dfc86c2433c555872c6fa0636a9b60",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_237/compute.log": "4d8d64878b39525623faaa172dda70ccfcf4422f7f7ad15daeca1c5f5feaae56",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_147/scaling_input_validation.log": "b378ceb6a8c74bd098e9520ddfaec5fa910a71d8cdf386b8bfaebaedaa6f0717",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_147/selection_plateau.log": "31aa1baa73ef9c8f0471db6ff3ae20f9b18310e859277d641d99ee63dd14f35e",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_147/selection_window.log": "cb3dbf0aba26182c48cdcbbe3c057c9519b84155a7e21a3a6d1fbf7fe0691d18",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_147/result.csv": "089e3d68eb38087bb66abd91f2dfb9cea178749392e7210e0ce5b663d3fa7b21",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_147/objective_curve_sigma_hat.npz": "e3a48da1c404b440a2352ad4c805cc4b50c7dcb75c2cdd357121a8fc06eece36",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_147/compute.log": "221690ae1f43488bf061406e8b2fa5417fc843aadeea51065b4d463058da42e9",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_141/scaling_input_validation.log": "e045301b3c8c35309a85e0fd4f948fe54448600fafd36916a0c46cd7c5407307",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_141/selection_plateau.log": "21bea655347c8fce8f903c99fafec883da9969276363842d7053a5bcae788a2b",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_141/selection_window.log": "1ea2087e18f044f98ebe613c95649ff7b8163f969ff59c31599546b6e928b336",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_141/result.csv": "93396b394344fef5862d7324535ad61866e83b81d75992bf5bc41e090003e53a",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_141/objective_curve_sigma_hat.npz": "344b045184048f6bdc52c97c3f9f66d719f0b54b9341e5eeace21d80467fb4b7",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_141/compute.log": "64f850b0433d7d07bdd872fd0060126417d4fbb9f5d9d12f406ab39a4d7c6243",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_124/scaling_input_validation.log": "0602491da2858591124ec3d0abd0aa05c30076bd252092b8f9221a12ec44d693",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_124/selection_plateau.log": "0dea894f22ae9ed9b38c561e304566ce354954528c0516522a40c71ceac227c0",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_124/selection_window.log": "ce85ed8e00c53e72d035db26809cc888cbcb2239222591c52cc910073e0e4069",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_124/result.csv": "ab7e1358840e2d3478e108ff1819d4420ecb7d99ff2b3cf7f15b2a0470ef8f0d",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_124/objective_curve_sigma_hat.npz": "d55837c503b3b68d8de98077d1693d5bbe10003f925e11f67d24727e0bc198de",
+      "experiments/output/upp_scal_n4_dm4_nsm100_omega1_minabs02_10seeds_PlaAbs/support_18/seed_124/compute.log": "f69293f4557939e4f490d61c3c9c8760ba0bfec4508622bfe8de6b67dd7f705c",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_51/scaling_input_validation.log": "071f649de2724721a8f89426ad44e63544da39f977711b0b808159e92ec37cfb",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_51/selection_plateau.log": "40e73a48709083988bfd202f35bba1eb259d02a0f208a4057ad707d8f76d5374",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_51/selection_window.log": "6b3781ce537fd198468deeeb8fd91d94ed73516e5d50c3b2d7ab293d8b9dd07f",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_51/result.csv": "c9576cad63607da7829255d39613270dd23f9bac8ab4bdefcec690c8c61aadb4",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_51/objective_curve_sigma_hat.npz": "f0cc0de373d7a2c32140f025b261967a4729869217351e098e72fa911b43b396",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_51/compute.log": "82acd8f9eed16e1fc78d78b334c56cdec70cad3b3273ee2240191948facce279",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_59/scaling_input_validation.log": "9417632da8a10957894fe0f316f10717d81e4b1663f2c5b97ddd019d06ab67bb",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_59/selection_plateau.log": "76795d6c840d1cbdba6adaba61e620eec3ab0ced205749b3fcc6588d4a0694e0",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_59/selection_window.log": "1e5e5ae79f7411363eff041985f05a6658d4a9be19e4a92e8e9deff89f9a573e",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_59/result.csv": "ea96f04a80e3d0df60991e9eea5b7e16fe487a0fc80803bc9cdb60ab1cad1893",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_59/objective_curve_sigma_hat.npz": "843417eb77cb6c36b2c490ea9d77c8d385e750919f883d32461130ab3291ac92",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_59/compute.log": "e1c2a6e016e8ac6c9837316a79146acd9befe9c2bed58c5b32632494c64e527f",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_61/scaling_input_validation.log": "a4564ea969f970afd2906197efd7214455fd86c5240213d860d329fbc55dfe54",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_61/selection_plateau.log": "8f542da394cedde830814bd8840b868c5a990ae174e828c46e5632ff91280af6",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_61/selection_window.log": "cdf1c258f1fe72414aff58585b3e7286dcfec7938f952d4424a25bedaf642594",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_61/result.csv": "454cc0120f563f7c898765056bfcb154c7906d3cbb775f147784852e35fbe5a7",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_61/objective_curve_sigma_hat.npz": "967065b450c40d5772dc20d8a829b43ff7d96e5dd6d2ddd9081197000292181e",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_61/compute.log": "c1bcb15b92779fc85c8d3b428aa16ad51826e4b3d942b0e88a7de21852aec382",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_74/scaling_input_validation.log": "c19198ecdced4c622f8c477bbbbcc5ce74d0c190351485427d367360062464b9",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_74/selection_plateau.log": "aa920d08774645688d524e316f8fc7f6961a0d42c42edee733877a51f8b465f7",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_74/selection_window.log": "cb3dbf0aba26182c48cdcbbe3c057c9519b84155a7e21a3a6d1fbf7fe0691d18",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_74/result.csv": "3701c47da42d952d685f9a137cf886eee276daf6839ec29ebe4ca2916fb5700f",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_74/objective_curve_sigma_hat.npz": "db6e2fdc3518da1a50f93f49068cf2d18bd4f408a7591ca58aef2b48c939b89b",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_74/compute.log": "807761828f04612fe007843443831c07541b415f65339ce27101cb50a3fd9bb3",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_53/scaling_input_validation.log": "953643c6b7260ebaf0c1b620deb3d55ea05df29ecb60ea3dff6e7432c092eb24",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_53/selection_plateau.log": "672f3e2000178c1785c117e02f81bbda757e60c13f5cf0c12f2bdecc903c24ce",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_53/selection_window.log": "cb3dbf0aba26182c48cdcbbe3c057c9519b84155a7e21a3a6d1fbf7fe0691d18",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_53/result.csv": "1720c0307ddde5ddab57a5a2aec5d0129a01953dd4b83b2e1f77fb6745a50528",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_53/objective_curve_sigma_hat.npz": "2ef766165ab624742337f553a870332cc8d9107a5e84d87644019c9e93312fef",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_53/compute.log": "f703121772cbb334beb9c0d5a2a3db185044c136a5b663307bbbcbbad7fa1552",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_85/scaling_input_validation.log": "9257fd8ff8bbe69d1c7e593fc70a16de0c2935dec8723456f2a494eb0c588896",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_85/selection_plateau.log": "32901e6db65e16b89198ed511f5174eec43d02c9e547dcd469ab12aa64252c63",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_85/selection_window.log": "cb3dbf0aba26182c48cdcbbe3c057c9519b84155a7e21a3a6d1fbf7fe0691d18",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_85/result.csv": "41280774815cfc83e6d4f6157b724ace728bb772023626c6885f03cc247292f9",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_85/objective_curve_sigma_hat.npz": "8b99592197099dfe7d00e3cfb9fdcb634c6e4d95a8bc9d584e5aa11902bacdb2",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_85/compute.log": "53c6fa4d5a9fd127dba85b67e7d96188f4c1ac3950403445bef5cb7acefc4806",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_15/scaling_input_validation.log": "1ab1a8cb723353d294d383c2a0a6e8c3e7c1b5d28380859f6436497a9f17e964",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_15/selection_plateau.log": "193a0aca79e93c68d36171b467001ef5a8194536bc2cdd5fd4ad2b501a06f73c",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_15/selection_window.log": "a72f1f6f0268819ad19c19ad0e6a97c249a7034973487b4bae6a656ee91b47bf",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_15/result.csv": "518d5f5821b51df2a5908bf54924f64bd302e3264eb46eda90c795cbe39f0677",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_15/objective_curve_sigma_hat.npz": "af5ac4a07e2d7bf2ef3e8308ac832cdfd22fad28ddd8a61b61afc2fe94fa9ea6",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_15/compute.log": "f79770695b74e720956ffb5cad6c44e5980dc595646958ed64a014817620c13c",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_23/scaling_input_validation.log": "a9f4c5f3d9f9d526b0d308b6d6296aa8f21fb14fcbf49bb309da10cb70ff632f",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_23/selection_plateau.log": "ef1b67ef75b26457ad38b465e14d7edf6ab8f675d4103f594fe031b662651b67",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_23/selection_window.log": "2f53c71fd03c330ce94f68f5dc852150c5a4b7d0b7d1a39325d283683235100f",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_23/result.csv": "9cc6955d883309cf6928c8d186e6166d20418ab0d0399b0b79835d324133d33e",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_23/objective_curve_sigma_hat.npz": "1eec3ff071fc5d141a25ce9fffe81f9c68ee4786136a018b42f1a653e8d32fce",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_23/compute.log": "678de15f6a462f0105fbd3d1e171b6232f051068f301d6fee3ea789f253a71b5",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_46/scaling_input_validation.log": "ba588ed00688f7454da1bd7d269f209ae73ce5cd2224637a3b6d86816d5ad215",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_46/selection_plateau.log": "d03c96fc3a4bd15032ff4c778afe905a510f1f892d2dc9eb83c07fb7102cddfd",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_46/selection_window.log": "bba4864b3cae274ceea37dedaad0d30598d6b3627c2aaa74acf91160011a3177",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_46/result.csv": "6dee87459591e50959ff08cdef85148a7822f61deccfc29d84847e990cf06e11",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_46/objective_curve_sigma_hat.npz": "3ad30aa10376368aec85a5e30469629545cf03fd8ee6c8a807564ddf3b804c87",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_46/compute.log": "f55a1bd8dd6272ba52f464821a2ad3ce2285b32c4974791c270515e3e8829f8a",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_6/scaling_input_validation.log": "4d9ab6485b847f02f6036aa25a4a0f03e5928a9a6a389aaf0a92d01e38bf9bb9",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_6/selection_plateau.log": "9a0a38f961c164f2516e588d0fd443334afe509c87598a029eedfa61ae68eb29",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_6/selection_window.log": "cb3dbf0aba26182c48cdcbbe3c057c9519b84155a7e21a3a6d1fbf7fe0691d18",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_6/result.csv": "5c93f47a7b8b0444ef5994ce48bc15e637b08dced7def4280f82956df51b251b",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_6/objective_curve_sigma_hat.npz": "90bdc7ae3c042690e9c1a2b479df51a9c503fdb0059dd5d0edacd75be0b54ae1",
+      "experiments/output/upp_scal_n4_dm4_nsm1000_omega1_minabs02_10seeds_PlaAbs/support_18/seed_6/compute.log": "d235088cb9cac8ca67a6e5340277330a1534995ced859b5ac7c546830e23e2c6",
+      "objective.py": "a9996a9e26d267f5c5a8ab615a227f5b6b8c43b0744f6b2a5b064b137ba1a346",
+      "scaling_selection.py": "81d6da654fc4a9c12e93d2370cfa6f1cc06f0a725f24ea3bd2b674834aa4eaf5",
+      "admm.py": "56dbbff54ba3cbf1156aaf001905cefce9510f746f35c76aaff56e3666a18e2b",
+      "model_selection.py": "ffb0f782456fb6fa8748d4a3cbaead449b155a5a08caac3e52786d611e2f3ff5",
+      "penalty.py": "90388ec2bc8b5650e364a994791441d22cf6e2bc337161d0f260d11a2fb75c9e",
+      "analyze_penalty.py": "45938929856668a3f8aed502057b7d13caab14347dc90ad682b46ff1cfca4fa0",
+      "supports/preselected.py": "897ee7f396d49c105a9dbd31cc4c3fb7eb9dbaadf61d9348caa2a38f1f3d6dc1",
+      "supports/__init__.py": "5884cb84cab167974a7a0973e03d8d45570f7a6f6f5ed69c6019455a8b62e997",
+      "supports/common.py": "dbaf2f5f1be8c7ff6ef3fca45541359d984aabd8cd1cb6f5048213f26bf11a96",
+      "supports/exact.py": "697ab8d5cead45db5ab32568d32ac77d7ec5f0e9e23d0137b2dda9fda992cfbd",
+      "experiments/plot_upper_support_coverage.py": "74e5095be16fa2b8b02e05fc00d722fd8a39dea01fdf94dfbac010eef1cf7956",
+      "experiments/plot_dimension_path.py": "b24bba166b7f22b3a49f49bc797af3f32cd9fafb0127827c960a7e6e1a75e585",
+      "experiments/inspect_result.py": "211a040479089d61c5ccf912090a77bbe428bff6085c117a1e31ff39969bf109",
+      "experiments/run_synthetic.py": "310f1409081e1fe2c6b66940411760ba9ea42f9ee6197e3297c7fd1ed6e4595b",
+      "experiments/compute_objective_curve.py": "437622c62856a0f12345e73482f512ab8e962ebb70073fd1b25424e35eee7b50",
+      "experiments/select_scaling_parameter.py": "b9371f1b6c848ca9274e62e49a9eb47e53fc7487d71958a412a977b66459872a",
+      "experiments/plot_sigma_estimation_vs_omega.py": "c517b10fe89db876f3576aecc4fe55edfbd2474305f828e19e921024e41be8b5",
+      "experiments/plot_objective_curve.py": "9db68cfa4a33c5ed29f82b9c81bd096ec8b380dd3ffd4445910c74a93ef8490e",
+      "tests/test_preselected_supports.py": "01af01a976a847ef5fb4176392fa4dafae589bd3bdb1719ce4c4acd049c459e5",
+      "tests/test_covariance_vector_omega.py": "a367c4dc59e9291e4889e96463a8386b84dc454ce9cee137b160f242105a9989",
+      "tests/test_omega_star_configuration.py": "a11bcaa2c23f29293bfc82f5a0eab25ead798dd0af8267c1682b1967d0c58b4f",
+      "tests/test_scaling_parameter_selection.py": "64abe158b140d6220ab5b520e57d64986489efb7be1b4785b212b05199e20873",
+      "tests/test_support_streaming.py": "73a273ac29b4cda1663c05e8afefb637f808415c872ebb389928400789d113be",
+      "tests/test_admm_initialization.py": "bc7fba782fd2d3cc24cd6d6eaaae9cdcca25e4fcd1b2fbced972f20ca312a7b3",
+      "tests/test_penalty.py": "14f0f7edaab8e01657e30bf9f458c0a8ed58afee4be778a942462b5bf5b41ca1",
+      "tests/test_reselect_parallel.py": "13955f322cd249c6e11549f66a36ab79534bd02680ed57483d3ed35a90db0a22",
+      "tests/test_upper_triangular_supports.py": "9b927c6acc331568c16e7408fd408b130c0d7ea11bd67fcaf96e229bddeb6e14",
+      "optimizers/__init__.py": "66b0f67e17dcb109b85d307094d311cb7223f501ac69a829c918755411c69bf5",
+      "optimizers/support_search.py": "226c4aa6b4eddd1f54d51b3247fcc6a25335622c43dc2129b03aa6afc6e0f40c"
+    }
+  },
+  "rows": [
+    {
+      "num_samples": 1000000,
+      "seed": 2,
+      "candidates_descending": [
+        6,
+        4,
+        2
+      ],
+      "first_p": 0.26,
+      "second_p": 0.005,
+      "selected_dimension": 4,
+      "true_positive_edges": 3,
+      "selected_edge_count": 3,
+      "precision": 1.0,
+      "exact_support_recovery": true,
+      "path_passes_true_support": true,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000000,
+      "seed": 3,
+      "candidates_descending": [
+        5,
+        4,
+        2
+      ],
+      "first_p": 0.03,
+      "second_p": null,
+      "selected_dimension": 5,
+      "true_positive_edges": 3,
+      "selected_edge_count": 4,
+      "precision": 0.75,
+      "exact_support_recovery": false,
+      "path_passes_true_support": true,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000000,
+      "seed": 124,
+      "candidates_descending": [
+        5,
+        4,
+        2
+      ],
+      "first_p": 0.23,
+      "second_p": 0.005,
+      "selected_dimension": 4,
+      "true_positive_edges": 3,
+      "selected_edge_count": 3,
+      "precision": 1.0,
+      "exact_support_recovery": true,
+      "path_passes_true_support": true,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000000,
+      "seed": 139,
+      "candidates_descending": [
+        6,
+        4,
+        2
+      ],
+      "first_p": 0.63,
+      "second_p": 0.005,
+      "selected_dimension": 4,
+      "true_positive_edges": 3,
+      "selected_edge_count": 3,
+      "precision": 1.0,
+      "exact_support_recovery": true,
+      "path_passes_true_support": true,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000000,
+      "seed": 147,
+      "candidates_descending": [
+        6,
+        4,
+        2
+      ],
+      "first_p": 0.975,
+      "second_p": 0.005,
+      "selected_dimension": 4,
+      "true_positive_edges": 3,
+      "selected_edge_count": 3,
+      "precision": 1.0,
+      "exact_support_recovery": true,
+      "path_passes_true_support": true,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000000,
+      "seed": 153,
+      "candidates_descending": [
+        6,
+        4,
+        2
+      ],
+      "first_p": 0.445,
+      "second_p": 0.005,
+      "selected_dimension": 4,
+      "true_positive_edges": 3,
+      "selected_edge_count": 3,
+      "precision": 1.0,
+      "exact_support_recovery": true,
+      "path_passes_true_support": true,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000000,
+      "seed": 156,
+      "candidates_descending": [
+        6,
+        4,
+        2
+      ],
+      "first_p": 0.555,
+      "second_p": 0.005,
+      "selected_dimension": 4,
+      "true_positive_edges": 3,
+      "selected_edge_count": 3,
+      "precision": 1.0,
+      "exact_support_recovery": true,
+      "path_passes_true_support": true,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000000,
+      "seed": 173,
+      "candidates_descending": [
+        5,
+        4,
+        2
+      ],
+      "first_p": 0.105,
+      "second_p": 0.005,
+      "selected_dimension": 4,
+      "true_positive_edges": 3,
+      "selected_edge_count": 3,
+      "precision": 1.0,
+      "exact_support_recovery": true,
+      "path_passes_true_support": true,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000000,
+      "seed": 192,
+      "candidates_descending": [
+        6,
+        4,
+        2
+      ],
+      "first_p": 0.18,
+      "second_p": 0.005,
+      "selected_dimension": 4,
+      "true_positive_edges": 3,
+      "selected_edge_count": 3,
+      "precision": 1.0,
+      "exact_support_recovery": true,
+      "path_passes_true_support": true,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000000,
+      "seed": 237,
+      "candidates_descending": [
+        5,
+        4,
+        2
+      ],
+      "first_p": 0.1,
+      "second_p": 0.005,
+      "selected_dimension": 4,
+      "true_positive_edges": 3,
+      "selected_edge_count": 3,
+      "precision": 1.0,
+      "exact_support_recovery": true,
+      "path_passes_true_support": true,
+      "status": "ok"
+    },
+    {
+      "num_samples": 100,
+      "seed": 124,
+      "candidates_descending": [
+        6,
+        5,
+        2
+      ],
+      "first_p": 0.83,
+      "second_p": 0.71,
+      "selected_dimension": 2,
+      "true_positive_edges": 1,
+      "selected_edge_count": 1,
+      "precision": 1.0,
+      "exact_support_recovery": false,
+      "path_passes_true_support": false,
+      "status": "ok"
+    },
+    {
+      "num_samples": 100,
+      "seed": 139,
+      "candidates_descending": [
+        4,
+        3,
+        2
+      ],
+      "first_p": 0.61,
+      "second_p": 0.25,
+      "selected_dimension": 2,
+      "true_positive_edges": 1,
+      "selected_edge_count": 1,
+      "precision": 1.0,
+      "exact_support_recovery": false,
+      "path_passes_true_support": true,
+      "status": "ok"
+    },
+    {
+      "num_samples": 100,
+      "seed": 141,
+      "candidates_descending": [
+        6,
+        5,
+        4
+      ],
+      "first_p": 0.845,
+      "second_p": 0.755,
+      "selected_dimension": 4,
+      "true_positive_edges": 2,
+      "selected_edge_count": 3,
+      "precision": 0.6666666666666666,
+      "exact_support_recovery": false,
+      "path_passes_true_support": false,
+      "status": "ok"
+    },
+    {
+      "num_samples": 100,
+      "seed": 147,
+      "candidates_descending": [
+        6,
+        5,
+        4
+      ],
+      "first_p": 0.855,
+      "second_p": 0.685,
+      "selected_dimension": 4,
+      "true_positive_edges": 2,
+      "selected_edge_count": 3,
+      "precision": 0.6666666666666666,
+      "exact_support_recovery": false,
+      "path_passes_true_support": false,
+      "status": "ok"
+    },
+    {
+      "num_samples": 100,
+      "seed": 153,
+      "candidates_descending": [
+        6,
+        5,
+        3
+      ],
+      "first_p": 0.88,
+      "second_p": 0.95,
+      "selected_dimension": 3,
+      "true_positive_edges": 0,
+      "selected_edge_count": 2,
+      "precision": 0.0,
+      "exact_support_recovery": false,
+      "path_passes_true_support": false,
+      "status": "ok"
+    },
+    {
+      "num_samples": 100,
+      "seed": 156,
+      "candidates_descending": [
+        6,
+        5,
+        4
+      ],
+      "first_p": 0.785,
+      "second_p": 0.67,
+      "selected_dimension": 4,
+      "true_positive_edges": 2,
+      "selected_edge_count": 3,
+      "precision": 0.6666666666666666,
+      "exact_support_recovery": false,
+      "path_passes_true_support": false,
+      "status": "ok"
+    },
+    {
+      "num_samples": 100,
+      "seed": 173,
+      "candidates_descending": [
+        6,
+        4,
+        2
+      ],
+      "first_p": 0.89,
+      "second_p": 0.605,
+      "selected_dimension": 2,
+      "true_positive_edges": 1,
+      "selected_edge_count": 1,
+      "precision": 1.0,
+      "exact_support_recovery": false,
+      "path_passes_true_support": true,
+      "status": "ok"
+    },
+    {
+      "num_samples": 100,
+      "seed": 192,
+      "candidates_descending": [
+        6,
+        4,
+        3
+      ],
+      "first_p": 0.925,
+      "second_p": 0.83,
+      "selected_dimension": 3,
+      "true_positive_edges": 1,
+      "selected_edge_count": 2,
+      "precision": 0.5,
+      "exact_support_recovery": false,
+      "path_passes_true_support": false,
+      "status": "ok"
+    },
+    {
+      "num_samples": 100,
+      "seed": 237,
+      "candidates_descending": [
+        5,
+        3,
+        2
+      ],
+      "first_p": 0.43,
+      "second_p": 0.285,
+      "selected_dimension": 2,
+      "true_positive_edges": 1,
+      "selected_edge_count": 1,
+      "precision": 1.0,
+      "exact_support_recovery": false,
+      "path_passes_true_support": false,
+      "status": "ok"
+    },
+    {
+      "num_samples": 100,
+      "seed": 243,
+      "candidates_descending": [
+        6,
+        5,
+        4
+      ],
+      "first_p": 0.57,
+      "second_p": 0.705,
+      "selected_dimension": 4,
+      "true_positive_edges": 1,
+      "selected_edge_count": 3,
+      "precision": 0.3333333333333333,
+      "exact_support_recovery": false,
+      "path_passes_true_support": false,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000,
+      "seed": 6,
+      "candidates_descending": [
+        6,
+        5,
+        3
+      ],
+      "first_p": 0.665,
+      "second_p": 0.15,
+      "selected_dimension": 3,
+      "true_positive_edges": 2,
+      "selected_edge_count": 2,
+      "precision": 1.0,
+      "exact_support_recovery": false,
+      "path_passes_true_support": false,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000,
+      "seed": 15,
+      "candidates_descending": [
+        6,
+        4,
+        2
+      ],
+      "first_p": 0.755,
+      "second_p": 0.4,
+      "selected_dimension": 2,
+      "true_positive_edges": 1,
+      "selected_edge_count": 1,
+      "precision": 1.0,
+      "exact_support_recovery": false,
+      "path_passes_true_support": false,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000,
+      "seed": 23,
+      "candidates_descending": [
+        6,
+        5,
+        4
+      ],
+      "first_p": 0.35,
+      "second_p": 0.05,
+      "selected_dimension": 4,
+      "true_positive_edges": 3,
+      "selected_edge_count": 3,
+      "precision": 1.0,
+      "exact_support_recovery": true,
+      "path_passes_true_support": true,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000,
+      "seed": 46,
+      "candidates_descending": [
+        5,
+        4,
+        2
+      ],
+      "first_p": 0.535,
+      "second_p": 0.05,
+      "selected_dimension": 2,
+      "true_positive_edges": 1,
+      "selected_edge_count": 1,
+      "precision": 1.0,
+      "exact_support_recovery": false,
+      "path_passes_true_support": true,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000,
+      "seed": 51,
+      "candidates_descending": [
+        5,
+        3,
+        2
+      ],
+      "first_p": 0.61,
+      "second_p": 0.065,
+      "selected_dimension": 2,
+      "true_positive_edges": 1,
+      "selected_edge_count": 1,
+      "precision": 1.0,
+      "exact_support_recovery": false,
+      "path_passes_true_support": false,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000,
+      "seed": 53,
+      "candidates_descending": [
+        6,
+        4,
+        2
+      ],
+      "first_p": 0.52,
+      "second_p": 0.09,
+      "selected_dimension": 2,
+      "true_positive_edges": 1,
+      "selected_edge_count": 1,
+      "precision": 1.0,
+      "exact_support_recovery": false,
+      "path_passes_true_support": false,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000,
+      "seed": 59,
+      "candidates_descending": [
+        6,
+        5,
+        4
+      ],
+      "first_p": 0.895,
+      "second_p": 0.625,
+      "selected_dimension": 4,
+      "true_positive_edges": 3,
+      "selected_edge_count": 3,
+      "precision": 1.0,
+      "exact_support_recovery": true,
+      "path_passes_true_support": true,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000,
+      "seed": 61,
+      "candidates_descending": [
+        6,
+        5,
+        2
+      ],
+      "first_p": 0.845,
+      "second_p": 0.985,
+      "selected_dimension": 2,
+      "true_positive_edges": 1,
+      "selected_edge_count": 1,
+      "precision": 1.0,
+      "exact_support_recovery": false,
+      "path_passes_true_support": false,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000,
+      "seed": 74,
+      "candidates_descending": [
+        6,
+        3,
+        2
+      ],
+      "first_p": 0.57,
+      "second_p": 0.16,
+      "selected_dimension": 2,
+      "true_positive_edges": 1,
+      "selected_edge_count": 1,
+      "precision": 1.0,
+      "exact_support_recovery": false,
+      "path_passes_true_support": true,
+      "status": "ok"
+    },
+    {
+      "num_samples": 1000,
+      "seed": 85,
+      "candidates_descending": [
+        6,
+        4,
+        3
+      ],
+      "first_p": 0.615,
+      "second_p": 0.095,
+      "selected_dimension": 3,
+      "true_positive_edges": 2,
+      "selected_edge_count": 2,
+      "precision": 1.0,
+      "exact_support_recovery": false,
+      "path_passes_true_support": false,
+      "status": "ok"
+    }
+  ],
+  "tests": {
+    "1000000:2:4:6": {
+      "key": "1000000:2:4:6",
+      "trial_key": "1000000:2",
+      "stage": 1,
+      "num_samples": 1000000,
+      "seed": 2,
+      "small_dimension": 4,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 5.462948291120678e-06,
+      "null_covariance": [
+        [
+          1.0085245195766068,
+          0.0,
+          0.0,
+          0.06232570119130552
+        ],
+        [
+          0.0,
+          1.0649629326727084,
+          0.0,
+          0.061360993043527795
+        ],
+        [
+          0.0,
+          0.0,
+          1.1878981293012694,
+          -0.2716129838668688
+        ],
+        [
+          0.06232570119130552,
+          0.061360993043527795,
+          -0.2716129838668688,
+          2.6280025413877945
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.09193729581424814,
+          0.0,
+          0.0,
+          -0.639362472173137
+        ],
+        [
+          0.0,
+          -0.24698214906968036,
+          0.0,
+          -0.20268575679450979
+        ],
+        [
+          0.0,
+          0.0,
+          -0.3977146868522711,
+          0.4534685661716785
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.5311226022712748
+        ]
+      ],
+      "null_spectral_radius": 0.5311226022712748,
+      "exceedances": 51,
+      "B": 199,
+      "p_value": 0.26,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.19716149780873388,
+        0.3228158554573206
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 27,
+      "omega_cap_rejection_count": 0
+    },
+    "1000000:3:4:5": {
+      "key": "1000000:3:4:5",
+      "trial_key": "1000000:3",
+      "stage": 1,
+      "num_samples": 1000000,
+      "seed": 3,
+      "small_dimension": 4,
+      "large_dimension": 5,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 1.1629470569783121e-05,
+      "null_covariance": [
+        [
+          1.0121517984247925,
+          0.0,
+          0.0,
+          0.06646410449397169
+        ],
+        [
+          0.0,
+          1.0643527002615394,
+          0.0,
+          0.05911718296096832
+        ],
+        [
+          0.0,
+          0.0,
+          1.188882363873287,
+          -0.2763067812414817
+        ],
+        [
+          0.06646410449397169,
+          0.05911718296096832,
+          -0.2763067812414817,
+          2.6388826466810484
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.10957146109401307,
+          0.0,
+          0.0,
+          -0.5622572638605987
+        ],
+        [
+          0.0,
+          -0.2458898512534016,
+          0.0,
+          -0.19455323357259302
+        ],
+        [
+          0.0,
+          0.0,
+          -0.39858987480176206,
+          0.45197526937300814
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.5641023740424795
+        ]
+      ],
+      "null_spectral_radius": 0.5641023740424795,
+      "exceedances": 5,
+      "B": 199,
+      "p_value": 0.03,
+      "retain_large": true,
+      "selected_dimension": 5,
+      "mc_interval": [
+        0.008207450931323908,
+        0.057657805822972856
+      ],
+      "mc_interval_crosses_alpha": true,
+      "feasible_fallback_count": 21,
+      "omega_cap_rejection_count": 0
+    },
+    "1000000:124:4:5": {
+      "key": "1000000:124:4:5",
+      "trial_key": "1000000:124",
+      "stage": 1,
+      "num_samples": 1000000,
+      "seed": 124,
+      "small_dimension": 4,
+      "large_dimension": 5,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 3.6047788001549193e-06,
+      "null_covariance": [
+        [
+          1.0119942572925413,
+          0.0,
+          0.0,
+          0.06419708825270143
+        ],
+        [
+          0.0,
+          1.0635546635906976,
+          0.0,
+          0.0647072411026736
+        ],
+        [
+          0.0,
+          0.0,
+          1.1917150785758324,
+          -0.2710807782972399
+        ],
+        [
+          0.06419708825270143,
+          0.0647072411026736,
+          -0.2710807782972399,
+          2.639541617286689
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.10886735118408616,
+          0.0,
+          0.0,
+          -0.5462794029491002
+        ],
+        [
+          0.0,
+          -0.24445211773078693,
+          0.0,
+          -0.21396190538970147
+        ],
+        [
+          0.0,
+          0.0,
+          -0.4010900780134198,
+          0.43656036410075905
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.5740153453090737
+        ]
+      ],
+      "null_spectral_radius": 0.5740153453090737,
+      "exceedances": 45,
+      "B": 199,
+      "p_value": 0.23,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.16997980615282932,
+        0.29063110949210663
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 17,
+      "omega_cap_rejection_count": 0
+    },
+    "1000000:139:4:6": {
+      "key": "1000000:139:4:6",
+      "trial_key": "1000000:139",
+      "stage": 1,
+      "num_samples": 1000000,
+      "seed": 139,
+      "small_dimension": 4,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 1.2033064661592699e-06,
+      "null_covariance": [
+        [
+          1.009761166974988,
+          0.0,
+          0.0,
+          0.06304581707143717
+        ],
+        [
+          0.0,
+          1.0691071509045331,
+          0.0,
+          0.062304930517069985
+        ],
+        [
+          0.0,
+          0.0,
+          1.1905437721794503,
+          -0.27457705714414676
+        ],
+        [
+          0.06304581707143717,
+          0.062304930517069985,
+          -0.27457705714414676,
+          2.636834054413028
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.09831992499685786,
+          0.0,
+          0.0,
+          -0.6006574930958198
+        ],
+        [
+          0.0,
+          -0.25424409627322164,
+          0.0,
+          -0.19713335154297446
+        ],
+        [
+          0.0,
+          0.0,
+          -0.4000595992385694,
+          0.449515827059429
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.550563519840153
+        ]
+      ],
+      "null_spectral_radius": 0.550563519840153,
+      "exceedances": 125,
+      "B": 199,
+      "p_value": 0.63,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.5569671291179923,
+        0.6954344664316547
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 37,
+      "omega_cap_rejection_count": 0
+    },
+    "1000000:147:4:6": {
+      "key": "1000000:147:4:6",
+      "trial_key": "1000000:147",
+      "stage": 1,
+      "num_samples": 1000000,
+      "seed": 147,
+      "small_dimension": 4,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 1.22641772636466e-07,
+      "null_covariance": [
+        [
+          1.0093173011234817,
+          0.0,
+          0.0,
+          0.061637008116191626
+        ],
+        [
+          0.0,
+          1.0651883412029859,
+          0.0,
+          0.06253519970474399
+        ],
+        [
+          0.0,
+          0.0,
+          1.1898522037800197,
+          -0.2730365190040293
+        ],
+        [
+          0.061637008116191626,
+          0.06253519970474399,
+          -0.2730365190040293,
+          2.6416534847242255
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.09607960455249769,
+          0.0,
+          0.0,
+          -0.6019385409779454
+        ],
+        [
+          0.0,
+          -0.24738408853258267,
+          0.0,
+          -0.20495677445358593
+        ],
+        [
+          0.0,
+          0.0,
+          -0.39944897557921705,
+          0.44798842502469993
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.5511822798805179
+        ]
+      ],
+      "null_spectral_radius": 0.5511822798805179,
+      "exceedances": 194,
+      "B": 199,
+      "p_value": 0.975,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.9423421941770271,
+        0.9917925490686761
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 1,
+      "omega_cap_rejection_count": 0
+    },
+    "1000000:153:4:6": {
+      "key": "1000000:153:4:6",
+      "trial_key": "1000000:153",
+      "stage": 1,
+      "num_samples": 1000000,
+      "seed": 153,
+      "small_dimension": 4,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 3.6325553629893898e-06,
+      "null_covariance": [
+        [
+          1.0108164180830514,
+          0.0,
+          0.0,
+          0.06352965224337648
+        ],
+        [
+          0.0,
+          1.0681644098044407,
+          0.0,
+          0.06388813990061779
+        ],
+        [
+          0.0,
+          0.0,
+          1.1900445727117985,
+          -0.2757930092791392
+        ],
+        [
+          0.06352965224337648,
+          0.06388813990061779,
+          -0.2757930092791392,
+          2.6379696446891923
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.10344406753081459,
+          0.0,
+          0.0,
+          -0.5723784332640195
+        ],
+        [
+          0.0,
+          -0.25261537963498143,
+          0.0,
+          -0.20327450016777612
+        ],
+        [
+          0.0,
+          0.0,
+          -0.39961899360298353,
+          0.45015194219833443
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.559981622367419
+        ]
+      ],
+      "null_spectral_radius": 0.559981622367419,
+      "exceedances": 88,
+      "B": 199,
+      "p_value": 0.445,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.37202006346429106,
+        0.5141496553541726
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 0,
+      "omega_cap_rejection_count": 0
+    },
+    "1000000:156:4:6": {
+      "key": "1000000:156:4:6",
+      "trial_key": "1000000:156",
+      "stage": 1,
+      "num_samples": 1000000,
+      "seed": 156,
+      "small_dimension": 4,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 1.2759012622061094e-06,
+      "null_covariance": [
+        [
+          1.009556556781007,
+          0.0,
+          0.0,
+          0.06619180710181378
+        ],
+        [
+          0.0,
+          1.0678354979178022,
+          0.0,
+          0.0635446465279335
+        ],
+        [
+          0.0,
+          0.0,
+          1.19379537387641,
+          -0.2755933687829823
+        ],
+        [
+          0.06619180710181378,
+          0.0635446465279335,
+          -0.2755933687829823,
+          2.6326981051718175
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.09729385140275428,
+          0.0,
+          0.0,
+          -0.6390567002154796
+        ],
+        [
+          0.0,
+          -0.25204398155375435,
+          0.0,
+          -0.20448722795634414
+        ],
+        [
+          0.0,
+          0.0,
+          -0.4029088037698251,
+          0.4503269617642551
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.5312575438327377
+        ]
+      ],
+      "null_spectral_radius": 0.5312575438327377,
+      "exceedances": 110,
+      "B": 199,
+      "p_value": 0.555,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.48082455237292226,
+        0.6231075220025688
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 46,
+      "omega_cap_rejection_count": 0
+    },
+    "1000000:173:4:5": {
+      "key": "1000000:173:4:5",
+      "trial_key": "1000000:173",
+      "stage": 1,
+      "num_samples": 1000000,
+      "seed": 173,
+      "small_dimension": 4,
+      "large_dimension": 5,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 7.4243826547912715e-06,
+      "null_covariance": [
+        [
+          1.0114918615691408,
+          0.0,
+          0.0,
+          0.06435221989842543
+        ],
+        [
+          0.0,
+          1.0663129623368621,
+          0.0,
+          0.05747140271526364
+        ],
+        [
+          0.0,
+          0.0,
+          1.1929741371890092,
+          -0.27403934237946725
+        ],
+        [
+          0.06435221989842543,
+          0.05747140271526364,
+          -0.27403934237946725,
+          2.6366904700032547
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.10658939484170925,
+          0.0,
+          0.0,
+          -0.5605402999204429
+        ],
+        [
+          0.0,
+          -0.24937727229020054,
+          0.0,
+          -0.1853418902273174
+        ],
+        [
+          0.0,
+          0.0,
+          -0.4021925665982193,
+          0.4399378183834274
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.571191997673718
+        ]
+      ],
+      "null_spectral_radius": 0.571191997673718,
+      "exceedances": 20,
+      "B": 199,
+      "p_value": 0.105,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.06247738223070605,
+        0.15094612574732896
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 22,
+      "omega_cap_rejection_count": 0
+    },
+    "1000000:192:4:6": {
+      "key": "1000000:192:4:6",
+      "trial_key": "1000000:192",
+      "stage": 1,
+      "num_samples": 1000000,
+      "seed": 192,
+      "small_dimension": 4,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 7.316660480178153e-06,
+      "null_covariance": [
+        [
+          1.0113036302085276,
+          0.0,
+          0.0,
+          0.06237940783354728
+        ],
+        [
+          0.0,
+          1.0657886907968508,
+          0.0,
+          0.061538203128336716
+        ],
+        [
+          0.0,
+          0.0,
+          1.1917413690698755,
+          -0.2755173542256357
+        ],
+        [
+          0.06237940783354728,
+          0.061538203128336716,
+          -0.2755173542256357,
+          2.632087734758864
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.10572268582232483,
+          0.0,
+          0.0,
+          -0.5482258511370738
+        ],
+        [
+          0.0,
+          -0.24845061047120193,
+          0.0,
+          -0.19944124660988635
+        ],
+        [
+          0.0,
+          0.0,
+          -0.4011131539794077,
+          0.44440697238142207
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.5707941668215836
+        ]
+      ],
+      "null_spectral_radius": 0.5707941668215836,
+      "exceedances": 35,
+      "B": 199,
+      "p_value": 0.18,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.12566959758570861,
+        0.23602035393473528
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 1,
+      "omega_cap_rejection_count": 0
+    },
+    "1000000:237:4:5": {
+      "key": "1000000:237:4:5",
+      "trial_key": "1000000:237",
+      "stage": 1,
+      "num_samples": 1000000,
+      "seed": 237,
+      "small_dimension": 4,
+      "large_dimension": 5,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 8.725578874465539e-06,
+      "null_covariance": [
+        [
+          1.0106401132835074,
+          0.0,
+          0.0,
+          0.0656903136730055
+        ],
+        [
+          0.0,
+          1.0692664941892842,
+          0.0,
+          0.06218761783039913
+        ],
+        [
+          0.0,
+          0.0,
+          1.191359598065928,
+          -0.27383927555375537
+        ],
+        [
+          0.0656903136730055,
+          0.06218761783039913,
+          -0.27383927555375537,
+          2.6374171347853723
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.10260649677003418,
+          0.0,
+          0.0,
+          -0.5975481281895596
+        ],
+        [
+          0.0,
+          -0.25451807179552116,
+          0.0,
+          -0.196359889077458
+        ],
+        [
+          0.0,
+          0.0,
+          -0.40077783145626744,
+          0.4464705213046495
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.5527423940879778
+        ]
+      ],
+      "null_spectral_radius": 0.5527423940879778,
+      "exceedances": 19,
+      "B": 199,
+      "p_value": 0.1,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.05846702402586655,
+        0.14508194882057968
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 29,
+      "omega_cap_rejection_count": 0
+    },
+    "100:124:5:6": {
+      "key": "100:124:5:6",
+      "trial_key": "100:124",
+      "stage": 1,
+      "num_samples": 100,
+      "seed": 124,
+      "small_dimension": 5,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.0013411694602843674,
+      "null_covariance": [
+        [
+          1.1131527832258432,
+          0.0,
+          0.09223786667881724,
+          -0.017669106307971284
+        ],
+        [
+          0.0,
+          1.406306155199758,
+          -0.08762985477732751,
+          -0.11645583457351197
+        ],
+        [
+          0.09223786667881724,
+          -0.08762985477732751,
+          1.3421678256999447,
+          -0.3718600555554195
+        ],
+        [
+          -0.017669106307971284,
+          -0.11645583457351197,
+          -0.3718600555554195,
+          3.1318570153932894
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.31882710236839273,
+          0.0,
+          -0.2240962944017453,
+          0.0
+        ],
+        [
+          0.0,
+          -0.5375102643307753,
+          0.08900601525674026,
+          0.12453979051608396
+        ],
+        [
+          0.0,
+          0.0,
+          -0.432038460791109,
+          0.4654451365014492
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.7067374208348748
+        ]
+      ],
+      "null_spectral_radius": 0.7067374208348748,
+      "exceedances": 165,
+      "B": 199,
+      "p_value": 0.83,
+      "retain_large": false,
+      "selected_dimension": 5,
+      "mc_interval": [
+        0.7695180499366124,
+        0.8786818647905814
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 4,
+      "omega_cap_rejection_count": 141
+    },
+    "100:139:3:4": {
+      "key": "100:139:3:4",
+      "trial_key": "100:139",
+      "stage": 1,
+      "num_samples": 100,
+      "seed": 139,
+      "small_dimension": 3,
+      "large_dimension": 4,
+      "small_edges": [
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.008656886678107763,
+      "null_covariance": [
+        [
+          1.2407971911061901,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.126453114957295,
+          0.0,
+          -0.1716773809500912
+        ],
+        [
+          0.0,
+          0.0,
+          1.4323512418284534,
+          -0.37225570071637276
+        ],
+        [
+          0.0,
+          -0.1716773809500912,
+          -0.37225570071637276,
+          2.6973865273216706
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.4405298157347396,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.33504890722572483,
+          0.0,
+          0.3532895348875786
+        ],
+        [
+          0.0,
+          0.0,
+          -0.549406244040482,
+          0.29981083346350856
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6665461155494423
+        ]
+      ],
+      "null_spectral_radius": 0.6665461155494423,
+      "exceedances": 121,
+      "B": 199,
+      "p_value": 0.61,
+      "retain_large": false,
+      "selected_dimension": 3,
+      "mc_interval": [
+        0.5365013317518388,
+        0.6763093254987442
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 4,
+      "omega_cap_rejection_count": 138
+    },
+    "100:141:5:6": {
+      "key": "100:141:5:6",
+      "trial_key": "100:141",
+      "stage": 1,
+      "num_samples": 100,
+      "seed": 141,
+      "small_dimension": 5,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 5.843627816976937e-05,
+      "null_covariance": [
+        [
+          1.2245008443122938,
+          0.0,
+          0.0846043195899649,
+          0.09406550567256523
+        ],
+        [
+          0.0,
+          1.1170076717750048,
+          -0.015770162984367245,
+          0.16548425872164468
+        ],
+        [
+          0.0846043195899649,
+          -0.015770162984367245,
+          1.113844832063213,
+          0.015295617694475766
+        ],
+        [
+          0.09406550567256523,
+          0.16548425872164468,
+          0.015295617694475766,
+          2.606201354946652
+        ]
+      ],
+      "null_Lambda": [
+        [
+          0.4281830238715646,
+          0.0,
+          0.17991140109434067,
+          0.2346795636791408
+        ],
+        [
+          0.0,
+          0.3236525931126657,
+          -0.04741165160490317,
+          0.5643362342007991
+        ],
+        [
+          0.0,
+          0.0,
+          -0.2684557122068952,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.7194991153204061
+        ]
+      ],
+      "null_spectral_radius": 0.7194991153204061,
+      "exceedances": 168,
+      "B": 199,
+      "p_value": 0.845,
+      "retain_large": false,
+      "selected_dimension": 5,
+      "mc_interval": [
+        0.7862307408976467,
+        0.8916354631379568
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 14,
+      "omega_cap_rejection_count": 169
+    },
+    "100:147:5:6": {
+      "key": "100:147:5:6",
+      "trial_key": "100:147",
+      "stage": 1,
+      "num_samples": 100,
+      "seed": 147,
+      "small_dimension": 5,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.00038572717411982976,
+      "null_covariance": [
+        [
+          1.2309949273545875,
+          0.03383034037906138,
+          -0.11711041707659811,
+          -0.18956452569390725
+        ],
+        [
+          0.03383034037906138,
+          1.3224963082914596,
+          -0.0210340675058212,
+          -0.025407128946802443
+        ],
+        [
+          -0.11711041707659811,
+          -0.0210340675058212,
+          1.3176308127472958,
+          -0.45531545496620923
+        ],
+        [
+          -0.18956452569390725,
+          -0.025407128946802443,
+          -0.45531545496620923,
+          2.8873226275989614
+        ]
+      ],
+      "null_Lambda": [
+        [
+          0.4331846808163445,
+          0.07691321153968463,
+          -0.2619144528882985,
+          -0.3507884773569285
+        ],
+        [
+          0.0,
+          -0.4901802980580017,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.44460445441093693,
+          0.7847204637087575
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.45425725328831446
+        ]
+      ],
+      "null_spectral_radius": 0.4901802980580017,
+      "exceedances": 170,
+      "B": 199,
+      "p_value": 0.855,
+      "retain_large": false,
+      "selected_dimension": 5,
+      "mc_interval": [
+        0.7974599351703806,
+        0.9001805833799857
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 16,
+      "omega_cap_rejection_count": 146
+    },
+    "100:153:5:6": {
+      "key": "100:153:5:6",
+      "trial_key": "100:153",
+      "stage": 1,
+      "num_samples": 100,
+      "seed": 153,
+      "small_dimension": 5,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.0005788841674855308,
+      "null_covariance": [
+        [
+          1.0758243904658311,
+          0.0,
+          -0.10414170572791125,
+          -0.005415451068195302
+        ],
+        [
+          0.0,
+          1.1194819901865094,
+          -0.11598178373624095,
+          -0.06290742640082207
+        ],
+        [
+          -0.10414170572791125,
+          -0.11598178373624095,
+          1.3416567758634923,
+          -0.016030500977530057
+        ],
+        [
+          -0.005415451068195302,
+          -0.06290742640082207,
+          -0.016030500977530057,
+          2.984095047298179
+        ]
+      ],
+      "null_Lambda": [
+        [
+          0.26548119927398317,
+          0.0,
+          -0.3893456674896677,
+          0.0
+        ],
+        [
+          0.0,
+          0.32669513588006416,
+          -0.343579424234636,
+          -0.1919312504946509
+        ],
+        [
+          0.0,
+          0.0,
+          -0.2553473463695835,
+          0.23703857743596551
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.7916197710665014
+        ]
+      ],
+      "null_spectral_radius": 0.7916197710665014,
+      "exceedances": 175,
+      "B": 199,
+      "p_value": 0.88,
+      "retain_large": false,
+      "selected_dimension": 5,
+      "mc_interval": [
+        0.82588387759787,
+        0.9211775601285009
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 7,
+      "omega_cap_rejection_count": 172
+    },
+    "100:156:5:6": {
+      "key": "100:156:5:6",
+      "trial_key": "100:156",
+      "stage": 1,
+      "num_samples": 100,
+      "seed": 156,
+      "small_dimension": 5,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "observed_gain": 0.0012211731209588743,
+      "null_covariance": [
+        [
+          1.1248548339794955,
+          0.0,
+          -0.13070559691445752,
+          0.1923540797306588
+        ],
+        [
+          0.0,
+          1.2854773471727494,
+          0.04601330705911147,
+          0.1427980778123119
+        ],
+        [
+          -0.13070559691445752,
+          0.04601330705911147,
+          1.2893681468146072,
+          -0.23340017335974605
+        ],
+        [
+          0.1923540797306588,
+          0.1427980778123119,
+          -0.23340017335974605,
+          3.1069344210097074
+        ]
+      ],
+      "null_Lambda": [
+        [
+          0.3331612180775371,
+          0.0,
+          -0.3880132831803056,
+          0.6422319800710701
+        ],
+        [
+          0.0,
+          0.4712524404301016,
+          0.08804445221988698,
+          0.3194958012635394
+        ],
+        [
+          0.0,
+          0.0,
+          -0.337699800847022,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.7541165269477471
+        ]
+      ],
+      "null_spectral_radius": 0.7541165269477471,
+      "exceedances": 156,
+      "B": 199,
+      "p_value": 0.785,
+      "retain_large": false,
+      "selected_dimension": 5,
+      "mc_interval": [
+        0.7201877616829899,
+        0.8389881876143424
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 22,
+      "omega_cap_rejection_count": 155
+    },
+    "100:173:4:6": {
+      "key": "100:173:4:6",
+      "trial_key": "100:173",
+      "stage": 1,
+      "num_samples": 100,
+      "seed": 173,
+      "small_dimension": 4,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.005753438218199179,
+      "null_covariance": [
+        [
+          1.0501147296714228,
+          0.0,
+          0.0,
+          -0.13151789953122078
+        ],
+        [
+          0.0,
+          1.0969980414470226,
+          0.0,
+          0.11783170561047263
+        ],
+        [
+          0.0,
+          0.0,
+          1.2421512354994557,
+          -0.23066291570077302
+        ],
+        [
+          -0.13151789953122078,
+          0.11783170561047263,
+          -0.23066291570077302,
+          2.8821792888467614
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.21845617282127425,
+          0.0,
+          0.0,
+          0.4923473758303898
+        ],
+        [
+          0.0,
+          -0.2973572669940873,
+          0.0,
+          -0.2917941519023511
+        ],
+        [
+          0.0,
+          0.0,
+          -0.44152582102742594,
+          0.30054601877125997
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6463919328032746
+        ]
+      ],
+      "null_spectral_radius": 0.6463919328032746,
+      "exceedances": 177,
+      "B": 199,
+      "p_value": 0.89,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.8374149105182469,
+        0.929407067281909
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 1,
+      "omega_cap_rejection_count": 183
+    },
+    "100:192:4:6": {
+      "key": "100:192:4:6",
+      "trial_key": "100:192",
+      "stage": 1,
+      "num_samples": 100,
+      "seed": 192,
+      "small_dimension": 4,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.002791115090035713,
+      "null_covariance": [
+        [
+          1.2912007971926682,
+          0.0,
+          0.31720475416392047,
+          -0.21382670931097839
+        ],
+        [
+          0.0,
+          1.1713360366477656,
+          0.0,
+          0.0
+        ],
+        [
+          0.31720475416392047,
+          0.0,
+          1.441832125775823,
+          -0.3488303156935525
+        ],
+        [
+          -0.21382670931097839,
+          0.0,
+          -0.3488303156935525,
+          3.2105564669937587
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.47489695729341874,
+          0.0,
+          -0.45202636395568957,
+          0.18210728756442468
+        ],
+        [
+          0.0,
+          -0.3824578734299538,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.26571978626404674,
+          0.14941533378013996
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.784405467199037
+        ]
+      ],
+      "null_spectral_radius": 0.784405467199037,
+      "exceedances": 184,
+      "B": 199,
+      "p_value": 0.925,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.8787245864446106,
+        0.9572000587858146
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 3,
+      "omega_cap_rejection_count": 148
+    },
+    "100:237:3:5": {
+      "key": "100:237:3:5",
+      "trial_key": "100:237",
+      "stage": 1,
+      "num_samples": 100,
+      "seed": 237,
+      "small_dimension": 3,
+      "large_dimension": 5,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.0322803861151101,
+      "null_covariance": [
+        [
+          1.0856149545068055,
+          0.0,
+          0.0,
+          0.1689027892359979
+        ],
+        [
+          0.0,
+          1.3899801498890758,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.2318053603568582,
+          -0.3409984060147804
+        ],
+        [
+          0.1689027892359979,
+          0.0,
+          -0.3409984060147804,
+          2.764534040290858
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.28082573649495557,
+          0.0,
+          0.0,
+          -0.46175869246371926
+        ],
+        [
+          0.0,
+          -0.5296841186677795,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.43380114346573234,
+          0.4739877679548921
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.592994306104503
+        ]
+      ],
+      "null_spectral_radius": 0.592994306104503,
+      "exceedances": 85,
+      "B": 199,
+      "p_value": 0.43,
+      "retain_large": false,
+      "selected_dimension": 3,
+      "mc_interval": [
+        0.3574454197407124,
+        0.4990298304392963
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 2,
+      "omega_cap_rejection_count": 151
+    },
+    "100:243:5:6": {
+      "key": "100:243:5:6",
+      "trial_key": "100:243",
+      "stage": 1,
+      "num_samples": 100,
+      "seed": 243,
+      "small_dimension": 5,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.004423531043578841,
+      "null_covariance": [
+        [
+          1.2498451075328278,
+          0.0,
+          -0.19235288625650118,
+          0.06615936187307789
+        ],
+        [
+          0.0,
+          1.2198274784124055,
+          -0.1863378682965618,
+          0.20062570749107456
+        ],
+        [
+          -0.19235288625650118,
+          -0.1863378682965618,
+          1.3183552197019919,
+          -0.13099974034801048
+        ],
+        [
+          0.06615936187307789,
+          0.20062570749107456,
+          -0.13099974034801048,
+          1.9137256447790743
+        ]
+      ],
+      "null_Lambda": [
+        [
+          0.4471027359967161,
+          0.0,
+          -0.3594324448921865,
+          0.0
+        ],
+        [
+          0.0,
+          0.4245137709082346,
+          -0.37494133749426284,
+          0.2506578790310872
+        ],
+        [
+          0.0,
+          0.0,
+          -0.09885012180216358,
+          -0.7100935124363296
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.1720841103593603
+        ]
+      ],
+      "null_spectral_radius": 0.4471027359967161,
+      "exceedances": 113,
+      "B": 199,
+      "p_value": 0.57,
+      "retain_large": false,
+      "selected_dimension": 5,
+      "mc_interval": [
+        0.4959231272249152,
+        0.6377034939256091
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 6,
+      "omega_cap_rejection_count": 172
+    },
+    "1000:6:5:6": {
+      "key": "1000:6:5:6",
+      "trial_key": "1000:6",
+      "stage": 1,
+      "num_samples": 1000,
+      "seed": 6,
+      "small_dimension": 5,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.00042808968353400407,
+      "null_covariance": [
+        [
+          1.0464482572390343,
+          0.0,
+          0.0,
+          0.049858467927396254
+        ],
+        [
+          0.0,
+          1.1171149892981718,
+          0.06570667570610152,
+          0.11594525976405588
+        ],
+        [
+          0.0,
+          0.06570667570610152,
+          1.2116776788815102,
+          -0.24417905807598284
+        ],
+        [
+          0.049858467927396254,
+          0.11594525976405588,
+          -0.24417905807598284,
+          2.7838650963940834
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.21068122375779572,
+          0.0,
+          0.0,
+          -0.19627131139650175
+        ],
+        [
+          0.0,
+          0.3237854299125021,
+          0.20403476600722706,
+          0.3537196067097957
+        ],
+        [
+          0.0,
+          0.0,
+          -0.380441111284902,
+          0.5426494703105744
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6270914339252163
+        ]
+      ],
+      "null_spectral_radius": 0.6270914339252163,
+      "exceedances": 132,
+      "B": 199,
+      "p_value": 0.665,
+      "retain_large": false,
+      "selected_dimension": 5,
+      "mc_interval": [
+        0.5930790719916945,
+        0.7286042070651861
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 5,
+      "omega_cap_rejection_count": 100
+    },
+    "1000:15:4:6": {
+      "key": "1000:15:4:6",
+      "trial_key": "1000:15",
+      "stage": 1,
+      "num_samples": 1000,
+      "seed": 15,
+      "small_dimension": 4,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.000972318994947721,
+      "null_covariance": [
+        [
+          1.0350011663466194,
+          0.0,
+          0.04423916812781153,
+          -0.004251500702087286
+        ],
+        [
+          0.0,
+          1.0783317167458606,
+          0.0,
+          0.04196867416527146
+        ],
+        [
+          0.04423916812781153,
+          0.0,
+          1.1691001419488307,
+          -0.21777448122644363
+        ],
+        [
+          -0.004251500702087286,
+          0.04196867416527146,
+          -0.21777448122644363,
+          2.6341777322045514
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.18389538851367504,
+          0.0,
+          -0.21912142004196086,
+          0.0
+        ],
+        [
+          0.0,
+          -0.2695210145603424,
+          0.0,
+          -0.1177839166434798
+        ],
+        [
+          0.0,
+          0.0,
+          -0.3114007106992244,
+          0.45686197898924086
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6839778573549601
+        ]
+      ],
+      "null_spectral_radius": 0.6839778573549601,
+      "exceedances": 150,
+      "B": 199,
+      "p_value": 0.755,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.6878690067319269,
+        0.8119433232282024
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 4,
+      "omega_cap_rejection_count": 116
+    },
+    "1000:23:5:6": {
+      "key": "1000:23:5:6",
+      "trial_key": "1000:23",
+      "stage": 1,
+      "num_samples": 1000,
+      "seed": 23,
+      "small_dimension": 5,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.0019070345564775625,
+      "null_covariance": [
+        [
+          1.1280129018700666,
+          0.0,
+          0.0,
+          0.14087419532947856
+        ],
+        [
+          0.0,
+          1.1321460869276676,
+          -0.07246217680400252,
+          0.19996107385100048
+        ],
+        [
+          0.0,
+          -0.07246217680400252,
+          1.075460060474784,
+          -0.20646216056596495
+        ],
+        [
+          0.14087419532947856,
+          0.19996107385100048,
+          -0.20646216056596495,
+          2.890918259606146
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.3368758185258952,
+          0.0,
+          0.0,
+          -0.2900020380399614
+        ],
+        [
+          0.0,
+          0.3416456683822373,
+          -0.19903173538406657,
+          0.6553283667370221
+        ],
+        [
+          0.0,
+          0.0,
+          -0.18265453634239376,
+          0.378087901695919
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6463381940534318
+        ]
+      ],
+      "null_spectral_radius": 0.6463381940534318,
+      "exceedances": 69,
+      "B": 199,
+      "p_value": 0.35,
+      "retain_large": false,
+      "selected_dimension": 5,
+      "mc_interval": [
+        0.28083291953858175,
+        0.4172781973322971
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 3,
+      "omega_cap_rejection_count": 112
+    },
+    "1000:46:4:5": {
+      "key": "1000:46:4:5",
+      "trial_key": "1000:46",
+      "stage": 1,
+      "num_samples": 1000,
+      "seed": 46,
+      "small_dimension": 4,
+      "large_dimension": 5,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.0007121945169434184,
+      "null_covariance": [
+        [
+          1.0984821824507347,
+          0.0,
+          0.0,
+          0.09527345311893262
+        ],
+        [
+          0.0,
+          1.079158449790508,
+          0.0,
+          0.07157305190846479
+        ],
+        [
+          0.0,
+          0.0,
+          1.233885052660433,
+          -0.2717126245569876
+        ],
+        [
+          0.09527345311893262,
+          0.07157305190846479,
+          -0.2717126245569876,
+          2.438658145724613
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.299421046341265,
+          0.0,
+          0.0,
+          -0.23424067984054273
+        ],
+        [
+          0.0,
+          -0.27083577639313966,
+          0.0,
+          -0.20250010108153882
+        ],
+        [
+          0.0,
+          0.0,
+          -0.4353753956207309,
+          0.3650699876381387
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.63903452357109
+        ]
+      ],
+      "null_spectral_radius": 0.63903452357109,
+      "exceedances": 106,
+      "B": 199,
+      "p_value": 0.535,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.4607915427189617,
+        0.6035475096874721
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 19,
+      "omega_cap_rejection_count": 49
+    },
+    "1000:51:3:5": {
+      "key": "1000:51:3:5",
+      "trial_key": "1000:51",
+      "stage": 1,
+      "num_samples": 1000,
+      "seed": 51,
+      "small_dimension": 3,
+      "large_dimension": 5,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.002381707822589513,
+      "null_covariance": [
+        [
+          1.0352003436943473,
+          0.0,
+          0.0,
+          0.10912604440876514
+        ],
+        [
+          0.0,
+          1.076053396409383,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.168468380754114,
+          -0.31576614407995146
+        ],
+        [
+          0.10912604440876514,
+          0.0,
+          -0.31576614407995146,
+          2.698277796556629
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.1844001407493807,
+          0.0,
+          0.0,
+          -0.5143853950775485
+        ],
+        [
+          0.0,
+          -0.26585350812402786,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.3797088490946115,
+          0.5648575268231751
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.5433848493622174
+        ]
+      ],
+      "null_spectral_radius": 0.5433848493622174,
+      "exceedances": 121,
+      "B": 199,
+      "p_value": 0.61,
+      "retain_large": false,
+      "selected_dimension": 3,
+      "mc_interval": [
+        0.5365013317518388,
+        0.6763093254987442
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 2,
+      "omega_cap_rejection_count": 121
+    },
+    "1000:53:4:6": {
+      "key": "1000:53:4:6",
+      "trial_key": "1000:53",
+      "stage": 1,
+      "num_samples": 1000,
+      "seed": 53,
+      "small_dimension": 4,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.0026329672933798594,
+      "null_covariance": [
+        [
+          1.0203646533413393,
+          0.0,
+          0.0,
+          0.07454967163344146
+        ],
+        [
+          0.0,
+          1.0775202959012187,
+          0.05317179203545954,
+          -0.0061276347819748805
+        ],
+        [
+          0.0,
+          0.05317179203545954,
+          1.2546926335267627,
+          -0.2606373701541014
+        ],
+        [
+          0.07454967163344146,
+          -0.0061276347819748805,
+          -0.2606373701541014,
+          2.728102039675707
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.14127353356932432,
+          0.0,
+          0.0,
+          -0.4691321897887567
+        ],
+        [
+          0.0,
+          -0.26822236117323073,
+          -0.1633747534259267,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.41747920420068424,
+          0.3538876530386571
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6574336453987171
+        ]
+      ],
+      "null_spectral_radius": 0.6574336453987171,
+      "exceedances": 103,
+      "B": 199,
+      "p_value": 0.52,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.44584000671205926,
+        0.5888041336200793
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 21,
+      "omega_cap_rejection_count": 121
+    },
+    "1000:59:5:6": {
+      "key": "1000:59:5:6",
+      "trial_key": "1000:59",
+      "stage": 1,
+      "num_samples": 1000,
+      "seed": 59,
+      "small_dimension": 5,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 3.186106314271682e-05,
+      "null_covariance": [
+        [
+          1.0617256423948724,
+          0.0,
+          -0.012428324153682002,
+          0.052845992813264846
+        ],
+        [
+          0.0,
+          1.0816234340963546,
+          0.0,
+          0.13983638196153736
+        ],
+        [
+          -0.012428324153682002,
+          0.0,
+          1.1344782332883627,
+          -0.18901685535504242
+        ],
+        [
+          0.052845992813264846,
+          0.13983638196153736,
+          -0.18901685535504242,
+          2.5922511794010603
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.24111634739995474,
+          0.0,
+          0.044555456524580685,
+          -0.17004454304188024
+        ],
+        [
+          0.0,
+          -0.2747067857043728,
+          0.0,
+          -0.38686101436963793
+        ],
+        [
+          0.0,
+          0.0,
+          -0.34109624965064406,
+          0.35341144682404707
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6479054199682006
+        ]
+      ],
+      "null_spectral_radius": 0.6479054199682006,
+      "exceedances": 178,
+      "B": 199,
+      "p_value": 0.895,
+      "retain_large": false,
+      "selected_dimension": 5,
+      "mc_interval": [
+        0.8432201046623633,
+        0.9334799685658335
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 0,
+      "omega_cap_rejection_count": 94
+    },
+    "1000:61:5:6": {
+      "key": "1000:61:5:6",
+      "trial_key": "1000:61",
+      "stage": 1,
+      "num_samples": 1000,
+      "seed": 61,
+      "small_dimension": 5,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 4.925523352337118e-05,
+      "null_covariance": [
+        [
+          1.024905381993871,
+          -0.008706583619966759,
+          4.388403762357617e-05,
+          0.010114934953510953
+        ],
+        [
+          -0.008706583619966759,
+          1.0949331012610266,
+          -0.010863890664431771,
+          -0.0020012205361248955
+        ],
+        [
+          4.388403762357617e-05,
+          -0.010863890664431771,
+          1.1732287872681186,
+          -0.34435675183952674
+        ],
+        [
+          0.010114934953510953,
+          -0.0020012205361248955,
+          -0.34435675183952674,
+          2.55703818457647
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.15588513979193266,
+          0.05203429595442213,
+          0.0,
+          -0.057482181067121677
+        ],
+        [
+          0.0,
+          -0.28970339102407405,
+          0.030403919353727136,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.38284859682348366,
+          0.5922481581310222
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.5931126046490471
+        ]
+      ],
+      "null_spectral_radius": 0.5931126046490471,
+      "exceedances": 168,
+      "B": 199,
+      "p_value": 0.845,
+      "retain_large": false,
+      "selected_dimension": 5,
+      "mc_interval": [
+        0.7862307408976467,
+        0.8916354631379568
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 8,
+      "omega_cap_rejection_count": 120
+    },
+    "1000:74:3:6": {
+      "key": "1000:74:3:6",
+      "trial_key": "1000:74",
+      "stage": 1,
+      "num_samples": 1000,
+      "seed": 74,
+      "small_dimension": 3,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.0049031204169103105,
+      "null_covariance": [
+        [
+          1.0610290207692072,
+          0.0,
+          0.0,
+          0.07010955512645692
+        ],
+        [
+          0.0,
+          1.10215909553884,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.1574851693496107,
+          -0.2796427778130714
+        ],
+        [
+          0.07010955512645692,
+          0.0,
+          -0.2796427778130714,
+          2.485183654413065
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.2398305864755995,
+          0.0,
+          0.0,
+          -0.23497954766133627
+        ],
+        [
+          0.0,
+          -0.30445027812305364,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.368860468306068,
+          0.5067681643101428
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.61345959626392
+        ]
+      ],
+      "null_spectral_radius": 0.61345959626392,
+      "exceedances": 113,
+      "B": 199,
+      "p_value": 0.57,
+      "retain_large": false,
+      "selected_dimension": 3,
+      "mc_interval": [
+        0.4959231272249152,
+        0.6377034939256091
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 0,
+      "omega_cap_rejection_count": 80
+    },
+    "1000:85:4:6": {
+      "key": "1000:85:4:6",
+      "trial_key": "1000:85",
+      "stage": 1,
+      "num_samples": 1000,
+      "seed": 85,
+      "small_dimension": 4,
+      "large_dimension": 6,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.002301858248028627,
+      "null_covariance": [
+        [
+          1.0102370048805318,
+          0.0,
+          0.0,
+          0.09795069887298297
+        ],
+        [
+          0.0,
+          1.0925850168843112,
+          0.05292814427667447,
+          0.01134809438309828
+        ],
+        [
+          0.0,
+          0.05292814427667447,
+          1.1000893237619043,
+          -0.19073042153623432
+        ],
+        [
+          0.09795069887298297,
+          0.01134809438309828,
+          -0.19073042153623432,
+          2.505099570034534
+        ]
+      ],
+      "null_Lambda": [
+        [
+          0.1006641472449473,
+          0.0,
+          0.0,
+          0.9571590393752054
+        ],
+        [
+          0.0,
+          0.2911003548097738,
+          0.1786329822420311,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.25224322354519085,
+          0.723211200729309
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.062144110875429655
+        ]
+      ],
+      "null_spectral_radius": 0.2911003548097738,
+      "exceedances": 122,
+      "B": 199,
+      "p_value": 0.615,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.541606525556084,
+        0.681101946088891
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 11,
+      "omega_cap_rejection_count": 162
+    },
+    "1000000:2:2:4": {
+      "key": "1000000:2:2:4",
+      "trial_key": "1000000:2",
+      "stage": 2,
+      "num_samples": 1000000,
+      "seed": 2,
+      "small_dimension": 2,
+      "large_dimension": 4,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.011877195053396574,
+      "null_covariance": [
+        [
+          1.011930741727644,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0656242387605885,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.188052468778345,
+          -0.27078252060457475
+        ],
+        [
+          0.0,
+          0.0,
+          -0.27078252060457475,
+          2.62714821238353
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.10858212265247041,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.24815903639679093,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.39785214976239053,
+          0.4145974094512428
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6944593436056683
+        ]
+      ],
+      "null_spectral_radius": 0.6944593436056683,
+      "exceedances": 0,
+      "B": 199,
+      "p_value": 0.005,
+      "retain_large": true,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.0,
+        0.018366327694415267
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 0,
+      "omega_cap_rejection_count": 0
+    },
+    "1000000:124:2:4": {
+      "key": "1000000:124:2:4",
+      "trial_key": "1000000:124",
+      "stage": 2,
+      "num_samples": 1000000,
+      "seed": 124,
+      "small_dimension": 2,
+      "large_dimension": 4,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.012666072277520644,
+      "null_covariance": [
+        [
+          1.0149280824323959,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0643326623031877,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.1918899283121547,
+          -0.2702853820666136
+        ],
+        [
+          0.0,
+          0.0,
+          -0.2702853820666136,
+          2.637924389535941
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.12127865659163176,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.24585388032220404,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.40124350488393346,
+          0.406765454296625
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6985197765256468
+        ]
+      ],
+      "null_spectral_radius": 0.6985197765256468,
+      "exceedances": 0,
+      "B": 199,
+      "p_value": 0.005,
+      "retain_large": true,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.0,
+        0.018366327694415267
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 0,
+      "omega_cap_rejection_count": 0
+    },
+    "1000000:139:2:4": {
+      "key": "1000000:139:2:4",
+      "trial_key": "1000000:139",
+      "stage": 2,
+      "num_samples": 1000000,
+      "seed": 139,
+      "small_dimension": 2,
+      "large_dimension": 4,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.012018369769124656,
+      "null_covariance": [
+        [
+          1.012453517865605,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0697313772605945,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.1906954799929483,
+          -0.2735712214577914
+        ],
+        [
+          0.0,
+          0.0,
+          -0.2735712214577914,
+          2.634139750075138
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.1109068772381355,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.25531524891086105,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.40019333101188415,
+          0.414455353943114
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6949105774650006
+        ]
+      ],
+      "null_spectral_radius": 0.6949105774650006,
+      "exceedances": 0,
+      "B": 199,
+      "p_value": 0.005,
+      "retain_large": true,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.0,
+        0.018366327694415267
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 0,
+      "omega_cap_rejection_count": 0
+    },
+    "1000000:147:2:4": {
+      "key": "1000000:147:2:4",
+      "trial_key": "1000000:147",
+      "stage": 2,
+      "num_samples": 1000000,
+      "seed": 147,
+      "small_dimension": 2,
+      "large_dimension": 4,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.011854016101457079,
+      "null_covariance": [
+        [
+          1.0116850302486735,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0658736016652537,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.1899862755163249,
+          -0.27187149870932636
+        ],
+        [
+          0.0,
+          0.0,
+          -0.27187149870932636,
+          2.6384193108838407
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.10747123969775461,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.2486009887097115,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.39956748327023817,
+          0.4126840867953138
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6963807345344318
+        ]
+      ],
+      "null_spectral_radius": 0.6963807345344318,
+      "exceedances": 0,
+      "B": 199,
+      "p_value": 0.005,
+      "retain_large": true,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.0,
+        0.018366327694415267
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 0,
+      "omega_cap_rejection_count": 0
+    },
+    "1000000:153:2:4": {
+      "key": "1000000:153:2:4",
+      "trial_key": "1000000:153",
+      "stage": 2,
+      "num_samples": 1000000,
+      "seed": 153,
+      "small_dimension": 2,
+      "large_dimension": 4,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.012378523870843018,
+      "null_covariance": [
+        [
+          1.0135011593845416,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.068923865215968,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.190226455610062,
+          -0.2748844883719778
+        ],
+        [
+          0.0,
+          0.0,
+          -0.2748844883719778,
+          2.635826887059235
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.11541796352781748,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.25392848731851064,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.3997796269261789,
+          0.41743750395894463
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6939092020386429
+        ]
+      ],
+      "null_spectral_radius": 0.6939092020386429,
+      "exceedances": 0,
+      "B": 199,
+      "p_value": 0.005,
+      "retain_large": true,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.0,
+        0.018366327694415267
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 0,
+      "omega_cap_rejection_count": 0
+    },
+    "1000000:156:2:4": {
+      "key": "1000000:156:2:4",
+      "trial_key": "1000000:156",
+      "stage": 2,
+      "num_samples": 1000000,
+      "seed": 156,
+      "small_dimension": 2,
+      "large_dimension": 4,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.012966935093415604,
+      "null_covariance": [
+        [
+          1.0127482487727002,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0685182169676275,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.1939552921288628,
+          -0.2745771743523113
+        ],
+        [
+          0.0,
+          0.0,
+          -0.2745771743523113,
+          2.6305658963318534
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.1121952613272444,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.25322819599138296,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.4030480130878364,
+          0.4106417343371636
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.695483532577437
+        ]
+      ],
+      "null_spectral_radius": 0.695483532577437,
+      "exceedances": 0,
+      "B": 199,
+      "p_value": 0.005,
+      "retain_large": true,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.0,
+        0.018366327694415267
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 0,
+      "omega_cap_rejection_count": 0
+    },
+    "1000000:173:2:4": {
+      "key": "1000000:173:2:4",
+      "trial_key": "1000000:173",
+      "stage": 2,
+      "num_samples": 1000000,
+      "seed": 173,
+      "small_dimension": 2,
+      "large_dimension": 4,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.011544266352353968,
+      "null_covariance": [
+        [
+          1.0130855264489962,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0669400196407923,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.193069794538745,
+          -0.27245030864106035
+        ],
+        [
+          0.0,
+          0.0,
+          -0.27245030864106035,
+          2.631921163663657
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.11365081237288581,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.2504799195230694,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.4022761100329032,
+          0.40856366445215053
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6967396802842781
+        ]
+      ],
+      "null_spectral_radius": 0.6967396802842781,
+      "exceedances": 0,
+      "B": 199,
+      "p_value": 0.005,
+      "retain_large": true,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.0,
+        0.018366327694415267
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 0,
+      "omega_cap_rejection_count": 0
+    },
+    "1000000:192:2:4": {
+      "key": "1000000:192:2:4",
+      "trial_key": "1000000:192",
+      "stage": 2,
+      "num_samples": 1000000,
+      "seed": 192,
+      "small_dimension": 2,
+      "large_dimension": 4,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.011819024620412202,
+      "null_covariance": [
+        [
+          1.0132198953184075,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0665772485901983,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.1918788260302153,
+          -0.27418966704471665
+        ],
+        [
+          0.0,
+          0.0,
+          -0.27418966704471665,
+          2.6287562678617533
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.11422525957520215,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.2498427571594013,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.40123376595364646,
+          0.41361973788419043
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6943433595108266
+        ]
+      ],
+      "null_spectral_radius": 0.6943433595108266,
+      "exceedances": 0,
+      "B": 199,
+      "p_value": 0.005,
+      "retain_large": true,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.0,
+        0.018366327694415267
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 0,
+      "omega_cap_rejection_count": 0
+    },
+    "1000000:237:2:4": {
+      "key": "1000000:237:2:4",
+      "trial_key": "1000000:237",
+      "stage": 2,
+      "num_samples": 1000000,
+      "seed": 237,
+      "small_dimension": 2,
+      "large_dimension": 4,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.012476508591366587,
+      "null_covariance": [
+        [
+          1.0141597111583651,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0697715975017934,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.1915248180841433,
+          -0.2731024094932634
+        ],
+        [
+          0.0,
+          0.0,
+          -0.2731024094932634,
+          2.635833414072427
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.11816096261405341,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.25538406874082753,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.4009230106450216,
+          0.4121721494213856
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6959690620072767
+        ]
+      ],
+      "null_spectral_radius": 0.6959690620072767,
+      "exceedances": 0,
+      "B": 199,
+      "p_value": 0.005,
+      "retain_large": true,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.0,
+        0.018366327694415267
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 0,
+      "omega_cap_rejection_count": 0
+    },
+    "100:124:2:5": {
+      "key": "100:124:2:5",
+      "trial_key": "100:124",
+      "stage": 2,
+      "num_samples": 100,
+      "seed": 124,
+      "small_dimension": 2,
+      "large_dimension": 5,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.03479035424270446,
+      "null_covariance": [
+        [
+          1.1176302900909518,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.404563155729813,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.3435197354994939,
+          -0.38251297720121863
+        ],
+        [
+          0.0,
+          0.0,
+          -0.38251297720121863,
+          3.141387100989114
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.32442215309239103,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.5366887950303939,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.505654435546602,
+          0.3489142804413544
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.7521258503564139
+        ]
+      ],
+      "null_spectral_radius": 0.7521258503564139,
+      "exceedances": 141,
+      "B": 199,
+      "p_value": 0.71,
+      "retain_large": false,
+      "selected_dimension": 2,
+      "mc_interval": [
+        0.6401018441199158,
+        0.7706514302505901
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 1,
+      "omega_cap_rejection_count": 122
+    },
+    "100:139:2:3": {
+      "key": "100:139:2:3",
+      "trial_key": "100:139",
+      "stage": 2,
+      "num_samples": 100,
+      "seed": 139,
+      "small_dimension": 2,
+      "large_dimension": 3,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.03495784377109146,
+      "null_covariance": [
+        [
+          1.2405906654859191,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.1249189373978543,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.4320884409277286,
+          -0.34980301021776655
+        ],
+        [
+          0.0,
+          0.0,
+          -0.34980301021776655,
+          2.6372431402962415
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.44037751065005126,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.33323723836364577,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.5492896356004966,
+          0.26675504903246294
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.7284418725968259
+        ]
+      ],
+      "null_spectral_radius": 0.7284418725968259,
+      "exceedances": 49,
+      "B": 199,
+      "p_value": 0.25,
+      "retain_large": false,
+      "selected_dimension": 2,
+      "mc_interval": [
+        0.1880566767717976,
+        0.3121309932680731
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 14,
+      "omega_cap_rejection_count": 136
+    },
+    "100:141:4:5": {
+      "key": "100:141:4:5",
+      "trial_key": "100:141",
+      "stage": 2,
+      "num_samples": 100,
+      "seed": 141,
+      "small_dimension": 4,
+      "large_dimension": 5,
+      "small_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "observed_gain": 0.0015054971378691303,
+      "null_covariance": [
+        [
+          1.2253567879542155,
+          0.0,
+          0.08400782099789236,
+          0.08866138687578914
+        ],
+        [
+          0.0,
+          1.1173588736729716,
+          0.0,
+          0.16482678666518644
+        ],
+        [
+          0.08400782099789236,
+          0.0,
+          1.1140675193599887,
+          0.03967435292975325
+        ],
+        [
+          0.08866138687578914,
+          0.16482678666518644,
+          0.03967435292975325,
+          2.608047507878615
+        ]
+      ],
+      "null_Lambda": [
+        [
+          0.42884864431265113,
+          0.0,
+          0.17859820442465155,
+          0.2209254048467342
+        ],
+        [
+          0.0,
+          -0.32408701086531233,
+          0.0,
+          -0.34873735024199926
+        ],
+        [
+          0.0,
+          0.0,
+          -0.27324816526548246,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.721504661731334
+        ]
+      ],
+      "null_spectral_radius": 0.721504661731334,
+      "exceedances": 150,
+      "B": 199,
+      "p_value": 0.755,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.6878690067319269,
+        0.8119433232282024
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 25,
+      "omega_cap_rejection_count": 168
+    },
+    "100:147:4:5": {
+      "key": "100:147:4:5",
+      "trial_key": "100:147",
+      "stage": 2,
+      "num_samples": 100,
+      "seed": 147,
+      "small_dimension": 4,
+      "large_dimension": 5,
+      "small_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.0017515150554239336,
+      "null_covariance": [
+        [
+          1.230645474453091,
+          0.0,
+          -0.11684592942635104,
+          -0.19036144154851778
+        ],
+        [
+          0.0,
+          1.3224747169525446,
+          0.0,
+          0.0
+        ],
+        [
+          -0.11684592942635104,
+          0.0,
+          1.3177292785187114,
+          -0.4553163064496804
+        ],
+        [
+          -0.19036144154851778,
+          0.0,
+          -0.4553163064496804,
+          2.887243431289044
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.43291834481648905,
+          0.0,
+          0.17708412125444634,
+          0.3616806344581688
+        ],
+        [
+          0.0,
+          -0.4938034799010729,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.4448178654160768,
+          0.7849909806579504
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.45355351407697375
+        ]
+      ],
+      "null_spectral_radius": 0.4938034799010729,
+      "exceedances": 136,
+      "B": 199,
+      "p_value": 0.685,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.6138922186311799,
+        0.7473787871566694
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 41,
+      "omega_cap_rejection_count": 147
+    },
+    "100:153:3:5": {
+      "key": "100:153:3:5",
+      "trial_key": "100:153",
+      "stage": 2,
+      "num_samples": 100,
+      "seed": 153,
+      "small_dimension": 3,
+      "large_dimension": 5,
+      "small_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.005415355836574997,
+      "null_covariance": [
+        [
+          1.0759304559756901,
+          0.0,
+          -0.10385253783880789,
+          0.0
+        ],
+        [
+          0.0,
+          1.1202956498686931,
+          -0.11580372945765625,
+          0.0
+        ],
+        [
+          -0.10385253783880789,
+          -0.11580372945765625,
+          1.343368873924024,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          2.982057019227991
+        ]
+      ],
+      "null_Lambda": [
+        [
+          0.26565372097878126,
+          0.0,
+          -0.388512496037956,
+          0.0
+        ],
+        [
+          0.0,
+          -0.3276865654991179,
+          0.2884962046723581,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.26075854674341264,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.8152674446429301
+        ]
+      ],
+      "null_spectral_radius": 0.8152674446429301,
+      "exceedances": 189,
+      "B": 199,
+      "p_value": 0.95,
+      "retain_large": false,
+      "selected_dimension": 3,
+      "mc_interval": [
+        0.9095297590873253,
+        0.9756427286837924
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 0,
+      "omega_cap_rejection_count": 171
+    },
+    "100:156:4:5": {
+      "key": "100:156:4:5",
+      "trial_key": "100:156",
+      "stage": 2,
+      "num_samples": 100,
+      "seed": 156,
+      "small_dimension": 4,
+      "large_dimension": 5,
+      "small_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "observed_gain": 0.003705463045236725,
+      "null_covariance": [
+        [
+          1.1238696706359528,
+          0.0,
+          -0.12935518934373086,
+          0.18867743374695056
+        ],
+        [
+          0.0,
+          1.2859218121140956,
+          0.0,
+          0.16212637578728467
+        ],
+        [
+          -0.12935518934373086,
+          0.0,
+          1.2880509388659596,
+          -0.2593767857741475
+        ],
+        [
+          0.18867743374695056,
+          0.16212637578728467,
+          -0.2593767857741475,
+          3.1584493239426603
+        ]
+      ],
+      "null_Lambda": [
+        [
+          0.3319896280513036,
+          0.0,
+          -0.3865872841266198,
+          0.6327368840145707
+        ],
+        [
+          0.0,
+          -0.4715376364869089,
+          0.0,
+          -0.17196079355421365
+        ],
+        [
+          0.0,
+          0.0,
+          -0.3466230235615749,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.7567969967983712
+        ]
+      ],
+      "null_spectral_radius": 0.7567969967983712,
+      "exceedances": 133,
+      "B": 199,
+      "p_value": 0.67,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.5982698961475019,
+        0.73331045422324
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 20,
+      "omega_cap_rejection_count": 156
+    },
+    "100:173:2:4": {
+      "key": "100:173:2:4",
+      "trial_key": "100:173",
+      "stage": 2,
+      "num_samples": 100,
+      "seed": 173,
+      "small_dimension": 2,
+      "large_dimension": 4,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.03928956801026877,
+      "null_covariance": [
+        [
+          1.058407570561757,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0953068096640732,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.2424505518699387,
+          -0.23291587812224868
+        ],
+        [
+          0.0,
+          0.0,
+          -0.23291587812224868,
+          2.8734680178027587
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.23491356861080756,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.2949810194168884,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.44174539598268725,
+          0.2812382098445309
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.7635295212291134
+        ]
+      ],
+      "null_spectral_radius": 0.7635295212291134,
+      "exceedances": 120,
+      "B": 199,
+      "p_value": 0.605,
+      "retain_large": false,
+      "selected_dimension": 2,
+      "mc_interval": [
+        0.5314035548618248,
+        0.6715092395816504
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 2,
+      "omega_cap_rejection_count": 182
+    },
+    "100:192:3:4": {
+      "key": "100:192:3:4",
+      "trial_key": "100:192",
+      "stage": 2,
+      "num_samples": 100,
+      "seed": 192,
+      "small_dimension": 3,
+      "large_dimension": 4,
+      "small_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.0023382380116367062,
+      "null_covariance": [
+        [
+          1.2862512740948824,
+          0.0,
+          0.31722913690106946,
+          -0.23048297269531093
+        ],
+        [
+          0.0,
+          1.1713668332278704,
+          0.0,
+          0.0
+        ],
+        [
+          0.31722913690106946,
+          0.0,
+          1.4422162382070562,
+          -0.3066940972933869
+        ],
+        [
+          -0.23048297269531093,
+          0.0,
+          -0.3066940972933869,
+          3.1635092273526073
+        ]
+      ],
+      "null_Lambda": [
+        [
+          0.4717488011937871,
+          0.0,
+          0.5863844661689361,
+          -0.5224636414473416
+        ],
+        [
+          0.0,
+          -0.38248721597655194,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.2578081514014464,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.7959291803013037
+        ]
+      ],
+      "null_spectral_radius": 0.7959291803013037,
+      "exceedances": 165,
+      "B": 199,
+      "p_value": 0.83,
+      "retain_large": false,
+      "selected_dimension": 3,
+      "mc_interval": [
+        0.7695180499366124,
+        0.8786818647905814
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 4,
+      "omega_cap_rejection_count": 149
+    },
+    "100:237:2:3": {
+      "key": "100:237:2:3",
+      "trial_key": "100:237",
+      "stage": 2,
+      "num_samples": 100,
+      "seed": 237,
+      "small_dimension": 2,
+      "large_dimension": 3,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.0331375655019622,
+      "null_covariance": [
+        [
+          1.1033047908455147,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.3905649414651478,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.2349840396274343,
+          -0.36851231896442366
+        ],
+        [
+          0.0,
+          0.0,
+          -0.36851231896442366,
+          2.861214582212593
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.30599369601318116,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.5299696391387446,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.4362028615223822,
+          0.4802796217400321
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6829649491672932
+        ]
+      ],
+      "null_spectral_radius": 0.6829649491672932,
+      "exceedances": 56,
+      "B": 199,
+      "p_value": 0.285,
+      "retain_large": false,
+      "selected_dimension": 2,
+      "mc_interval": [
+        0.22010352939790936,
+        0.3493511755013931
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 12,
+      "omega_cap_rejection_count": 139
+    },
+    "100:243:4:5": {
+      "key": "100:243:4:5",
+      "trial_key": "100:243",
+      "stage": 2,
+      "num_samples": 100,
+      "seed": 243,
+      "small_dimension": 4,
+      "large_dimension": 5,
+      "small_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.005372339959718357,
+      "null_covariance": [
+        [
+          1.2614124003327745,
+          0.0,
+          -0.1653627164082245,
+          0.0
+        ],
+        [
+          0.0,
+          1.2468305281221277,
+          -0.15414350372238136,
+          0.18609707851247273
+        ],
+        [
+          -0.1653627164082245,
+          -0.15414350372238136,
+          1.337678639223386,
+          -0.14087228846796623
+        ],
+        [
+          0.0,
+          0.18609707851247273,
+          -0.14087228846796623,
+          1.9290043235170222
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.4552338466901968,
+          0.0,
+          0.24539128300008378,
+          0.0
+        ],
+        [
+          0.0,
+          0.44493413175559066,
+          -0.31801076109235227,
+          0.4315891214578432
+        ],
+        [
+          0.0,
+          0.0,
+          -0.32479052489733384,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6440772809227636
+        ]
+      ],
+      "null_spectral_radius": 0.6440772809227636,
+      "exceedances": 140,
+      "B": 199,
+      "p_value": 0.705,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.6348421410241698,
+        0.7660149206510349
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 12,
+      "omega_cap_rejection_count": 153
+    },
+    "1000:6:3:5": {
+      "key": "1000:6:3:5",
+      "trial_key": "1000:6",
+      "stage": 2,
+      "num_samples": 1000,
+      "seed": 6,
+      "small_dimension": 3,
+      "large_dimension": 5,
+      "small_edges": [
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.009958320901122874,
+      "null_covariance": [
+        [
+          1.0482356949963856,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.1236901829880768,
+          0.0,
+          0.12623792311017693
+        ],
+        [
+          0.0,
+          0.0,
+          1.2156519110671666,
+          -0.2566846196311211
+        ],
+        [
+          0.0,
+          0.12623792311017693,
+          -0.2566846196311211,
+          2.835139548204833
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.21451358352415717,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.3317755078757078,
+          0.0,
+          -0.2586734045079176
+        ],
+        [
+          0.0,
+          0.0,
+          -0.4211841670086923,
+          0.35108276163306745
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.711539149215904
+        ]
+      ],
+      "null_spectral_radius": 0.711539149215904,
+      "exceedances": 29,
+      "B": 199,
+      "p_value": 0.15,
+      "retain_large": false,
+      "selected_dimension": 3,
+      "mc_interval": [
+        0.0998194166200142,
+        0.2025400648296194
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 0,
+      "omega_cap_rejection_count": 63
+    },
+    "1000:15:2:4": {
+      "key": "1000:15:2:4",
+      "trial_key": "1000:15",
+      "stage": 2,
+      "num_samples": 1000,
+      "seed": 15,
+      "small_dimension": 2,
+      "large_dimension": 4,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.005629101071262415,
+      "null_covariance": [
+        [
+          1.03742970480309,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.079247081373464,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.1698323746766903,
+          -0.21826884963380297
+        ],
+        [
+          0.0,
+          0.0,
+          -0.21826884963380297,
+          2.6378903135919867
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.1899454354176966,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.2709762302865792,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.3810205705506453,
+          0.35480205302486506
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.7229353291696461
+        ]
+      ],
+      "null_spectral_radius": 0.7229353291696461,
+      "exceedances": 79,
+      "B": 199,
+      "p_value": 0.4,
+      "retain_large": false,
+      "selected_dimension": 2,
+      "mc_interval": [
+        0.3284907604183496,
+        0.46859644513817517
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 0,
+      "omega_cap_rejection_count": 95
+    },
+    "1000:23:4:5": {
+      "key": "1000:23:4:5",
+      "trial_key": "1000:23",
+      "stage": 2,
+      "num_samples": 1000,
+      "seed": 23,
+      "small_dimension": 4,
+      "large_dimension": 5,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.008855938592603897,
+      "null_covariance": [
+        [
+          1.1288867102088607,
+          0.0,
+          0.0,
+          0.1442326739497625
+        ],
+        [
+          0.0,
+          1.127668764345079,
+          0.0,
+          0.1796110790655655
+        ],
+        [
+          0.0,
+          0.0,
+          1.0652961644081764,
+          -0.19786162671600388
+        ],
+        [
+          0.1442326739497625,
+          0.1796110790655655,
+          -0.19786162671600388,
+          2.8198250755627345
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.3378927622142171,
+          0.0,
+          0.0,
+          -0.3087711531810029
+        ],
+        [
+          0.0,
+          -0.33647403174396023,
+          0.0,
+          -0.38691156886615347
+        ],
+        [
+          0.0,
+          0.0,
+          -0.24757606377884106,
+          0.6493903334229337
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.5428150520904493
+        ]
+      ],
+      "null_spectral_radius": 0.5428150520904493,
+      "exceedances": 9,
+      "B": 199,
+      "p_value": 0.05,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.020885893857190672,
+        0.084114637001735
+      ],
+      "mc_interval_crosses_alpha": true,
+      "feasible_fallback_count": 25,
+      "omega_cap_rejection_count": 102
+    },
+    "1000:46:2:4": {
+      "key": "1000:46:2:4",
+      "trial_key": "1000:46",
+      "stage": 2,
+      "num_samples": 1000,
+      "seed": 46,
+      "small_dimension": 2,
+      "large_dimension": 4,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.018833048171658918,
+      "null_covariance": [
+        [
+          1.0995520653178052,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0801013141389741,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.2339266692395037,
+          -0.2665286620486195
+        ],
+        [
+          0.0,
+          0.0,
+          -0.2665286620486195,
+          2.4293842978873106
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.30089657051474306,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.2723250382739195,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.43540678572730585,
+          0.34728032549747717
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6889265773755567
+        ]
+      ],
+      "null_spectral_radius": 0.6889265773755567,
+      "exceedances": 9,
+      "B": 199,
+      "p_value": 0.05,
+      "retain_large": false,
+      "selected_dimension": 2,
+      "mc_interval": [
+        0.020885893857190672,
+        0.084114637001735
+      ],
+      "mc_interval_crosses_alpha": true,
+      "feasible_fallback_count": 0,
+      "omega_cap_rejection_count": 38
+    },
+    "1000:51:2:3": {
+      "key": "1000:51:2:3",
+      "trial_key": "1000:51",
+      "stage": 2,
+      "num_samples": 1000,
+      "seed": 51,
+      "small_dimension": 2,
+      "large_dimension": 3,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.018276009716264426,
+      "null_covariance": [
+        [
+          1.0325303613988528,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0760378996384738,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.168030367386057,
+          -0.30757169796812195
+        ],
+        [
+          0.0,
+          0.0,
+          -0.30757169796812195,
+          2.6670954828403857
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.1774978221017134,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.26582833552881285,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.37928600776138466,
+          0.5222078020467312
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6534030941732846
+        ]
+      ],
+      "null_spectral_radius": 0.6534030941732846,
+      "exceedances": 12,
+      "B": 199,
+      "p_value": 0.065,
+      "retain_large": false,
+      "selected_dimension": 2,
+      "mc_interval": [
+        0.03154363444787349,
+        0.10296487409050199
+      ],
+      "mc_interval_crosses_alpha": true,
+      "feasible_fallback_count": 2,
+      "omega_cap_rejection_count": 108
+    },
+    "1000:53:2:4": {
+      "key": "1000:53:2:4",
+      "trial_key": "1000:53",
+      "stage": 2,
+      "num_samples": 1000,
+      "seed": 53,
+      "small_dimension": 2,
+      "large_dimension": 4,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.012816390676311004,
+      "null_covariance": [
+        [
+          1.0300736263235495,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0802836861555982,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.255324729992668,
+          -0.2758225217457443
+        ],
+        [
+          0.0,
+          0.0,
+          -0.2758225217457443,
+          2.7616190405546415
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.1708672247774203,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.27261185843416136,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.4509915433385441,
+          0.3254533165129469
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.7361318458216255
+        ]
+      ],
+      "null_spectral_radius": 0.7361318458216255,
+      "exceedances": 17,
+      "B": 199,
+      "p_value": 0.09,
+      "retain_large": false,
+      "selected_dimension": 2,
+      "mc_interval": [
+        0.050552738589867995,
+        0.13325384172665564
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 0,
+      "omega_cap_rejection_count": 98
+    },
+    "1000:59:4:5": {
+      "key": "1000:59:4:5",
+      "trial_key": "1000:59",
+      "stage": 2,
+      "num_samples": 1000,
+      "seed": 59,
+      "small_dimension": 4,
+      "large_dimension": 5,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.00025516986309816013,
+      "null_covariance": [
+        [
+          1.0612541725822098,
+          0.0,
+          0.0,
+          0.051497799059152034
+        ],
+        [
+          0.0,
+          1.0816257009663246,
+          0.0,
+          0.13986803502003498
+        ],
+        [
+          0.0,
+          0.0,
+          1.134254503359256,
+          -0.1880312946532519
+        ],
+        [
+          0.051497799059152034,
+          0.13986803502003498,
+          -0.1880312946532519,
+          2.588301724805889
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.24024708864165717,
+          0.0,
+          0.0,
+          -0.17087990357112073
+        ],
+        [
+          0.0,
+          -0.2747103124273906,
+          0.0,
+          -0.3878437826476566
+        ],
+        [
+          0.0,
+          0.0,
+          -0.34404018700684197,
+          0.37559817076548624
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6409296717579047
+        ]
+      ],
+      "null_spectral_radius": 0.6409296717579047,
+      "exceedances": 124,
+      "B": 199,
+      "p_value": 0.625,
+      "retain_large": false,
+      "selected_dimension": 4,
+      "mc_interval": [
+        0.5518393691658171,
+        0.6906645746015867
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 23,
+      "omega_cap_rejection_count": 99
+    },
+    "1000:61:2:5": {
+      "key": "1000:61:2:5",
+      "trial_key": "1000:61",
+      "stage": 2,
+      "num_samples": 1000,
+      "seed": 61,
+      "small_dimension": 2,
+      "large_dimension": 5,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.0005080906288289707,
+      "null_covariance": [
+        [
+          1.0249315325552113,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0950909412301113,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.17324099923591,
+          -0.3445578097815531
+        ],
+        [
+          0.0,
+          0.0,
+          -0.3445578097815531,
+          2.5574497656461412
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.15596496801989795,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.29467580584818814,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.38426579192178234,
+          0.5892643366274078
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.5958832926184872
+        ]
+      ],
+      "null_spectral_radius": 0.5958832926184872,
+      "exceedances": 196,
+      "B": 199,
+      "p_value": 0.985,
+      "retain_large": false,
+      "selected_dimension": 2,
+      "mc_interval": [
+        0.9565777431204332,
+        0.9968802392407808
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 1,
+      "omega_cap_rejection_count": 119
+    },
+    "1000:74:2:3": {
+      "key": "1000:74:2:3",
+      "trial_key": "1000:74",
+      "stage": 2,
+      "num_samples": 1000,
+      "seed": 74,
+      "small_dimension": 2,
+      "large_dimension": 3,
+      "small_edges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.007025693050518875,
+      "null_covariance": [
+        [
+          1.0643482770371768,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.1021605128081313,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.158259996326089,
+          -0.2815896728965742
+        ],
+        [
+          0.0,
+          0.0,
+          -0.2815896728965742,
+          2.4957519756378472
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.2458819115175688,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.30445219421128394,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.3696430517768906,
+          0.5020677600303213
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.6401622694616113
+        ]
+      ],
+      "null_spectral_radius": 0.6401622694616113,
+      "exceedances": 31,
+      "B": 199,
+      "p_value": 0.16,
+      "retain_large": false,
+      "selected_dimension": 2,
+      "mc_interval": [
+        0.10836453686204314,
+        0.21376925910235328
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 3,
+      "omega_cap_rejection_count": 72
+    },
+    "1000:85:3:4": {
+      "key": "1000:85:3:4",
+      "trial_key": "1000:85",
+      "stage": 2,
+      "num_samples": 1000,
+      "seed": 85,
+      "small_dimension": 3,
+      "large_dimension": 4,
+      "small_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "large_edges": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "observed_gain": 0.0046545727406140935,
+      "null_covariance": [
+        [
+          1.0258712200166324,
+          0.0,
+          0.0,
+          0.10007803244872981
+        ],
+        [
+          0.0,
+          1.0950314551500018,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.1066596160325597,
+          -0.1778985911455059
+        ],
+        [
+          0.10007803244872981,
+          0.0,
+          -0.1778985911455059,
+          2.4724517361786478
+        ]
+      ],
+      "null_Lambda": [
+        [
+          -0.15880421727889588,
+          0.0,
+          0.0,
+          -0.558777558975992
+        ],
+        [
+          0.0,
+          -0.2945916225117049,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.3104509384019683,
+          0.4263046666593602
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.5691934216413934
+        ]
+      ],
+      "null_spectral_radius": 0.5691934216413934,
+      "exceedances": 18,
+      "B": 199,
+      "p_value": 0.095,
+      "retain_large": false,
+      "selected_dimension": 3,
+      "mc_interval": [
+        0.054491265610358504,
+        0.139185300633255
+      ],
+      "mc_interval_crosses_alpha": false,
+      "feasible_fallback_count": 4,
+      "omega_cap_rejection_count": 123
+    }
+  },
+  "summary": [
+    {
+      "num_samples": 1000000,
+      "seeds": 10,
+      "successful_selections": 10,
+      "correct_dimension_count": 9,
+      "exact_support_count": 9,
+      "path_passes_true_support_count": 10,
+      "mean_precision": 0.975
+    },
+    {
+      "num_samples": 100,
+      "seeds": 10,
+      "successful_selections": 10,
+      "correct_dimension_count": 4,
+      "exact_support_count": 0,
+      "path_passes_true_support_count": 2,
+      "mean_precision": 0.6833333333333333
+    },
+    {
+      "num_samples": 1000,
+      "seeds": 10,
+      "successful_selections": 10,
+      "correct_dimension_count": 2,
+      "exact_support_count": 2,
+      "path_passes_true_support_count": 4,
+      "mean_precision": 1.0
+    }
+  ],
+  "solver_validation": {
+    "fits": 82,
+    "batch_seconds": 0.5232439160000002,
+    "max_objective_difference": 1.0408340855860843e-17,
+    "min_covariance_eigenvalue": 0.6357418395405253
+  }
+}

@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/Users/liubixuan/Documents/LPSM/model_selection/MS-S/experiments/select_scaling_parameter.py", line 367, in <module>
+    run(parse_args())
+  File "/Users/liubixuan/Documents/LPSM/model_selection/MS-S/experiments/select_scaling_parameter.py", line 192, in run
+    result = select_minimal_scale(
+  File "/Users/liubixuan/Documents/LPSM/model_selection/MS-S/scaling_selection.py", line 756, in select_minimal_scale
+    raise ValueError(
+ValueError: Window selection failed: No stable multi-transition cluster satisfied all jump criteria.

@@ -1,0 +1,41 @@
+seed,mode,method,true_dimension,status,selected_dimension,minimal_scale,recommended_scale,error,dimension_correct,true_positive_edges,selected_edge_count,support_precision
+3,constant,plateau,4,ok,4,5.549918002651613e-10,1.1099836005303227e-09,,True,2,3,0.6666666666666666
+3,constant,window,4,ok,4,8.342659865438193e-11,1.6685319730876385e-10,,True,2,3,0.6666666666666666
+3,dimension,plateau,4,ok,4,3.7082732516299855e-10,7.416546503259971e-10,,True,2,3,0.6666666666666666
+3,dimension,window,4,ok,4,5.0626432114975306e-11,1.0125286422995061e-10,,True,2,3,0.6666666666666666
+4,constant,plateau,4,ok,4,9.530644634920387e-10,1.9061289269840775e-09,,True,2,3,0.6666666666666666
+4,constant,window,4,ok,2,1.9452850286086566e-08,3.890570057217313e-08,,False,1,1,1.0
+4,dimension,plateau,4,ok,4,6.412824954609966e-10,1.2825649909219932e-09,,True,2,3,0.6666666666666666
+4,dimension,window,4,ok,2,1.4776974190101782e-08,2.9553948380203564e-08,,False,1,1,1.0
+6,constant,plateau,4,ok,6,3.946928191557304e-13,7.893856383114608e-13,,False,3,5,0.6
+6,constant,window,4,ok,2,5.36486671711446e-09,1.072973343422892e-08,,False,1,1,1.0
+6,dimension,plateau,4,ok,6,2.396875197378397e-13,4.793750394756794e-13,,False,3,5,0.6
+6,dimension,window,4,ok,2,3.8188577036462885e-09,7.637715407292577e-09,,False,1,1,1.0
+8,constant,plateau,4,ok,6,4.7992494687749564e-12,9.598498937549913e-12,,False,3,5,0.6
+8,constant,window,4,failed,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.,False,,,
+8,dimension,plateau,4,ok,6,2.9124652640375483e-12,5.824930528075097e-12,,False,3,5,0.6
+8,dimension,window,4,ok,2,3.64304517762797e-09,7.28609035525594e-09,,False,1,1,1.0
+12,constant,plateau,4,ok,4,8.925750355053981e-10,1.7851500710107962e-09,,True,2,3,0.6666666666666666
+12,constant,window,4,failed,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.,False,,,
+12,dimension,plateau,4,ok,4,6.075516187190544e-10,1.2151032374381088e-09,,True,2,3,0.6666666666666666
+12,dimension,window,4,failed,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.,False,,,
+13,constant,plateau,4,ok,4,9.955699768924365e-10,1.991139953784873e-09,,True,3,3,1.0
+13,constant,window,4,ok,4,1.708899785290859e-10,3.417799570581718e-10,,True,3,3,1.0
+13,dimension,plateau,4,ok,4,6.649641598397658e-10,1.3299283196795316e-09,,True,3,3,1.0
+13,dimension,window,4,ok,4,1.0615136968823899e-10,2.1230273937647799e-10,,True,3,3,1.0
+18,constant,plateau,4,ok,6,1.6763591812281937e-11,3.3527183624563874e-11,,False,3,5,0.6
+18,constant,window,4,failed,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.,False,,,
+18,dimension,plateau,4,ok,6,1.0167592968319122e-11,2.0335185936638244e-11,,False,3,5,0.6
+18,dimension,window,4,failed,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.,False,,,
+21,constant,plateau,4,ok,4,5.608768517567605e-10,1.121753703513521e-09,,True,2,3,0.6666666666666666
+21,constant,window,4,ok,2,3.0273234652390472e-09,6.0546469304780944e-09,,False,1,1,1.0
+21,dimension,plateau,4,ok,4,3.748643880383136e-10,7.497287760766272e-10,,True,2,3,0.6666666666666666
+21,dimension,window,4,ok,2,2.154315056420309e-09,4.308630112840618e-09,,False,1,1,1.0
+22,constant,plateau,4,ok,4,6.425096066883963e-10,1.2850192133767926e-09,,True,3,3,1.0
+22,constant,window,4,failed,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.,False,,,
+22,dimension,plateau,4,ok,4,4.2912538382497356e-10,8.582507676499471e-10,,True,3,3,1.0
+22,dimension,window,4,failed,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.,False,,,
+27,constant,plateau,4,ok,5,9.157891596143051e-11,1.8315783192286102e-10,,False,3,4,0.75
+27,constant,window,4,failed,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.,False,,,
+27,dimension,plateau,4,ok,5,5.7552601572153385e-11,1.1510520314430677e-10,,False,3,4,0.75
+27,dimension,window,4,failed,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.,False,,,

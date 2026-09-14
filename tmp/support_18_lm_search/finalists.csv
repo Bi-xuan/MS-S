@@ -1,0 +1,101 @@
+form,seed,method,dimension,precision,recall,tp,edges,recommended_scale,error
+D^1,3,plateau,4.0,0.6666666666666666,0.6666666666666666,2,3,7.416546503259971e-10,
+D^1,3,window,4.0,0.6666666666666666,0.6666666666666666,2,3,1.0125286422995061e-10,
+D^1,4,plateau,4.0,0.6666666666666666,0.6666666666666666,2,3,1.2825649909219932e-09,
+D^1,4,window,2.0,1.0,0.3333333333333333,1,1,2.9553948380203564e-08,
+D^1,6,plateau,6.0,0.6,1.0,3,5,4.793750394756794e-13,
+D^1,6,window,2.0,1.0,0.3333333333333333,1,1,7.637715407292577e-09,
+D^1,8,plateau,6.0,0.6,1.0,3,5,5.824930528075097e-12,
+D^1,8,window,2.0,1.0,0.3333333333333333,1,1,7.28609035525594e-09,
+D^1,12,plateau,4.0,0.6666666666666666,0.6666666666666666,2,3,1.2151032374381088e-09,
+D^1,12,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^1,13,plateau,4.0,1.0,1.0,3,3,1.3299283196795316e-09,
+D^1,13,window,4.0,1.0,1.0,3,3,2.1230273937647799e-10,
+D^1,18,plateau,6.0,0.6,1.0,3,5,2.0335185936638244e-11,
+D^1,18,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^1,21,plateau,4.0,0.6666666666666666,0.6666666666666666,2,3,7.497287760766272e-10,
+D^1,21,window,2.0,1.0,0.3333333333333333,1,1,4.308630112840618e-09,
+D^1,22,plateau,4.0,1.0,1.0,3,3,8.582507676499471e-10,
+D^1,22,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^1,27,plateau,5.0,0.75,1.0,3,4,1.1510520314430677e-10,
+D^1,27,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^2,3,plateau,2.0,1.0,0.3333333333333333,1,1,1.2370893699076125e-08,
+D^2,3,window,5.0,0.75,1.0,3,4,4.36680318800735e-11,
+D^2,4,plateau,4.0,0.6666666666666666,0.6666666666666666,2,3,6.683975646138022e-10,
+D^2,4,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^2,6,plateau,6.0,0.6,1.0,3,5,2.0687440870449045e-13,
+D^2,6,window,2.0,1.0,0.3333333333333333,1,1,4.645295074916866e-09,
+D^2,8,plateau,6.0,0.6,1.0,3,5,2.51223288029983e-12,
+D^2,8,window,2.0,1.0,0.3333333333333333,1,1,4.429287226337019e-09,
+D^2,12,plateau,4.0,0.6666666666666666,0.6666666666666666,2,3,6.511561155971522e-10,
+D^2,12,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^2,13,plateau,4.0,1.0,1.0,3,3,7.064691928055408e-10,
+D^2,13,window,4.0,1.0,1.0,3,3,9.637437788199428e-11,
+D^2,18,plateau,6.0,0.6,1.0,3,5,8.766174292267374e-12,
+D^2,18,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^2,21,plateau,4.0,0.6666666666666666,0.6666666666666666,2,3,3.9850411321624803e-10,
+D^2,21,window,2.0,1.0,0.3333333333333333,1,1,2.6198092028460096e-09,
+D^2,22,plateau,4.0,1.0,1.0,3,3,4.558884980727467e-10,
+D^2,22,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^2,27,plateau,5.0,0.75,1.0,3,4,5.3478730839222976e-11,
+D^2,27,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^8,3,plateau,2.0,1.0,0.3333333333333333,1,1,9.141830820754996e-10,
+D^8,3,window,5.0,0.75,1.0,3,4,1.6256811347392965e-13,
+D^8,4,plateau,4.0,0.6666666666666666,0.6666666666666666,2,3,4.0810684833400784e-12,
+D^8,4,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^8,6,plateau,6.0,0.6,1.0,3,5,4.08573993974473e-16,
+D^8,6,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^8,8,plateau,6.0,0.6,1.0,3,5,4.959348540616996e-15,
+D^8,8,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^8,12,plateau,4.0,0.6666666666666666,0.6666666666666666,2,3,4.8130310568228175e-12,
+D^8,12,window,5.0,0.5,0.6666666666666666,2,4,1.6871214478669347e-14,
+D^8,13,plateau,4.0,1.0,1.0,3,3,5.219801587920893e-12,
+D^8,13,window,5.0,0.75,1.0,3,4,2.6268267892216975e-13,
+D^8,18,plateau,2.0,1.0,0.3333333333333333,1,1,7.874010864507976e-10,
+D^8,18,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^8,21,plateau,2.0,1.0,0.3333333333333333,1,1,9.981335848587975e-10,
+D^8,21,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^8,22,plateau,4.0,1.0,1.0,3,3,3.368186442455876e-12,
+D^8,22,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^8,27,plateau,5.0,0.75,1.0,3,4,1.8336426712312966e-13,
+D^8,27,window,5.0,0.75,1.0,3,4,1.276136475246554e-14,
+D^32,3,plateau,2.0,1.0,0.3333333333333333,1,1,1.849963986931577e-14,
+D^32,3,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^32,4,plateau,4.0,0.6666666666666666,0.6666666666666666,2,3,2.8630396011562723e-20,
+D^32,4,window,4.0,0.6666666666666666,0.6666666666666666,2,3,1.3312797962959925e-22,
+D^32,6,plateau,4.0,0.6666666666666666,0.6666666666666666,2,3,2.0286029718699078e-20,
+D^32,6,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^32,8,plateau,2.0,1.0,0.3333333333333333,1,1,2.3026903674959535e-14,
+D^32,8,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^32,12,plateau,2.0,1.0,0.3333333333333333,1,1,2.578049350141112e-14,
+D^32,12,window,6.0,0.6,1.0,3,5,1.738684048921706e-24,
+D^32,13,plateau,2.0,1.0,0.3333333333333333,1,1,2.2655108099365493e-14,
+D^32,13,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^32,18,plateau,2.0,1.0,0.3333333333333333,1,1,1.5932797931418546e-14,
+D^32,18,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^32,21,plateau,2.0,1.0,0.3333333333333333,1,1,2.0199514123395365e-14,
+D^32,21,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^32,22,plateau,2.0,1.0,0.3333333333333333,1,1,2.3965870258562272e-14,
+D^32,22,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^32,27,plateau,2.0,1.0,0.3333333333333333,1,1,2.98360620555639e-14,
+D^32,27,window,6.0,0.6,1.0,3,5,1.3151394123530219e-24,
+D^48,3,plateau,2.0,1.0,0.3333333333333333,1,1,1.4265966978667337e-17,
+D^48,3,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^48,4,plateau,2.0,1.0,0.3333333333333333,1,1,2.4317652712818748e-17,
+D^48,4,window,5.0,0.5,0.6666666666666666,2,4,1.5947003641773695e-28,
+D^48,6,plateau,2.0,1.0,0.3333333333333333,1,1,1.943147424279764e-17,
+D^48,6,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^48,8,plateau,2.0,1.0,0.3333333333333333,1,1,1.7757159066089374e-17,
+D^48,8,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^48,12,plateau,2.0,1.0,0.3333333333333333,1,1,1.988058533575904e-17,
+D^48,12,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^48,13,plateau,2.0,1.0,0.3333333333333333,1,1,1.7470449239445716e-17,
+D^48,13,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^48,18,plateau,2.0,1.0,0.3333333333333333,1,1,1.2286550810153907e-17,
+D^48,18,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^48,21,plateau,2.0,1.0,0.3333333333333333,1,1,1.557682240079656e-17,
+D^48,21,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^48,22,plateau,2.0,1.0,0.3333333333333333,1,1,1.8481241278851603e-17,
+D^48,22,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.
+D^48,27,plateau,2.0,1.0,0.3333333333333333,1,1,2.3008030834769905e-17,
+D^48,27,window,,,,,,,Window selection failed: No stable multi-transition cluster satisfied all jump criteria.

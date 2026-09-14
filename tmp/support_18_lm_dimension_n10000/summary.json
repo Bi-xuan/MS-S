@@ -1,0 +1,42 @@
+[
+  {
+    "mode": "constant",
+    "method": "plateau",
+    "seeds": 10,
+    "successful_selections": 10,
+    "mean_selected_dimension": 4.7,
+    "dimension_accuracy": 0.6,
+    "mean_support_precision": 0.7216666666666667,
+    "precision_denominator": 10
+  },
+  {
+    "mode": "constant",
+    "method": "window",
+    "seeds": 10,
+    "successful_selections": 5,
+    "mean_selected_dimension": 2.8,
+    "dimension_accuracy": 0.2,
+    "mean_support_precision": 0.9333333333333332,
+    "precision_denominator": 5
+  },
+  {
+    "mode": "dimension",
+    "method": "plateau",
+    "seeds": 10,
+    "successful_selections": 10,
+    "mean_selected_dimension": 4.7,
+    "dimension_accuracy": 0.6,
+    "mean_support_precision": 0.7216666666666667,
+    "precision_denominator": 10
+  },
+  {
+    "mode": "dimension",
+    "method": "window",
+    "seeds": 10,
+    "successful_selections": 6,
+    "mean_selected_dimension": 2.6666666666666665,
+    "dimension_accuracy": 0.2,
+    "mean_support_precision": 0.9444444444444443,
+    "precision_denominator": 6
+  }
+]

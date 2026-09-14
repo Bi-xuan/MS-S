@@ -1,0 +1,2 @@
+support_index,random_seed,true_dimension,scaling_input_status,window_status,window_dimension,window_correct,plateau_status,plateau_dimension,plateau_correct,curve_file,scaling_input_log,bootstrap_status,bootstrap_dimension,bootstrap_correct,bootstrap_precision
+18,2,4,valid,failed,NA,NA,ok,4,true,tmp/plateau_bootstrap_deployment/study/support_18/seed_2/objective_curve_sigma_hat.npz,tmp/plateau_bootstrap_deployment/study/support_18/seed_2/scaling_input_validation.log,ok,4,true,1

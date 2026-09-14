@@ -1,6 +1,8 @@
 """Exercise the Bash reselect worker pool without running numerical solvers."""
 
 import os
+import csv
+import json
 from pathlib import Path
 import subprocess
 
@@ -8,6 +10,51 @@ import pytest
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "experiments/run_upper_support_scaling_study.sh"
+
+
+@pytest.mark.parametrize("top_plateaus", [None, "2"])
+def test_study_runs_all_methods_and_forwards_bootstrap_options(tmp_path, top_plateaus):
+    output = tmp_path / "output"
+    trial = output / "support_18/seed_2"
+    trial.mkdir(parents=True)
+    (trial / "objective_curve_sigma_hat.npz").touch()
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    python_stub = bin_dir / "python"
+    python_stub.write_text('''#!/usr/bin/env python3
+import json, os, sys
+from pathlib import Path
+args = sys.argv[1:]
+with (Path(os.environ["OUTPUT_ROOT"]) / "calls.jsonl").open("a") as f:
+    f.write(json.dumps(args) + "\\n")
+if "--method" in args:
+    method = args[args.index("--method") + 1]
+    if method == "plateau-bootstrap":
+        print("Selected dimension: 4")
+        print("Selected support precision: 0.75")
+    else:
+        print("Selected dimension at recommended scale: 4")
+''')
+    python_stub.chmod(0o755)
+    env = dict(os.environ, OUTPUT_ROOT=str(output), N_JOBS="1",
+               PATH=str(bin_dir) + os.pathsep + os.environ["PATH"])
+    env.pop("TOP_PLATEAUS", None)
+    if top_plateaus is not None:
+        env["TOP_PLATEAUS"] = top_plateaus
+    result = subprocess.run(["bash", str(SCRIPT), "reselect"], env=env,
+                            capture_output=True, text=True, timeout=20)
+    assert result.returncode == 0, result.stderr
+    assert "unbound variable" not in result.stderr
+    with (trial / "result.csv").open() as f:
+        row = next(csv.DictReader(f))
+    for method in ("window", "plateau", "bootstrap"):
+        assert row[f"{method}_status"] == "ok"
+        assert row[f"{method}_dimension"] == "4"
+    assert row["bootstrap_precision"] == "0.75"
+    calls = [json.loads(line) for line in (output / "calls.jsonl").read_text().splitlines()]
+    boot = next(call for call in calls if "plateau-bootstrap" in call)
+    assert boot[boot.index("--top-plateaus") + 1] == (top_plateaus or "3")
+    assert boot[boot.index("--n-jobs") + 1] == "1"
 
 
 @pytest.fixture

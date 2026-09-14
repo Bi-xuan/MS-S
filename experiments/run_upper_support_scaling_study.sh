@@ -34,11 +34,16 @@ SEEDS=(2 3 124 139 147 153 156 173 192 237)
 N_JOBS="${N_JOBS:-${SLURM_CPUS_PER_TASK:-${NSLOTS:-8}}}"
 NUM_SUPPORTS="${NUM_SUPPORTS:-20}"
 MAX_RESTARTS="${MAX_RESTARTS:-10}"
+NESTED_SUPPORTS="${NESTED_SUPPORTS:-true}"
 REFINE_AFTER_FIXED_OMEGA="${REFINE_AFTER_FIXED_OMEGA:-false}"
 OMEGA_STAR="${OMEGA_STAR:-1}"
 OMEGA_REF="${OMEGA_REF:-1}"
 RECOMMENDATION_FACTOR="${RECOMMENDATION_FACTOR:-2.0}"
 OBJECTIVE_FLOOR="${OBJECTIVE_FLOOR:-1e-8}"
+TOP_PLATEAUS="${TOP_PLATEAUS:-3}"
+BOOTSTRAP_REPLICATES="${BOOTSTRAP_REPLICATES:-199}"
+BOOTSTRAP_ALPHA="${BOOTSTRAP_ALPHA:-0.05}"
+BOOTSTRAP_SEED="${BOOTSTRAP_SEED:-20260913}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-experiments/output/upper_support_scaling_n4_dm4_nsm100_omega1_minabs02_10seeds}"
 
 if [[ ! "${NUM_SUPPORTS}" =~ ^[1-9][0-9]*$ ]] || ((NUM_SUPPORTS > 20)); then
@@ -50,7 +55,7 @@ mkdir -p "${OUTPUT_ROOT}"
 SUMMARY_PATH="${OUTPUT_ROOT}/selection_summary.csv"
 COVERAGE_PLOT_PATH="${OUTPUT_ROOT}/selection_coverage.png"
 COVERAGE_PDF_PATH="${OUTPUT_ROOT}/selection_coverage.pdf"
-CSV_HEADER="support_index,random_seed,true_dimension,scaling_input_status,window_status,window_dimension,window_correct,plateau_status,plateau_dimension,plateau_correct,curve_file,scaling_input_log"
+CSV_HEADER="support_index,random_seed,true_dimension,scaling_input_status,window_status,window_dimension,window_correct,plateau_status,plateau_dimension,plateau_correct,curve_file,scaling_input_log,bootstrap_status,bootstrap_dimension,bootstrap_correct,bootstrap_precision"
 SEED_COUNT="${#SEEDS[@]}"
 TOTAL_TRIALS="$((NUM_SUPPORTS * SEED_COUNT))"
 
@@ -66,7 +71,7 @@ Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect]
   aggregate   Validate all per-trial result files, create selection_summary.csv,
               and draw the PNG and PDF coverage plots.
   reselect    Discover existing support_*/seed_* directories under OUTPUT_ROOT,
-              rerun both selection methods with up to N_JOBS concurrent trials,
+              rerun all three selection methods with up to N_JOBS concurrent trials,
               and aggregate after all workers finish. Each trial uses one CPU.
               Refresh selection logs, CSVs, and coverage plots without computing
               objective curves. Ignore the configured SEEDS and NUM_SAMPLES.
@@ -84,19 +89,29 @@ run_selection() {
     local method="$2"
     local log_path="$3"
     local selected_dimension
+    local selection_options=(--objective-floor "${OBJECTIVE_FLOOR}")
+    SELECTION_PRECISION="NA"
+    if [[ "${method}" == "plateau-bootstrap" ]]; then
+        selection_options+=(--top-plateaus "${TOP_PLATEAUS}"
+            --bootstrap-replicates "${BOOTSTRAP_REPLICATES}"
+            --bootstrap-alpha "${BOOTSTRAP_ALPHA}" --bootstrap-seed "${BOOTSTRAP_SEED}"
+            --n-jobs "${N_JOBS}" --output-json "${log_path%.log}.json")
+    fi
 
     if python experiments/select_scaling_parameter.py \
         "${curve_path}" \
         --method "${method}" \
         --recommendation-factor "${RECOMMENDATION_FACTOR}" \
-        --objective-floor "${OBJECTIVE_FLOOR}" \
+        "${selection_options[@]}" \
         2>&1 | tee "${log_path}"; then
         selected_dimension="$(awk -F ': ' \
-            '$1 == "Selected dimension at recommended scale" {print $2}' \
+            '$1 == "Selected dimension at recommended scale" || $1 == "Selected dimension" {print $2}' \
             "${log_path}" | tail -n 1)"
         if [[ "${selected_dimension}" =~ ^[0-9]+$ ]]; then
             SELECTION_STATUS="ok"
             SELECTION_DIMENSION="${selected_dimension}"
+            SELECTION_PRECISION="$(awk -F ': ' '$1 == "Selected support precision" {print $2}' "${log_path}" | tail -n 1)"
+            SELECTION_PRECISION="${SELECTION_PRECISION:-NA}"
             if [[ "${selected_dimension}" -eq "${TRUE_DIMENSION}" ]]; then
                 SELECTION_CORRECT="true"
             else
@@ -139,6 +154,10 @@ run_trial() {
     local plateau_status
     local plateau_dimension
     local plateau_correct
+    local bootstrap_status="invalid_input"
+    local bootstrap_dimension="NA"
+    local bootstrap_correct="NA"
+    local bootstrap_precision="NA"
 
     support_dir="${OUTPUT_ROOT}/support_$(printf '%02d' "${support_index}")"
     scenario_dir="${support_dir}/seed_${random_seed}"
@@ -167,6 +186,7 @@ run_trial() {
             --lambda-star-dimension "${TRUE_DIMENSION}" \
             --lambda-star-support-index "${support_index}" \
             --support-scope upper \
+            --nested-supports "${NESTED_SUPPORTS}" \
             --num-samples "${NUM_SAMPLES}" \
             --n-jobs "${N_JOBS}" \
             --random-seed "${random_seed}" \
@@ -193,6 +213,11 @@ run_trial() {
         plateau_status="${SELECTION_STATUS}"
         plateau_dimension="${SELECTION_DIMENSION}"
         plateau_correct="${SELECTION_CORRECT}"
+        run_selection "${curve_path}" plateau-bootstrap "${scenario_dir}/selection_bootstrap.log"
+        bootstrap_status="${SELECTION_STATUS}"
+        bootstrap_dimension="${SELECTION_DIMENSION}"
+        bootstrap_correct="${SELECTION_CORRECT}"
+        bootstrap_precision="${SELECTION_PRECISION}"
     else
         scaling_input_status="invalid"
         window_status="invalid_input"
@@ -207,15 +232,19 @@ run_trial() {
         printf '%s\n' \
             "Selection skipped because the scaling input is invalid." \
             > "${scenario_dir}/selection_plateau.log"
+        printf '%s\n' \
+            "Selection skipped because the scaling input is invalid." \
+            > "${scenario_dir}/selection_bootstrap.log"
     fi
 
     {
         printf '%s\n' "${CSV_HEADER}"
-        printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+        printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
             "${support_index}" "${random_seed}" "${TRUE_DIMENSION}" "${scaling_input_status}" \
             "${window_status}" "${window_dimension}" "${window_correct}" \
             "${plateau_status}" "${plateau_dimension}" "${plateau_correct}" \
-            "${curve_path}" "${validation_log}"
+            "${curve_path}" "${validation_log}" \
+            "${bootstrap_status}" "${bootstrap_dimension}" "${bootstrap_correct}" "${bootstrap_precision}"
     } > "${result_tmp}"
     mv -f "${result_tmp}" "${result_path}"
 
