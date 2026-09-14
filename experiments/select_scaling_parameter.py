@@ -15,9 +15,10 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from analyze_penalty import build_penalty_constants, scalar_value
 from penalty import pen_n
-from plateau_bootstrap import FitSettings, select_plateau_bootstrap
 from scaling_selection import (
     DEFAULT_RECOMMENDATION_FACTOR,
+    FitSettings,
+    select_plateau_bootstrap,
     build_dimension_path,
     select_minimal_scale,
 )

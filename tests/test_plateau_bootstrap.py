@@ -6,7 +6,7 @@ import json
 import numpy as np
 import pytest
 
-import plateau_bootstrap as bootstrap
+import scaling_selection as bootstrap
 from experiments.select_scaling_parameter import parse_args, run
 from scaling_selection import DimensionPath, ranked_plateaus
 
