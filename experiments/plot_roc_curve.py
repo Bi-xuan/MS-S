@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """Plot mean edge-recovery ROC curves for the fixed-support experiment.
 
-Each seed contributes one ROC path indexed by model dimension. The plotted
-points are the pointwise mean false-positive and true-positive rates over the
-10 seeds for each requested sample size.
+Each seed contributes one ROC path indexed by model dimension. One plot shows
+the pointwise mean ROC paths over the 10 seeds for each requested sample size.
+A separate plot shows the final support selected in each seed and its mean
+operating point.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 from pathlib import Path
@@ -26,6 +28,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 
 
 SAMPLE_SIZES = (100, 1_000, 10_000, 1_000_000)
@@ -60,7 +63,13 @@ def _upper_edges(n: int) -> tuple[tuple[int, int], ...]:
 def _load_seed_path(
     curve_path: Path,
     expected_num_samples: int,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, frozenset[tuple[int, int]]]:
+) -> tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    frozenset[tuple[int, int]],
+    tuple[frozenset[tuple[int, int]], ...],
+]:
     """Load and validate one nested upper-support recovery path."""
 
     with np.load(curve_path, allow_pickle=False) as data:
@@ -150,13 +159,64 @@ def _load_seed_path(
         off_diagonal_masks & false_mask,
         axis=(1, 2),
     ) / np.count_nonzero(false_mask)
-    return dimensions, false_positive_rates, true_positive_rates, true_edges
+    path_edges = tuple(
+        frozenset((int(i), int(j)) for i, j in np.argwhere(mask))
+        for mask in off_diagonal_masks
+    )
+    return (
+        dimensions,
+        false_positive_rates,
+        true_positive_rates,
+        true_edges,
+        path_edges,
+    )
+
+
+def _load_selected_index(
+    selection_path: Path,
+    dimensions: np.ndarray,
+    path_edges: tuple[frozenset[tuple[int, int]], ...],
+) -> int:
+    """Locate and validate the final selected support on its saved ROC path."""
+
+    if not selection_path.is_file():
+        raise FileNotFoundError(f"Missing final selection: {selection_path}")
+    selection = json.loads(selection_path.read_text(encoding="utf-8"))
+    required = {"selected_dimension", "selected_edges"}
+    missing = required.difference(selection)
+    if missing:
+        raise ValueError(
+            f"{selection_path} is missing required fields: "
+            f"{', '.join(sorted(missing))}"
+        )
+
+    selected_dimension = int(selection["selected_dimension"])
+    matches = np.flatnonzero(dimensions == selected_dimension)
+    if len(matches) != 1:
+        raise ValueError(
+            f"{selection_path} selects dimension {selected_dimension}, which is "
+            "not present exactly once on its ROC path."
+        )
+    selected_index = int(matches[0])
+    selected_edge_list = [tuple(map(int, edge)) for edge in selection["selected_edges"]]
+    selected_edges = frozenset(selected_edge_list)
+    if len(selected_edges) != len(selected_edge_list):
+        raise ValueError(f"{selection_path} contains duplicate selected edges.")
+    if selected_edges != path_edges[selected_index]:
+        raise ValueError(
+            f"{selection_path} final support does not match the saved support "
+            f"at dimension {selected_dimension}."
+        )
+    return selected_index
 
 
 def collect_mean_roc(
     input_dir: Path,
-) -> dict[int, tuple[np.ndarray, np.ndarray, np.ndarray]]:
-    """Collect dimension-indexed mean ROC paths for all requested sample sizes."""
+) -> dict[
+    int,
+    tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+]:
+    """Collect mean ROC paths and per-seed final operating points."""
 
     curves = {}
     reference_dimensions = None
@@ -165,10 +225,11 @@ def collect_mean_roc(
         sample_dir = input_dir / f"num_samples_{sample_size}"
         false_positive_rates = []
         true_positive_rates = []
+        selected_false_positive_rates = []
+        selected_true_positive_rates = []
         for _, curve_path in _seed_curve_files(sample_dir):
-            dimensions, fpr, tpr, true_edges = _load_seed_path(
-                curve_path,
-                sample_size,
+            dimensions, fpr, tpr, true_edges, path_edges = _load_seed_path(
+                curve_path, sample_size
             )
             if reference_dimensions is None:
                 reference_dimensions = dimensions
@@ -179,23 +240,55 @@ def collect_mean_roc(
                 raise ValueError(f"{curve_path} has an inconsistent ground-truth support.")
             false_positive_rates.append(fpr)
             true_positive_rates.append(tpr)
+            selected_index = _load_selected_index(
+                curve_path.with_name("selection_plateau_bootstrap.json"),
+                dimensions,
+                path_edges,
+            )
+            selected_false_positive_rates.append(fpr[selected_index])
+            selected_true_positive_rates.append(tpr[selected_index])
 
         curves[sample_size] = (
             dimensions,
             np.mean(false_positive_rates, axis=0),
             np.mean(true_positive_rates, axis=0),
+            np.asarray(selected_false_positive_rates),
+            np.asarray(selected_true_positive_rates),
         )
     return curves
 
 
+def _jitter_overlaps(
+    x_values: np.ndarray,
+    y_values: np.ndarray,
+    phase: float,
+    radius: float = 0.012,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Apply deterministic display-only jitter to coincident points."""
+
+    x_display = np.asarray(x_values, dtype=float).copy()
+    y_display = np.asarray(y_values, dtype=float).copy()
+    groups: dict[tuple[float, float], list[int]] = {}
+    for index, point in enumerate(zip(x_values, y_values)):
+        groups.setdefault(tuple(map(float, point)), []).append(index)
+
+    for indices in groups.values():
+        if len(indices) < 2:
+            continue
+        angles = phase + np.linspace(0.0, 2.0 * np.pi, len(indices), endpoint=False)
+        x_display[indices] += radius * np.cos(angles)
+        y_display[indices] += radius * np.sin(angles)
+    return x_display, y_display
+
+
 def plot_mean_roc(input_dir: Path, output_path: Path) -> None:
-    """Draw all sample-size mean ROC paths on one set of axes."""
+    """Draw only the sample-size mean ROC paths on one set of axes."""
 
     curves = collect_mean_roc(input_dir)
     figure, axis = plt.subplots(figsize=(7.2, 6.4))
     colors = ("#0072B2", "#E69F00", "#009E73", "#CC79A7")
     for color, sample_size in zip(colors, SAMPLE_SIZES):
-        _, mean_fpr, mean_tpr = curves[sample_size]
+        _, mean_fpr, mean_tpr, _, _ = curves[sample_size]
         axis.plot(
             mean_fpr,
             mean_tpr,
@@ -231,6 +324,123 @@ def plot_mean_roc(input_dir: Path, output_path: Path) -> None:
     plt.close(figure)
 
 
+def plot_final_selections(input_dir: Path, output_path: Path) -> None:
+    """Draw seed-level and mean final-support operating points separately."""
+
+    curves = collect_mean_roc(input_dir)
+    figure, axis = plt.subplots(figsize=(9.2, 6.4))
+    colors = ("#0072B2", "#E69F00", "#009E73", "#CC79A7")
+    sample_handles = []
+    for curve_index, (color, sample_size) in enumerate(zip(colors, SAMPLE_SIZES)):
+        _, _, _, selected_fpr, selected_tpr = curves[sample_size]
+        display_fpr, display_tpr = _jitter_overlaps(
+            selected_fpr,
+            selected_tpr,
+            phase=curve_index * np.pi / 7.0,
+        )
+        axis.scatter(
+            display_fpr,
+            display_tpr,
+            color=color,
+            marker="D",
+            s=42,
+            alpha=0.32,
+            edgecolors="none",
+            zorder=3,
+        )
+        axis.scatter(
+            np.mean(selected_fpr),
+            np.mean(selected_tpr),
+            color=color,
+            marker="*",
+            s=230,
+            edgecolors="black",
+            linewidths=0.9,
+            zorder=5,
+        )
+        sample_handles.append(
+            Line2D(
+                [0],
+                [0],
+                marker="o",
+                linestyle="none",
+                markerfacecolor=color,
+                markeredgecolor=color,
+                markersize=7,
+                label=f"num_samples={sample_size:,}",
+            )
+        )
+
+    axis.plot(
+        [0, 1],
+        [0, 1],
+        color="0.45",
+        linewidth=1.2,
+        linestyle="--",
+        label="Random baseline",
+        zorder=0,
+    )
+    axis.set_xlim(-0.025, 1.025)
+    axis.set_ylim(-0.025, 1.025)
+    axis.set_aspect("equal", adjustable="box")
+    axis.set_xlabel("False positive rate")
+    axis.set_ylabel("True positive rate")
+    axis.set_title("Final support operating points across 10 seeds (n=4)")
+    axis.grid(True, color="0.88", linewidth=0.8)
+    axis.set_axisbelow(True)
+    sample_legend = axis.legend(
+        handles=sample_handles,
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.0),
+        frameon=True,
+        title="Sample size",
+    )
+    axis.add_artist(sample_legend)
+    axis.legend(
+        handles=[
+            Line2D(
+                [0],
+                [0],
+                marker="D",
+                linestyle="none",
+                markerfacecolor="0.45",
+                markeredgecolor="none",
+                alpha=0.4,
+                markersize=6,
+                label="Seed final selection",
+            ),
+            Line2D(
+                [0],
+                [0],
+                marker="*",
+                linestyle="none",
+                markerfacecolor="0.6",
+                markeredgecolor="black",
+                markeredgewidth=0.85,
+                markersize=13,
+                label="Mean final selection",
+            ),
+        ],
+        loc="upper left",
+        bbox_to_anchor=(1.02, 0.48),
+        frameon=True,
+        title="Final supports",
+    )
+    figure.text(
+        0.5,
+        0.015,
+        "Coincident seed points use display-only jitter; stars use unjittered means.",
+        ha="center",
+        fontsize=8.5,
+        color="0.35",
+    )
+    figure.tight_layout(rect=(0, 0.04, 1, 1))
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    figure.savefig(output_path, dpi=220, bbox_inches="tight")
+    plt.close(figure)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -252,14 +462,29 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Output PNG path (default: <input-dir>/roc_curve.png)",
     )
+    parser.add_argument(
+        "--selection-output",
+        type=Path,
+        default=None,
+        help=(
+            "Final-selection PNG path "
+            "(default: <input-dir>/final_support_operating_points.png)"
+        ),
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
     output_path = args.output or args.input_dir / "roc_curve.png"
+    selection_output_path = (
+        args.selection_output
+        or args.input_dir / "final_support_operating_points.png"
+    )
     plot_mean_roc(args.input_dir, output_path)
+    plot_final_selections(args.input_dir, selection_output_path)
     print(f"Saved ROC plot to {output_path}")
+    print(f"Saved final-support plot to {selection_output_path}")
 
 
 if __name__ == "__main__":

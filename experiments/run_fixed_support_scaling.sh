@@ -135,28 +135,12 @@ if ((worker_failed)); then
     exit 1
 fi
 
-printf '%s\n' 'num_samples,random_seed,selected_dimension,precision,exact_support_recovery' > "${TRIALS_PATH}"
-for ((task = 0; task < ${#task_seeds[@]}; task++)); do
-    result_path="${OUTPUT_ROOT}/num_samples_${task_num_samples[task]}/seed_${task_seeds[task]}/result.csv"
-    if [[ ! -f "${result_path}" ]]; then
-        echo "Error: missing trial result: ${result_path}" >&2
-        exit 1
-    fi
-    tail -n 1 "${result_path}" >> "${TRIALS_PATH}"
-done
-
-awk -F ',' '
-    NR > 1 {count[$1]++; precision[$1] += $4; exact[$1] += ($5 == "true")}
-    END {
-        print "| Number of samples | Average precision over 10 seeds | Exact support recovery (x/10) |"
-        print "|---:|---:|---:|"
-        for (i = 1; i <= 4; i++) {
-            n = values[i]
-            printf "| %d | %.6f | %d/10 |\n", n, precision[n] / count[n], exact[n]
-        }
-    }
-    BEGIN {values[1] = 100; values[2] = 1000; values[3] = 10000; values[4] = 1000000}
-' "${TRIALS_PATH}" | tee "${TABLE_PATH}"
+python experiments/summarize_fixed_support_scaling.py \
+    "${OUTPUT_ROOT}" \
+    --sample-sizes "${NUM_SAMPLE_VALUES[@]}" \
+    --expected-seeds 10 \
+    --trials-output "${TRIALS_PATH}" \
+    --summary-output "${TABLE_PATH}"
 
 echo
 echo "Trial results: ${TRIALS_PATH}"
