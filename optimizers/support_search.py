@@ -23,6 +23,20 @@ PRESELECT_DIRECTION_POLICIES = ("directed", "both_per_pair")
 SUPPORT_SCOPES = ("all", "upper")
 
 
+def resolve_omega_ref(Sigma_hat, omega_ref=None, fit_omega_ref=False, kappa=0.93):
+    """Return the fixed reference, or None when omega is fitted by ADMM."""
+    if fit_omega_ref:
+        if omega_ref is not None:
+            raise ValueError("fit_omega_ref=True requires omega_ref=None.")
+        if not np.isfinite(kappa) or not (0.0 < kappa <= 1.0):
+            raise ValueError("kappa must be finite and in (0, 1].")
+        omega_ref = float(kappa * np.linalg.eigvalsh(Sigma_hat)[0])
+
+    if omega_ref is not None and (not np.isfinite(omega_ref) or omega_ref < 0.0):
+        raise ValueError("omega_ref must be finite and nonnegative.")
+    return omega_ref
+
+
 def support_edges_from_mask(mask):
     n = mask.shape[0]
     return [
@@ -351,6 +365,8 @@ def optimize_lambda(
     return_metadata=False,
     support_scope="all",
     previous_support_mask=None,
+    fit_omega_ref=False,
+    kappa=0.93,
 ):
     """
     Optimize Lambda over a support iterator.
@@ -380,7 +396,9 @@ def optimize_lambda(
     n = Sigma.shape[0]
     n_edge = D_m - 1
     lambda_min_sigma = np.min(np.linalg.eigvalsh(Sigma))
-    omega_upper = lambda_min_sigma - omega_upper_gap
+    omega_ref = resolve_omega_ref(Sigma, omega_ref, fit_omega_ref, kappa)
+    free_omega_upper = lambda_min_sigma - omega_upper_gap
+    omega_upper = lambda_min_sigma if omega_ref is not None else free_omega_upper
     validate_preselect_direction_policy(preselect_direction_policy)
     validate_support_scope(support_scope)
 
@@ -417,7 +435,10 @@ def optimize_lambda(
     if omega_upper < min_omega:
         return result_tuple(None, None, np.inf)
 
-    if omega_ref is not None and omega_ref > omega_upper:
+    if omega_ref is not None and omega_ref > lambda_min_sigma:
+        return result_tuple(None, None, np.inf)
+
+    if refine_after_fixed_omega and free_omega_upper < min_omega:
         return result_tuple(None, None, np.inf)
 
     if support_iterator is not None and (
@@ -601,7 +622,7 @@ def optimize_lambda(
             max_restarts=max_restarts,
             min_omega=min_omega,
             omega_fixed=None,
-            omega_upper=omega_upper,
+            omega_upper=free_omega_upper,
             init_strategy=init_strategy,
         )
 

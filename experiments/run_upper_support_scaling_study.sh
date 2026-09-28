@@ -38,6 +38,8 @@ NESTED_SUPPORTS="${NESTED_SUPPORTS:-true}"
 REFINE_AFTER_FIXED_OMEGA="${REFINE_AFTER_FIXED_OMEGA:-false}"
 OMEGA_STAR="${OMEGA_STAR:-1}"
 OMEGA_REF="${OMEGA_REF:-1}"
+FIT_OMEGA_REF="${FIT_OMEGA_REF:-false}"
+KAPPA="${KAPPA:-0.93}"
 RECOMMENDATION_FACTOR="${RECOMMENDATION_FACTOR:-2.0}"
 OBJECTIVE_FLOOR="${OBJECTIVE_FLOOR:-1e-8}"
 TOP_PLATEAUS="${TOP_PLATEAUS:-3}"
@@ -194,6 +196,8 @@ run_trial() {
             --refine-after-fixed-omega "${REFINE_AFTER_FIXED_OMEGA}" \
             --omega-star "${OMEGA_STAR}" \
             --omega-ref "${OMEGA_REF}" \
+            --fit-omega-ref "${FIT_OMEGA_REF}" \
+            --kappa "${KAPPA}" \
             2>&1 | tee "${compute_log}"
     fi
 

@@ -14,7 +14,9 @@ from admm import (
     covariance_from_lambda_star,
     lambda_star_spectral_radius,
 )
-from optimizers.support_search import optimize_lambda, print_optimization_result
+from optimizers.support_search import (
+    optimize_lambda, print_optimization_result, resolve_omega_ref,
+)
 
 
 def parse_bool(value):
@@ -130,6 +132,24 @@ def parse_args(argv=None):
         ),
     )
     parser.add_argument(
+        "--fit-omega-ref",
+        type=parse_bool,
+        default=False,
+        help="With --omega-ref none, set omega_ref from Sigma_hat's smallest eigenvalue.",
+    )
+    parser.add_argument(
+        "--kappa",
+        type=float,
+        default=0.93,
+        help="Multiplier for the fitted omega_ref (default: 0.93).",
+    )
+    parser.add_argument(
+        "--num-samples",
+        type=int,
+        default=100,
+        help="Number of observations used to build Sigma_hat for a fitted omega_ref.",
+    )
+    parser.add_argument(
         "--support-scope",
         choices=["all", "upper"],
         default="all",
@@ -177,7 +197,7 @@ def main():
     Lambda_star = lambda_star_for_dimension(n)
     omega_star = args.omega_star
     omega_ref = args.omega_ref
-    if omega_ref is None and args.refine_after_fixed_omega:
+    if omega_ref is None and not args.fit_omega_ref and args.refine_after_fixed_omega:
         raise SystemExit(
             "Error: --omega-ref none conflicts with "
             "--refine-after-fixed-omega true. Set "
@@ -192,6 +212,15 @@ def main():
         )
 
     Sigma_given = covariance_from_lambda_star(Lambda_star, omega_star)
+    if args.fit_omega_ref:
+        Sigma_hat = sample_empirical_covariance(
+            Sigma_given, num_samples=args.num_samples, seed=args.random_seed + 2,
+        )
+        omega_ref = resolve_omega_ref(
+            Sigma_hat, omega_ref, fit_omega_ref=True, kappa=args.kappa,
+        )
+    else:
+        omega_ref = resolve_omega_ref(Sigma_given, omega_ref)
     lambda_min_sigma = np.min(np.linalg.eigvalsh(Sigma_given))
 
     np.random.seed(args.random_seed)
@@ -235,8 +264,8 @@ def main():
     print_optimization_result(Lambda, omega, obj)
     if omega is not None and np.isfinite(omega):
         print(
-            "omega <= lambda_min(Sigma) - 1e-3: "
-            f"{omega <= lambda_min_sigma - 1e-3 + 1e-12}"
+            "omega <= lambda_min(Sigma): "
+            f"{omega <= lambda_min_sigma + 1e-12}"
         )
 
 

@@ -13,7 +13,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from admm import DEFAULT_OMEGA_STAR
-from optimizers.support_search import optimize_lambda, rank_preselected_edges
+from optimizers.support_search import (
+    optimize_lambda, rank_preselected_edges, resolve_omega_ref,
+)
 from supports.common import off_diagonal_edges, upper_triangular_edges, validate_support_mask
 from supports.preselected import normalize_preselected_edges
 
@@ -103,8 +105,11 @@ def compute_objective_curve(
     save_callback=None,
     support_scope="all",
     nested_supports=True,
+    fit_omega_ref=False,
+    kappa=0.93,
 ):
     """Fit each dimension, by default along a greedy forward-nested path."""
+    omega_ref = resolve_omega_ref(Sigma, omega_ref, fit_omega_ref, kappa)
     n = Sigma.shape[0]
     if support_scope not in ("all", "upper"):
         raise ValueError("support_scope must be one of ('all', 'upper').")
@@ -404,6 +409,8 @@ def save_curve_result(
     lambda_star_support_edges=None,
     nested_supports=True,
     fit_settings=None,
+    fit_omega_ref=False,
+    kappa=0.93,
 ):
     if len(curve_result) == 4:
         (
@@ -443,6 +450,8 @@ def save_curve_result(
         Sigma=Sigma,
         omega_star=omega_star,
         omega_ref=omega_ref,
+        fit_omega_ref=fit_omega_ref,
+        kappa=kappa,
         random_seed=random_seed,
         solve_seed=solve_seed,
         fallback_seed=fallback_seed,
@@ -508,6 +517,8 @@ def load_existing_curve_result(
                     # Legacy curves have no fitting metadata. Bootstrap selection
                     # independently verifies every observed candidate refit.
                     continue
+                elif key == "fit_omega_ref" and expected_value is False:
+                    actual_value = False
                 else:
                     raise ValueError(
                         f"Refusing to resume from {output_path}: missing "
@@ -651,6 +662,18 @@ def parse_args(argv=None):
         ),
     )
     parser.add_argument(
+        "--fit-omega-ref",
+        type=parse_bool,
+        default=False,
+        help="With --omega-ref none, set omega_ref from Sigma_hat's smallest eigenvalue.",
+    )
+    parser.add_argument(
+        "--kappa",
+        type=float,
+        default=0.93,
+        help="Multiplier for the fitted omega_ref (default: 0.93).",
+    )
+    parser.add_argument(
         "--lambda-star-dims",
         type=int,
         nargs="+",
@@ -738,7 +761,9 @@ def preselect_edges_for_sigma(
 
     n = Sigma.shape[0]
     lambda_min_sigma = np.min(np.linalg.eigvalsh(Sigma))
-    omega_upper = lambda_min_sigma - 1e-3
+    omega_upper = (
+        lambda_min_sigma if omega_ref is not None else lambda_min_sigma - 1e-3
+    )
     if args.preselect_direction_policy == "both_per_pair":
         max_edges = n * (n - 1) // 2
     else:
@@ -816,6 +841,15 @@ def run_experiment(args, n, add_output_suffix):
         )
 
     Sigma_given = covariance_from_lambda_star(Lambda_star, omega_star)
+    Sigma_hat_given = None
+    if args.fit_omega_ref:
+        Sigma_hat_given = sample_empirical_covariance(
+            Sigma_given, num_samples=args.num_samples, seed=sigma_hat_sample_seed,
+        )
+    omega_ref = resolve_omega_ref(
+        Sigma_hat_given if args.fit_omega_ref else Sigma_given,
+        omega_ref, args.fit_omega_ref, args.kappa,
+    )
 
     given_output = output_path_for_dimension(
         args.given_output,
@@ -865,6 +899,8 @@ def run_experiment(args, n, add_output_suffix):
             expected_metadata={
                 "omega_star": omega_star,
                 "omega_ref": omega_ref,
+                "fit_omega_ref": args.fit_omega_ref,
+                **({"kappa": args.kappa} if args.fit_omega_ref else {}),
                 "random_seed": args.random_seed,
                 "solve_seed": given_solve_seed,
                 "fallback_seed": given_fallback_seed,
@@ -930,6 +966,8 @@ def run_experiment(args, n, add_output_suffix):
                 support_scope=args.support_scope,
                 nested_supports=args.nested_supports,
                 fit_settings=fit_settings,
+                fit_omega_ref=args.fit_omega_ref,
+                kappa=args.kappa,
                 lambda_star_support_index=lambda_star_support_index,
                 lambda_star_dimension=true_dimension,
                 lambda_star_support_edges=lambda_star_support_edges,
@@ -965,11 +1003,10 @@ def run_experiment(args, n, add_output_suffix):
         print("Skipping Sigma_hat curve because --curve sigma_given was selected.")
         return
 
-    Sigma_hat_given = sample_empirical_covariance(
-        Sigma_given,
-        num_samples=args.num_samples,
-        seed=sigma_hat_sample_seed,
-    )
+    if Sigma_hat_given is None:
+        Sigma_hat_given = sample_empirical_covariance(
+            Sigma_given, num_samples=args.num_samples, seed=sigma_hat_sample_seed,
+        )
 
     print("\nEmpirical covariance Sigma_hat from given Sigma:")
     print(Sigma_hat_given)
@@ -980,6 +1017,8 @@ def run_experiment(args, n, add_output_suffix):
         expected_metadata={
             "omega_star": omega_star,
             "omega_ref": omega_ref,
+            "fit_omega_ref": args.fit_omega_ref,
+            **({"kappa": args.kappa} if args.fit_omega_ref else {}),
             "random_seed": args.random_seed,
             "solve_seed": sigma_hat_solve_seed,
             "fallback_seed": sigma_hat_fallback_seed,
@@ -1042,6 +1081,8 @@ def run_experiment(args, n, add_output_suffix):
             nested_supports=args.nested_supports,
             lambda_star_support_index=lambda_star_support_index,
             fit_settings=fit_settings,
+            fit_omega_ref=args.fit_omega_ref,
+            kappa=args.kappa,
             lambda_star_dimension=true_dimension,
             lambda_star_support_edges=lambda_star_support_edges,
         )
@@ -1075,7 +1116,7 @@ if __name__ == "__main__":
     args = parse_args()
     if args.omega_star < 0.0:
         raise SystemExit("Error: --omega-star must be nonnegative.")
-    if args.omega_ref is None and args.refine_after_fixed_omega:
+    if args.omega_ref is None and not args.fit_omega_ref and args.refine_after_fixed_omega:
         raise SystemExit(
             "Error: --omega-ref none conflicts with "
             "--refine-after-fixed-omega true. Set "

@@ -13,6 +13,14 @@ retain their behavior. If no valid fit is found at a dimension, it and all later
 dimensions receive `Inf` objectives and invalid-support flags; no unconstrained
 search replaces the missing predecessor.
 
+To derive a fixed reference from the empirical covariance, run with
+`--omega-ref none --fit-omega-ref true`. The reference is
+`kappa * lambda_min(Sigma_hat)`, with `--kappa 0.93` by default. When both
+curves are requested, the same reference is used to fit each curve;
+`omega_star` still generates the population covariance and its samples.
+`--refine-after-fixed-omega` continues to control the final free-omega refit.
+Fixed references may equal the smallest eigenvalue of the fitted covariance.
+
 To restore independent support searches at every dimension:
 
 ```sh

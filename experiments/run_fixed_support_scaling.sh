@@ -19,6 +19,8 @@ MAX_RESTARTS="${MAX_RESTARTS:-10}"
 REFINE_AFTER_FIXED_OMEGA="${REFINE_AFTER_FIXED_OMEGA:-false}"
 OMEGA_STAR="${OMEGA_STAR:-1}"
 OMEGA_REF="${OMEGA_REF:-1}"
+FIT_OMEGA_REF="${FIT_OMEGA_REF:-false}"
+KAPPA="${KAPPA:-0.93}"
 SUPPORT_SCOPE="${SUPPORT_SCOPE:-upper}"
 NESTED_SUPPORTS="${NESTED_SUPPORTS:-true}"
 OBJECTIVE_FLOOR="${OBJECTIVE_FLOOR:-1e-8}"
@@ -85,6 +87,8 @@ run_trial() {
             --refine-after-fixed-omega "${REFINE_AFTER_FIXED_OMEGA}" \
             --omega-star "${OMEGA_STAR}" \
             --omega-ref "${OMEGA_REF}" \
+            --fit-omega-ref "${FIT_OMEGA_REF}" \
+            --kappa "${KAPPA}" \
             2>&1 | tee "${trial_dir}/compute.log"
 
     python experiments/select_scaling_parameter.py \
