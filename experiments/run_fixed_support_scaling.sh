@@ -30,13 +30,19 @@ BOOTSTRAP_ALPHA="${BOOTSTRAP_ALPHA:-0.05}"
 BOOTSTRAP_SEED="${BOOTSTRAP_SEED:-20260913}"
 COMMAND="${1:-run-all}"
 if [[ "${COMMAND}" == "reselect" ]]; then
-    OUTPUT_ROOT="${2:-${OUTPUT_ROOT:-experiments/output/fixed_support_scaling_n4_omega_ref_eq_star_reselect}}"
+    OUTPUT_ROOT="${2:-${OUTPUT_ROOT:-experiments/output/fixed_support_scaling_n4_omega_ref_eq_star}}"
 else
     OUTPUT_ROOT="${OUTPUT_ROOT:-experiments/output/fixed_support_scaling_n${N}}"
 fi
 N_JOBS="${N_JOBS:-${SLURM_CPUS_PER_TASK:-${NSLOTS:-8}}}"
-TRIALS_PATH="${OUTPUT_ROOT}/selection_trials.csv"
-TABLE_PATH="${OUTPUT_ROOT}/selection_summary.md"
+RESELECT_ROOT="${OUTPUT_ROOT}/reselect_lm_support_count_plateau"
+if [[ "${COMMAND}" == "reselect" ]]; then
+    TRIALS_PATH="${RESELECT_ROOT}/selection_trials.csv"
+    TABLE_PATH="${RESELECT_ROOT}/selection_summary.md"
+else
+    TRIALS_PATH="${OUTPUT_ROOT}/selection_trials.csv"
+    TABLE_PATH="${OUTPUT_ROOT}/selection_summary.md"
+fi
 NUM_SAMPLE_VALUES=(100 1000 10000 1000000)
 
 if [[ ! "${N}" =~ ^[0-9]+$ ]] || ((N < 2)); then
@@ -59,6 +65,7 @@ Usage: $(basename "$0") [run-all | reselect [OUTPUT_FOLDER]]
             select with Lm equal to the number of available supports at each
             dimension, and summarize. Uses up to N_JOBS concurrent trials,
             with one curve-only selection per trial. Does not recompute curves.
+            Writes selections and summaries under OUTPUT_ROOT/reselect_lm_support_count_plateau.
             Default folder: experiments/output/fixed_support_scaling_n4_omega_ref_eq_star
 EOF
 }
@@ -88,6 +95,7 @@ run_trial() {
     local random_seed="$2"
     local selection_only="${3:-false}"
     local trial_dir="${OUTPUT_ROOT}/num_samples_${num_samples}/seed_${random_seed}"
+    local result_dir="${trial_dir}"
     local curve_path="${trial_dir}/objective_curve_sigma_hat.npz"
     local selection_log="${trial_dir}/selection_plateau_bootstrap.log"
     local selection_json="${trial_dir}/selection_plateau_bootstrap.json"
@@ -100,9 +108,11 @@ run_trial() {
 
     if [[ "${selection_only}" == "true" ]]; then
         [[ -f "${curve_path}" ]] || { echo "Missing saved curve: ${curve_path}" >&2; return 1; }
+        result_dir="${RESELECT_ROOT}/num_samples_${num_samples}/seed_${random_seed}"
+        mkdir -p "${result_dir}"
         selection_options+=(--lm-mode support-count)
-        selection_log="${trial_dir}/selection_plateau.log"
-        selection_json="${trial_dir}/selection_plateau.json"
+        selection_log="${result_dir}/selection_plateau.log"
+        selection_json="${result_dir}/selection_plateau.json"
         selection_method="plateau"
         selection_jobs=1
         echo "Reusing saved objective curve: ${curve_path}"
@@ -153,7 +163,7 @@ run_trial() {
     fi
     printf '%s,%s,%s,%s,%s\n' \
         "${num_samples}" "${random_seed}" "${selected_dimension}" "${precision}" "${exact}" \
-        > "${trial_dir}/result.csv"
+        > "${result_dir}/result.csv"
 }
 
 reselect_all() {
@@ -225,6 +235,7 @@ reselect_all() {
     python experiments/summarize_fixed_support_scaling.py \
         "${OUTPUT_ROOT}" --sample-sizes "${sample_sizes[@]}" \
         --expected-seeds "${expected_seeds}" \
+        --selection-root "${RESELECT_ROOT}" \
         --selection-file selection_plateau.json \
         --trials-output "${TRIALS_PATH}" --summary-output "${TABLE_PATH}"
     echo "Trial results: ${TRIALS_PATH}"
