@@ -28,7 +28,13 @@ TOP_PLATEAUS="${TOP_PLATEAUS:-3}"
 BOOTSTRAP_REPLICATES="${BOOTSTRAP_REPLICATES:-199}"
 BOOTSTRAP_ALPHA="${BOOTSTRAP_ALPHA:-0.05}"
 BOOTSTRAP_SEED="${BOOTSTRAP_SEED:-20260913}"
-OUTPUT_ROOT="${OUTPUT_ROOT:-experiments/output/fixed_support_scaling_n${N}}"
+COMMAND="${1:-run-all}"
+if [[ "${COMMAND}" == "reselect" ]]; then
+    OUTPUT_ROOT="${2:-${OUTPUT_ROOT:-experiments/output/fixed_support_scaling_n4_omega_ref_eq_star_reselect}}"
+else
+    OUTPUT_ROOT="${OUTPUT_ROOT:-experiments/output/fixed_support_scaling_n${N}}"
+fi
+N_JOBS="${N_JOBS:-${SLURM_CPUS_PER_TASK:-${NSLOTS:-8}}}"
 TRIALS_PATH="${OUTPUT_ROOT}/selection_trials.csv"
 TABLE_PATH="${OUTPUT_ROOT}/selection_summary.md"
 NUM_SAMPLE_VALUES=(100 1000 10000 1000000)
@@ -37,13 +43,29 @@ if [[ ! "${N}" =~ ^[0-9]+$ ]] || ((N < 2)); then
     echo "Error: N must be an integer of at least 2." >&2
     exit 2
 fi
-if [[ ! "${TOTAL_CPUS}" =~ ^[0-9]+$ || ! "${CPUS_PER_TRIAL}" =~ ^[0-9]+$ ]] \
-    || ((TOTAL_CPUS < CPUS_PER_TRIAL || CPUS_PER_TRIAL < 1)); then
+if [[ "${COMMAND}" != "reselect" ]] &&
+    { [[ ! "${TOTAL_CPUS}" =~ ^[0-9]+$ || ! "${CPUS_PER_TRIAL}" =~ ^[0-9]+$ ]] \
+    || ((TOTAL_CPUS < CPUS_PER_TRIAL || CPUS_PER_TRIAL < 1)); }; then
     echo "Error: TOTAL_CPUS and CPUS_PER_TRIAL must be positive integers, with TOTAL_CPUS >= CPUS_PER_TRIAL." >&2
     exit 2
 fi
 
-mkdir -p "${OUTPUT_ROOT}"
+usage() {
+    cat <<EOF
+Usage: $(basename "$0") [run-all | reselect [OUTPUT_FOLDER]]
+
+  run-all   Compute curves, select dimensions, and summarize (default).
+  reselect  Discover saved num_samples_*/seed_* curves under OUTPUT_ROOT,
+            select with Lm equal to the number of available supports at each
+            dimension, and summarize. Uses up to N_JOBS concurrent trials,
+            with one curve-only selection per trial. Does not recompute curves.
+            Default folder: experiments/output/fixed_support_scaling_n4_omega_ref_eq_star
+EOF
+}
+
+if [[ "${COMMAND}" == "run-all" ]]; then
+    mkdir -p "${OUTPUT_ROOT}"
+fi
 
 task_num_samples=()
 task_seeds=()
@@ -64,17 +86,31 @@ done
 run_trial() {
     local num_samples="$1"
     local random_seed="$2"
+    local selection_only="${3:-false}"
     local trial_dir="${OUTPUT_ROOT}/num_samples_${num_samples}/seed_${random_seed}"
     local curve_path="${trial_dir}/objective_curve_sigma_hat.npz"
     local selection_log="${trial_dir}/selection_plateau_bootstrap.log"
+    local selection_json="${trial_dir}/selection_plateau_bootstrap.json"
+    local selection_method="plateau-bootstrap"
     local selected_dimension
     local precision
     local exact=false
-    mkdir -p "${trial_dir}"
+    local selection_options=()
+    local selection_jobs="${CPUS_PER_TRIAL}"
 
-    echo
-    echo "=== n=${N}; num_samples=${num_samples}; seed=${random_seed}; CPUs=${CPUS_PER_TRIAL} ==="
-    python experiments/compute_objective_curve.py \
+    if [[ "${selection_only}" == "true" ]]; then
+        [[ -f "${curve_path}" ]] || { echo "Missing saved curve: ${curve_path}" >&2; return 1; }
+        selection_options+=(--lm-mode support-count)
+        selection_log="${trial_dir}/selection_plateau.log"
+        selection_json="${trial_dir}/selection_plateau.json"
+        selection_method="plateau"
+        selection_jobs=1
+        echo "Reusing saved objective curve: ${curve_path}"
+    else
+        mkdir -p "${trial_dir}"
+        echo
+        echo "=== n=${N}; num_samples=${num_samples}; seed=${random_seed}; CPUs=${CPUS_PER_TRIAL} ==="
+        python experiments/compute_objective_curve.py \
             --curve sigma_hat \
             --sigma-hat-output "${curve_path}" \
             --lambda-star-dims "${N}" \
@@ -90,21 +126,27 @@ run_trial() {
             --fit-omega-ref "${FIT_OMEGA_REF}" \
             --kappa "${KAPPA}" \
             2>&1 | tee "${trial_dir}/compute.log"
+        selection_options+=(--top-plateaus "${TOP_PLATEAUS}"
+            --bootstrap-replicates "${BOOTSTRAP_REPLICATES}"
+            --bootstrap-alpha "${BOOTSTRAP_ALPHA}"
+            --bootstrap-seed "${BOOTSTRAP_SEED}")
+    fi
 
     python experiments/select_scaling_parameter.py \
             "${curve_path}" \
-            --method plateau-bootstrap \
+            --method "${selection_method}" \
             --objective-floor "${OBJECTIVE_FLOOR}" \
-            --top-plateaus "${TOP_PLATEAUS}" \
-            --bootstrap-replicates "${BOOTSTRAP_REPLICATES}" \
-            --bootstrap-alpha "${BOOTSTRAP_ALPHA}" \
-            --bootstrap-seed "${BOOTSTRAP_SEED}" \
-            --n-jobs "${CPUS_PER_TRIAL}" \
-            --output-json "${trial_dir}/selection_plateau_bootstrap.json" \
+            --n-jobs "${selection_jobs}" \
+            "${selection_options[@]}" \
+            --output-json "${selection_json}" \
             2>&1 | tee "${selection_log}"
 
-    selected_dimension="$(awk -F ': ' '$1 == "Selected dimension" {print $2}' "${selection_log}" | tail -n 1)"
-    precision="$(awk -F ': ' '$1 == "Selected support precision" {print $2}' "${selection_log}" | tail -n 1)"
+    selected_dimension="$(awk -F ': ' '$1 == "Selected dimension" || $1 == "Selected dimension at recommended scale" {print $2}' "${selection_log}" | tail -n 1)"
+    if [[ ! "${selected_dimension}" =~ ^[0-9]+$ ]]; then
+        echo "Error: could not parse selected dimension from ${selection_log}" >&2
+        return 1
+    fi
+    precision="$(python -c 'import json,sys; p=json.load(open(sys.argv[1])); print(p["precision"] if p["precision"] is not None else 0)' "${selection_json}")"
     precision="${precision:-0}"
     if [[ "${selected_dimension}" == "${N}" ]] && awk -v p="${precision}" 'BEGIN {exit !(p == 1)}'; then
         exact=true
@@ -113,6 +155,100 @@ run_trial() {
         "${num_samples}" "${random_seed}" "${selected_dimension}" "${precision}" "${exact}" \
         > "${trial_dir}/result.csv"
 }
+
+reselect_all() {
+    local trial_dir sample_dir num_samples random_seed worker_count worker task worker_pid
+    local worker_failed=0 expected_seeds=0
+    local trial_dirs=() sample_sizes=() worker_pids=()
+
+    if [[ ! "${N_JOBS}" =~ ^[1-9][0-9]*$ ]]; then
+        echo "Error: N_JOBS must be a positive integer." >&2
+        return 2
+    fi
+    for sample_dir in "${OUTPUT_ROOT}"/num_samples_*; do
+        [[ -d "${sample_dir}" ]] || continue
+        num_samples="${sample_dir##*/num_samples_}"
+        if [[ ! "${num_samples}" =~ ^[0-9]+$ ]]; then
+            echo "Error: invalid sample directory: ${sample_dir}" >&2
+            return 1
+        fi
+        local seed_count=0
+        for trial_dir in "${sample_dir}"/seed_*; do
+            [[ -d "${trial_dir}" ]] || continue
+            random_seed="${trial_dir##*/seed_}"
+            if [[ ! "${random_seed}" =~ ^[0-9]+$ || ! -f "${trial_dir}/objective_curve_sigma_hat.npz" ]]; then
+                echo "Error: invalid trial or missing saved curve: ${trial_dir}" >&2
+                return 1
+            fi
+            trial_dirs+=("${trial_dir}")
+            seed_count=$((seed_count + 1))
+        done
+        if ((seed_count > 0)); then
+            sample_sizes+=("${num_samples}")
+            if ((expected_seeds == 0)); then
+                expected_seeds="${seed_count}"
+            elif ((seed_count != expected_seeds)); then
+                echo "Error: ${sample_dir} has ${seed_count} seeds; expected ${expected_seeds}." >&2
+                return 1
+            fi
+        fi
+    done
+    if ((${#trial_dirs[@]} == 0)); then
+        echo "Error: no saved trials found under ${OUTPUT_ROOT}." >&2
+        return 1
+    fi
+
+    worker_count="${N_JOBS}"
+    if ((worker_count > ${#trial_dirs[@]})); then
+        worker_count="${#trial_dirs[@]}"
+    fi
+    echo "Reselecting ${#trial_dirs[@]} saved curves with ${worker_count} concurrent workers."
+    for ((worker = 0; worker < worker_count; worker++)); do
+        (
+            for ((task = worker; task < ${#trial_dirs[@]}; task += worker_count)); do
+                trial_dir="${trial_dirs[task]}"
+                sample_dir="${trial_dir%/*}"
+                run_trial "${sample_dir##*/num_samples_}" "${trial_dir##*/seed_}" true
+            done
+        ) &
+        worker_pids+=("$!")
+    done
+    for worker_pid in "${worker_pids[@]}"; do
+        if ! wait "${worker_pid}"; then
+            worker_failed=1
+        fi
+    done
+    if ((worker_failed)); then
+        echo "Error: a reselect worker failed; summary generation was skipped." >&2
+        return 1
+    fi
+    python experiments/summarize_fixed_support_scaling.py \
+        "${OUTPUT_ROOT}" --sample-sizes "${sample_sizes[@]}" \
+        --expected-seeds "${expected_seeds}" \
+        --selection-file selection_plateau.json \
+        --trials-output "${TRIALS_PATH}" --summary-output "${TABLE_PATH}"
+    echo "Trial results: ${TRIALS_PATH}"
+    echo "Summary table: ${TABLE_PATH}"
+}
+
+case "${COMMAND}" in
+    reselect)
+        (($# <= 2)) || { usage >&2; exit 2; }
+        reselect_all
+        exit $?
+        ;;
+    run-all)
+        (($# <= 1)) || { usage >&2; exit 2; }
+        ;;
+    -h|--help|help)
+        usage
+        exit 0
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+esac
 
 worker_count="$((TOTAL_CPUS / CPUS_PER_TRIAL))"
 if ((worker_count > ${#task_seeds[@]})); then

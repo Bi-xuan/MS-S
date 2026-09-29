@@ -15,6 +15,7 @@ from experiments.select_scaling_parameter import (
     floor_objective_values,
     load_selection_inputs,
 )
+from penalty import pen_n
 from scaling_selection import (
     DimensionPath,
     adaptive_window,
@@ -83,6 +84,45 @@ def test_loading_floors_raw_objectives_but_not_penalties(tmp_path):
     assert selection_data["num_floored_objectives"] == 2
     assert np.all(selection_data["penalty_values"] > 0.0)
     assert np.all(np.diff(selection_data["penalty_values"]) > 0.0)
+
+
+def test_support_count_lm_uses_available_upper_supports_at_each_dimension(tmp_path):
+    input_path = tmp_path / "curve.npz"
+    dimensions = np.arange(1, 8)
+    np.savez(
+        input_path, d_m_values=dimensions,
+        objective_values=np.arange(7, 0, -1, dtype=float),
+        Sigma=np.eye(4), n=4, num_samples=100,
+        support_scope="upper", curve_type="test_curve",
+    )
+    args = Namespace(objective_floor=1e-8, num_samples=None, r=1.0,
+                     Lm=1.0, L=1.0, xi=10.0, lm_mode="support-count")
+
+    selection_data = load_selection_inputs(input_path, args)
+
+    np.testing.assert_array_equal(selection_data["lm_values"],
+                                  [1, 6, 15, 20, 15, 6, 1])
+    np.testing.assert_allclose(
+        selection_data["penalty_values"],
+        [pen_n(float(d), selection_data["constants"], Lm=float(lm))
+         for d, lm in zip(dimensions, selection_data["lm_values"])],
+    )
+
+
+def test_plateau_path_allows_decreasing_support_count_penalties():
+    dimensions = [1, 2, 3]
+    objectives = [3.0, 2.0, 1.0]
+    penalties = [1.0, 3.0, 2.0]
+
+    with pytest.raises(ValueError, match="nondecreasing"):
+        build_dimension_path(dimensions, objectives, penalties)
+
+    path = build_dimension_path(dimensions, objectives, penalties,
+                                require_monotonic_penalty=False)
+    for scale in (0.0, 1.0, 3.0, 10.0):
+        expected = dimensions[int(np.argmin(np.asarray(objectives) +
+                                            scale * np.asarray(penalties)))]
+        assert path.dimension_at(scale) == expected
 
 
 def test_recommendation_factor_controls_recommended_scale_and_dimension():

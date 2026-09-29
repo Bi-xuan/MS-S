@@ -115,3 +115,24 @@ individual trial; `reselect` parallelizes trials with one refit worker each.
 After upgrading an existing study, rerun `reselect` across its saved nested
 curves to refresh all CSV headers before aggregation. Selection does not
 reconstruct older unrestricted curves automatically.
+
+# Reselect fixed-support curves without fitting
+
+```sh
+N_JOBS=8 bash experiments/run_fixed_support_scaling.sh reselect
+```
+
+This reads existing `num_samples_*/seed_*/objective_curve_sigma_hat.npz` files
+from `experiments/output/fixed_support_scaling_n4_omega_ref_eq_star` by default.
+Pass another folder after `reselect`, or set `OUTPUT_ROOT`, to change the input.
+It runs up to `N_JOBS` curve-only
+`plateau` selections concurrently, then updates `selection_trials.csv` and
+`selection_summary.md`. It saves `selection_plateau.log` and
+`selection_plateau.json` beside each curve; the saved curves and prior
+`plateau-bootstrap` reports are left intact.
+
+For each candidate dimension `D_m`, this reselect uses `Lm` equal to the number
+of available supports with `D_m - 1` edges. For an `n=4` upper-triangular
+curve, the values are `C(6, D_m - 1)`, or `1, 6, 15, 20, 15, 6, 1` for
+dimensions 1 through 7. The same rule is available directly with
+`select_scaling_parameter.py --lm-mode support-count`.

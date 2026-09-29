@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from dataclasses import asdict
 import json
+from math import comb
 from pathlib import Path
 import sys
 
@@ -55,11 +56,39 @@ def floor_objective_values(objective_values, objective_floor):
     return floored_values, floored_mask
 
 
-def compute_penalty_values(d_m_values, constants):
+def support_counts_by_dimension(d_m_values, data):
+    """Count candidate supports of each size in the saved search space."""
+
+    scope = scalar_value(data, "support_scope")
+    n = int(scalar_value(data, "n", data["Sigma"].shape[0]))
+    if scope == "upper":
+        edge_count = n * (n - 1) // 2
+    elif scope == "all":
+        edge_count = (len(data["preselected_edges"])
+                      if "preselected_edges" in data and len(data["preselected_edges"]) > 0
+                      else n * (n - 1))
+    else:
+        raise ValueError(f"Support-count Lm does not support scope {scope!r}.")
+
+    counts = []
+    for dimension in d_m_values:
+        if not np.isfinite(dimension) or dimension != int(dimension):
+            raise ValueError("Support-count Lm requires integer dimensions.")
+        selected_edges = int(dimension) - 1
+        if not 0 <= selected_edges <= edge_count:
+            raise ValueError(f"Dimension {dimension} is outside the saved support space.")
+        counts.append(comb(edge_count, selected_edges))
+    return np.asarray(counts, dtype=float)
+
+
+def compute_penalty_values(d_m_values, constants, lm_values=None):
     """Compute the unscaled theorem penalty for every candidate dimension."""
 
+    if lm_values is None:
+        lm_values = np.full(len(d_m_values), constants.Lm)
     return np.asarray(
-        [pen_n(float(d_m), constants) for d_m in d_m_values],
+        [pen_n(float(d_m), constants, Lm=float(lm))
+         for d_m, lm in zip(d_m_values, lm_values)],
         dtype=float,
     )
 
@@ -79,6 +108,10 @@ def load_selection_inputs(input_path, args):
         raw_objective_values = data["objective_values"].copy()
         constants = build_penalty_constants(data, args)
         curve_type = scalar_value(data, "curve_type", "objective curve")
+        lm_mode = getattr(args, "lm_mode", "constant")
+        lm_values = (support_counts_by_dimension(d_m_values, data)
+                     if lm_mode == "support-count" else
+                     np.full(len(d_m_values), constants.Lm))
 
     objective_floor = getattr(
         args,
@@ -89,7 +122,7 @@ def load_selection_inputs(input_path, args):
         raw_objective_values,
         objective_floor,
     )
-    penalty_values = compute_penalty_values(d_m_values, constants)
+    penalty_values = compute_penalty_values(d_m_values, constants, lm_values)
     return {
         "d_m_values": d_m_values,
         "raw_objective_values": raw_objective_values,
@@ -97,6 +130,8 @@ def load_selection_inputs(input_path, args):
         "objective_floor": float(objective_floor),
         "num_floored_objectives": int(np.count_nonzero(floored_mask)),
         "penalty_values": penalty_values,
+        "lm_mode": lm_mode,
+        "lm_values": lm_values,
         "constants": constants,
         "curve_type": curve_type,
     }
@@ -129,6 +164,10 @@ def report_selection(input_path, selection_data, result):
     print(f"Curve type: {selection_data['curve_type']}")
     print(f"Matrix dimension: {constants.n}")
     print(f"Number of samples: {constants.num_samples}")
+    if selection_data["lm_mode"] == "support-count":
+        print("Lm by dimension (available supports): " + ", ".join(
+            f"{int(d)}:{int(lm)}" for d, lm in zip(
+                selection_data["d_m_values"], selection_data["lm_values"])))
     print(f"Raw-objective floor: {selection_data['objective_floor']:.12g}")
     print(
         "Raw objectives tied at zero: "
@@ -172,6 +211,48 @@ def report_selection(input_path, selection_data, result):
         )
 
 
+def write_curve_selection_json(input_path, selection_data, result, output_path):
+    """Save a curve-only selection with its selected support for summaries."""
+
+    with np.load(input_path) as data:
+        if "selected_support_masks" not in data:
+            raise ValueError("Saved support masks are required for selection JSON.")
+        dimensions = selection_data["d_m_values"]
+        selected_indices = np.flatnonzero(dimensions == result.selected_dimension)
+        if len(selected_indices) != 1:
+            raise ValueError("Selected dimension is not unique in the saved curve.")
+        if "selected_support_valid" in data and not data["selected_support_valid"][selected_indices[0]]:
+            raise ValueError("Selected dimension has no valid saved support.")
+        mask = np.asarray(data["selected_support_masks"][selected_indices[0]], dtype=bool)
+        scope = scalar_value(data, "support_scope", "all")
+        off_diagonal = mask & ~np.eye(len(mask), dtype=bool)
+        if scope == "upper":
+            off_diagonal = np.triu(off_diagonal, k=1)
+        edges = [[int(i), int(j)] for i, j in np.argwhere(off_diagonal)]
+        true_support = (np.abs(data["Lambda_star"]) > 1e-10
+                        if "Lambda_star" in data else None)
+    precision = None
+    if true_support is not None:
+        precision = (sum(bool(true_support[i, j]) for i, j in edges) / len(edges)
+                     if edges else 0.0)
+    output_path = Path(output_path)
+    if output_path.resolve() == input_path.resolve():
+        raise ValueError("The JSON output must not overwrite the input curve.")
+    payload = {
+        "input": str(input_path), "method": result.method,
+        "selected_dimension": int(result.selected_dimension),
+        "selected_edges": edges, "precision": precision,
+        "objective_floor": selection_data["objective_floor"],
+        "Lm_mode": selection_data["lm_mode"],
+        "Lm": (selection_data["constants"].Lm
+               if selection_data["lm_mode"] == "constant"
+               else selection_data["lm_values"].tolist()),
+    }
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(payload, indent=2, allow_nan=False) + "\n")
+    print(f"Saved selection report: {output_path}")
+
+
 def run(args):
     """Load one dataset, select its scale, and report the result."""
 
@@ -182,6 +263,7 @@ def run(args):
             selection_data["d_m_values"],
             selection_data["objective_values"],
             selection_data["penalty_values"],
+            require_monotonic_penalty=selection_data["lm_mode"] != "support-count",
         )
         print(f"Scaling-selection input is valid: {input_path}")
         return None
@@ -201,8 +283,12 @@ def run(args):
             "recommendation_factor",
             DEFAULT_RECOMMENDATION_FACTOR,
         ),
+        require_monotonic_penalty=selection_data["lm_mode"] != "support-count"
+        or args.method == "window",
     )
     report_selection(input_path, selection_data, result)
+    if args.output_json:
+        write_curve_selection_json(input_path, selection_data, result, args.output_json)
     return result
 
 
@@ -250,7 +336,9 @@ def run_bootstrap(input_path, selection_data, args):
             raise ValueError("The JSON output must not overwrite the input curve.")
         payload = asdict(result)
         payload.update(input=str(input_path), objective_floor=selection_data["objective_floor"],
-                       Lm=selection_data["constants"].Lm)
+                       Lm=selection_data["constants"].Lm if selection_data["lm_mode"] == "constant"
+                       else selection_data["lm_values"].tolist(),
+                       Lm_mode=selection_data["lm_mode"])
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(payload, indent=2, allow_nan=False) + "\n")
         print(f"Saved bootstrap report: {output}")
@@ -294,7 +382,7 @@ def parse_args(argv=None):
                         help="Parallel bootstrap refit workers. Default: 1.")
     parser.add_argument("--fit-max-restarts", type=int,
                         help="Override saved restart count (legacy curves default to 10).")
-    parser.add_argument("--output-json", help="Write the plateau-bootstrap result and all bootstrap gains to JSON.")
+    parser.add_argument("--output-json", help="Write the selected dimension and support to JSON (plus bootstrap diagnostics when applicable).")
     parser.add_argument(
         "--eta",
         type=float,
@@ -346,6 +434,10 @@ def parse_args(argv=None):
         type=float,
         default=1.0,
         help="Model entropy weight Lm. Default: 1.",
+    )
+    parser.add_argument(
+        "--lm-mode", choices=("constant", "support-count"), default="constant",
+        help="Use a constant Lm or the number of supports at each D_m. Default: constant.",
     )
     parser.add_argument(
         "--L",

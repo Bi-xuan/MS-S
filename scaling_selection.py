@@ -165,7 +165,8 @@ def _positive_float(value, name: str) -> float:
     return value
 
 
-def _validate_inputs(d_m_values, objective_values, penalty_values):
+def _validate_inputs(d_m_values, objective_values, penalty_values,
+                     *, require_monotonic_penalty=True):
     dimensions_original = np.asarray(d_m_values)
     try:
         dimensions = np.asarray(d_m_values, dtype=float)
@@ -204,7 +205,7 @@ def _validate_inputs(d_m_values, objective_values, penalty_values):
         raise ValueError("At least one objective value must be finite.")
 
     dimension_order = np.argsort(dimensions)
-    if np.any(np.diff(penalties[dimension_order]) < 0.0):
+    if require_monotonic_penalty and np.any(np.diff(penalties[dimension_order]) < 0.0):
         raise ValueError(
             "penalty_values must be nondecreasing with model dimension."
         )
@@ -228,6 +229,8 @@ def build_dimension_path(
     d_m_values,
     objective_values,
     penalty_values,
+    *,
+    require_monotonic_penalty=True,
 ) -> DimensionPath:
     """Build the exact lower-envelope path of selected dimensions.
 
@@ -237,9 +240,10 @@ def build_dimension_path(
 
     The returned path is exact up to floating-point arithmetic and therefore
     does not depend on a user-chosen grid of ``C`` values.  Non-finite
-    objective values are excluded.  Penalties must be nondecreasing with
-    model dimension so that the selected-complexity path has the interpretation
-    required by the jump procedures.
+    objective values are excluded. By default penalties must be
+    nondecreasing with model dimension so that the selected-complexity path
+    has the interpretation required by the jump procedures. Plateau screening
+    can disable this check for dimension-dependent penalties.
     """
 
     (
@@ -248,7 +252,8 @@ def build_dimension_path(
         objectives,
         penalties,
         finite_objectives,
-    ) = _validate_inputs(d_m_values, objective_values, penalty_values)
+    ) = _validate_inputs(d_m_values, objective_values, penalty_values,
+                         require_monotonic_penalty=require_monotonic_penalty)
 
     eligible_indices = np.flatnonzero(finite_objectives)
     # For identical penalty slopes, only the smallest-intercept line can be
@@ -710,6 +715,7 @@ def select_minimal_scale(
     method: str = "window",
     eta: float | None = None,
     recommendation_factor: float = DEFAULT_RECOMMENDATION_FACTOR,
+    require_monotonic_penalty: bool = True,
 ) -> ScalingSelection:
     """Estimate a minimal-penalty scale and report the recommended scale.
 
@@ -750,6 +756,7 @@ def select_minimal_scale(
         d_m_values,
         objective_values,
         penalty_values,
+        require_monotonic_penalty=require_monotonic_penalty,
     )
 
     resolved_eta = None

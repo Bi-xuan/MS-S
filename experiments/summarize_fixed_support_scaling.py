@@ -179,6 +179,7 @@ def collect_trials(
     input_dir: Path,
     sample_sizes: tuple[int, ...],
     expected_seeds: int,
+    selection_file: str = "selection_plateau_bootstrap.json",
 ) -> list[TrialSummary]:
     """Collect validated trials in sample-size and numeric-seed order."""
 
@@ -204,7 +205,7 @@ def collect_trials(
             trials.append(
                 _load_trial(
                     seed_dir / "objective_curve_sigma_hat.npz",
-                    seed_dir / "selection_plateau_bootstrap.json",
+                    seed_dir / selection_file,
                     num_samples,
                     random_seed,
                 )
@@ -304,6 +305,11 @@ def parse_args() -> argparse.Namespace:
         help="Required number of seeds per sample size (default: %(default)s)",
     )
     parser.add_argument(
+        "--selection-file",
+        default="selection_plateau_bootstrap.json",
+        help="Selection JSON filename within each seed directory.",
+    )
+    parser.add_argument(
         "--trials-output",
         type=Path,
         default=None,
@@ -330,7 +336,8 @@ def main() -> None:
 
     trials_output = args.trials_output or args.input_dir / "selection_trials.csv"
     summary_output = args.summary_output or args.input_dir / "selection_summary.md"
-    trials = collect_trials(args.input_dir, sample_sizes, args.expected_seeds)
+    trials = collect_trials(args.input_dir, sample_sizes, args.expected_seeds,
+                            args.selection_file)
     write_trials_csv(trials, trials_output)
     write_markdown_summary(
         trials,
