@@ -86,7 +86,8 @@ def test_loading_floors_raw_objectives_but_not_penalties(tmp_path):
     assert np.all(np.diff(selection_data["penalty_values"]) > 0.0)
 
 
-def test_support_count_lm_uses_available_upper_supports_at_each_dimension(tmp_path):
+@pytest.mark.parametrize("lm_weight", [1.0, 0.1])
+def test_support_count_lm_uses_available_upper_supports_at_each_dimension(tmp_path, lm_weight):
     input_path = tmp_path / "curve.npz"
     dimensions = np.arange(1, 8)
     np.savez(
@@ -96,12 +97,12 @@ def test_support_count_lm_uses_available_upper_supports_at_each_dimension(tmp_pa
         support_scope="upper", curve_type="test_curve",
     )
     args = Namespace(objective_floor=1e-8, num_samples=None, r=1.0,
-                     Lm=1.0, L=1.0, xi=10.0, lm_mode="support-count")
+                     Lm=lm_weight, L=1.0, xi=10.0, lm_mode="support-count")
 
     selection_data = load_selection_inputs(input_path, args)
 
-    np.testing.assert_array_equal(selection_data["lm_values"],
-                                  [1, 6, 15, 20, 15, 6, 1])
+    np.testing.assert_allclose(selection_data["lm_values"],
+                               lm_weight * np.array([1, 6, 15, 20, 15, 6, 1]))
     np.testing.assert_allclose(
         selection_data["penalty_values"],
         [pen_n(float(d), selection_data["constants"], Lm=float(lm))

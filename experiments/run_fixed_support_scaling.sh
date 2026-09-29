@@ -26,6 +26,7 @@ KAPPA="${KAPPA:-0.93}"
 SUPPORT_SCOPE="${SUPPORT_SCOPE:-upper}"
 NESTED_SUPPORTS="${NESTED_SUPPORTS:-true}"
 OBJECTIVE_FLOOR="${OBJECTIVE_FLOOR:-1e-8}"
+LM_WEIGHT="${LM_WEIGHT:-0.1}"
 TOP_PLATEAUS="${TOP_PLATEAUS:-3}"
 BOOTSTRAP_REPLICATES="${BOOTSTRAP_REPLICATES:-199}"
 BOOTSTRAP_ALPHA="${BOOTSTRAP_ALPHA:-0.05}"
@@ -69,8 +70,9 @@ Usage: $(basename "$0") [run-all | reselect [OUTPUT_FOLDER]]
 
   run-all   Compute curves, select dimensions, and summarize (default).
   reselect  Discover saved num_samples_*/seed_* curves under OUTPUT_ROOT,
-            select with Lm equal to the number of available supports at each
-            dimension, and summarize. Uses up to N_JOBS concurrent trials,
+            select with Lm equal to LM_WEIGHT times the number of available
+            supports at each dimension, and summarize. LM_WEIGHT defaults to
+            0.1. Uses up to N_JOBS concurrent trials,
             with one curve-only selection per trial. Does not recompute curves.
             Writes selections and summaries under OUTPUT_ROOT/reselect_lm_support_count_plateau.
             Default folder: experiments/output/fixed_support_scaling_n4_omega_ref_eq_star
@@ -117,7 +119,7 @@ run_trial() {
         [[ -f "${curve_path}" ]] || { echo "Missing saved curve: ${curve_path}" >&2; return 1; }
         result_dir="${RESELECT_ROOT}/num_samples_${num_samples}/seed_${random_seed}"
         mkdir -p "${result_dir}"
-        selection_options+=(--lm-mode support-count)
+        selection_options+=(--lm-mode support-count --Lm "${LM_WEIGHT}")
         selection_log="${result_dir}/selection_plateau.log"
         selection_json="${result_dir}/selection_plateau.json"
         selection_method="plateau"

@@ -131,8 +131,10 @@ files go under `OUTPUT_ROOT/reselect_lm_support_count_plateau/`: each trial has
 subfolder root has `selection_trials.csv` and `selection_summary.md`. The
 original curves, trial results, summaries, and bootstrap reports remain intact.
 
-For each candidate dimension `D_m`, this reselect uses `Lm` equal to the number
-of available supports with `D_m - 1` edges. For an `n=4` upper-triangular
-curve, the values are `C(6, D_m - 1)`, or `1, 6, 15, 20, 15, 6, 1` for
-dimensions 1 through 7. The same rule is available directly with
-`select_scaling_parameter.py --lm-mode support-count`.
+For each candidate dimension `D_m`, this reselect uses `Lm` equal to
+`LM_WEIGHT` times the number of available supports with `D_m - 1` edges.
+`LM_WEIGHT` defaults to `0.1` and can be set in the environment. For an
+`n=4` upper-triangular curve, the support counts are `C(6, D_m - 1)`, or
+`1, 6, 15, 20, 15, 6, 1` for dimensions 1 through 7. The same rule is
+available directly with `select_scaling_parameter.py --lm-mode support-count
+--Lm 0.1`.

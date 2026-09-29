@@ -109,7 +109,7 @@ def load_selection_inputs(input_path, args):
         constants = build_penalty_constants(data, args)
         curve_type = scalar_value(data, "curve_type", "objective curve")
         lm_mode = getattr(args, "lm_mode", "constant")
-        lm_values = (support_counts_by_dimension(d_m_values, data)
+        lm_values = (constants.Lm * support_counts_by_dimension(d_m_values, data)
                      if lm_mode == "support-count" else
                      np.full(len(d_m_values), constants.Lm))
 
@@ -165,8 +165,8 @@ def report_selection(input_path, selection_data, result):
     print(f"Matrix dimension: {constants.n}")
     print(f"Number of samples: {constants.num_samples}")
     if selection_data["lm_mode"] == "support-count":
-        print("Lm by dimension (available supports): " + ", ".join(
-            f"{int(d)}:{int(lm)}" for d, lm in zip(
+        print("Lm by dimension (weighted available supports): " + ", ".join(
+            f"{int(d)}:{lm:g}" for d, lm in zip(
                 selection_data["d_m_values"], selection_data["lm_values"])))
     print(f"Raw-objective floor: {selection_data['objective_floor']:.12g}")
     print(
@@ -433,7 +433,7 @@ def parse_args(argv=None):
         dest="Lm",
         type=float,
         default=1.0,
-        help="Model entropy weight Lm. Default: 1.",
+        help="Constant Lm, or multiplier for support-count Lm. Default: 1.",
     )
     parser.add_argument(
         "--lm-mode", choices=("constant", "support-count"), default="constant",
