@@ -21,6 +21,7 @@ from supports.preselected import normalize_preselected_edges
 
 
 MIN_LAMBDA_STAR_EDGE_MAGNITUDE = 0.20
+MAX_LAMBDA_STAR_EDGE_MAGNITUDE = 0.60
 
 
 def parse_bool(value):
@@ -307,9 +308,20 @@ def compute_objective_curve(
     )
 
 
-def lambda_star_for_dimension(n, support_edges=None):
+def lambda_star_for_dimension(
+    n,
+    support_edges=None,
+    offdiag_abs_min=MIN_LAMBDA_STAR_EDGE_MAGNITUDE,
+    offdiag_abs_max=MAX_LAMBDA_STAR_EDGE_MAGNITUDE,
+):
     if n < 2:
         raise ValueError("n must be at least 2.")
+    if not (np.isfinite(offdiag_abs_min) and np.isfinite(offdiag_abs_max)):
+        raise ValueError("Off-diagonal absolute-value bounds must be finite.")
+    if not (0 < offdiag_abs_min <= offdiag_abs_max):
+        raise ValueError(
+            "Off-diagonal absolute-value bounds must satisfy 0 < min <= max."
+        )
 
     Lambda_star = np.zeros((n, n))
     diag_values = np.linspace(0.10, 0.55, n)
@@ -321,9 +333,8 @@ def lambda_star_for_dimension(n, support_edges=None):
         support_edges = tuple(support_edges)
 
     edge_values = np.linspace(0.60, -0.45, len(support_edges))
-    edge_values = np.where(
-        np.abs(edge_values) < MIN_LAMBDA_STAR_EDGE_MAGNITUDE,
-        np.copysign(MIN_LAMBDA_STAR_EDGE_MAGNITUDE, edge_values),
+    edge_values = np.copysign(
+        np.clip(np.abs(edge_values), offdiag_abs_min, offdiag_abs_max),
         edge_values,
     )
     for (i, j), value in zip(support_edges, edge_values):
@@ -411,6 +422,8 @@ def save_curve_result(
     fit_settings=None,
     fit_omega_ref=False,
     kappa=0.93,
+    lambda_star_offdiag_abs_min=MIN_LAMBDA_STAR_EDGE_MAGNITUDE,
+    lambda_star_offdiag_abs_max=MAX_LAMBDA_STAR_EDGE_MAGNITUDE,
 ):
     if len(curve_result) == 4:
         (
@@ -436,7 +449,8 @@ def save_curve_result(
         curve_type=curve_type,
         n=n,
         Lambda_star=Lambda_star,
-        lambda_star_min_edge_magnitude=MIN_LAMBDA_STAR_EDGE_MAGNITUDE,
+        lambda_star_min_edge_magnitude=lambda_star_offdiag_abs_min,
+        lambda_star_max_edge_magnitude=lambda_star_offdiag_abs_max,
         lambda_star_support_index=lambda_star_support_index,
         lambda_star_dimension=(
             1 + np.count_nonzero(Lambda_star - np.diag(np.diag(Lambda_star)))
@@ -519,6 +533,10 @@ def load_existing_curve_result(
                     continue
                 elif key == "fit_omega_ref" and expected_value is False:
                     actual_value = False
+                elif (key == "lambda_star_max_edge_magnitude"
+                      and expected_value == MAX_LAMBDA_STAR_EDGE_MAGNITUDE):
+                    # Curves saved before this option used the same upper bound.
+                    actual_value = MAX_LAMBDA_STAR_EDGE_MAGNITUDE
                 else:
                     raise ValueError(
                         f"Refusing to resume from {output_path}: missing "
@@ -681,6 +699,18 @@ def parse_args(argv=None):
         help="Dimensions of Lambda_star to compute.",
     )
     parser.add_argument(
+        "--lambda-star-offdiag-abs-min",
+        type=float,
+        default=MIN_LAMBDA_STAR_EDGE_MAGNITUDE,
+        help="Minimum absolute value of nonzero Lambda_star off-diagonal entries (default: 0.20).",
+    )
+    parser.add_argument(
+        "--lambda-star-offdiag-abs-max",
+        type=float,
+        default=MAX_LAMBDA_STAR_EDGE_MAGNITUDE,
+        help="Maximum absolute value of nonzero Lambda_star off-diagonal entries (default: 0.60).",
+    )
+    parser.add_argument(
         "--lambda-star-dimension",
         type=int,
         default=None,
@@ -829,7 +859,11 @@ def run_experiment(args, n, add_output_suffix):
             true_dimension,
             lambda_star_support_index,
         )
-    Lambda_star = lambda_star_for_dimension(n, lambda_star_support_edges)
+    Lambda_star = lambda_star_for_dimension(
+        n, lambda_star_support_edges,
+        offdiag_abs_min=args.lambda_star_offdiag_abs_min,
+        offdiag_abs_max=args.lambda_star_offdiag_abs_max,
+    )
     omega_star = args.omega_star
     omega_ref = args.omega_ref
 
@@ -909,9 +943,8 @@ def run_experiment(args, n, add_output_suffix):
                 "support_scope": args.support_scope,
                 "nested_supports": args.nested_supports,
                 "fit_settings_json": json.dumps(fit_settings, sort_keys=True),
-                "lambda_star_min_edge_magnitude": (
-                    MIN_LAMBDA_STAR_EDGE_MAGNITUDE
-                ),
+                "lambda_star_min_edge_magnitude": args.lambda_star_offdiag_abs_min,
+                "lambda_star_max_edge_magnitude": args.lambda_star_offdiag_abs_max,
                 **(
                     {
                         "lambda_star_support_index": lambda_star_support_index,
@@ -971,6 +1004,8 @@ def run_experiment(args, n, add_output_suffix):
                 lambda_star_support_index=lambda_star_support_index,
                 lambda_star_dimension=true_dimension,
                 lambda_star_support_edges=lambda_star_support_edges,
+                lambda_star_offdiag_abs_min=args.lambda_star_offdiag_abs_min,
+                lambda_star_offdiag_abs_max=args.lambda_star_offdiag_abs_max,
             )
 
         given_curve = compute_objective_curve(
@@ -1027,9 +1062,8 @@ def run_experiment(args, n, add_output_suffix):
             "support_scope": args.support_scope,
             "nested_supports": args.nested_supports,
             "fit_settings_json": json.dumps(fit_settings, sort_keys=True),
-            "lambda_star_min_edge_magnitude": (
-                MIN_LAMBDA_STAR_EDGE_MAGNITUDE
-            ),
+            "lambda_star_min_edge_magnitude": args.lambda_star_offdiag_abs_min,
+            "lambda_star_max_edge_magnitude": args.lambda_star_offdiag_abs_max,
             **(
                 {
                     "lambda_star_support_index": lambda_star_support_index,
@@ -1085,6 +1119,8 @@ def run_experiment(args, n, add_output_suffix):
             kappa=args.kappa,
             lambda_star_dimension=true_dimension,
             lambda_star_support_edges=lambda_star_support_edges,
+            lambda_star_offdiag_abs_min=args.lambda_star_offdiag_abs_min,
+            lambda_star_offdiag_abs_max=args.lambda_star_offdiag_abs_max,
         )
 
     sigma_hat_curve = compute_objective_curve(

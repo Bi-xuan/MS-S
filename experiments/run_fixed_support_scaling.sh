@@ -13,6 +13,8 @@ export VECLIB_MAXIMUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
 
 N="${N:-4}"
+LAMBDA_STAR_OFFDIAG_ABS_MIN="${LAMBDA_STAR_OFFDIAG_ABS_MIN:-0.20}"
+LAMBDA_STAR_OFFDIAG_ABS_MAX="${LAMBDA_STAR_OFFDIAG_ABS_MAX:-0.60}"
 TOTAL_CPUS="${TOTAL_CPUS:-${SLURM_CPUS_PER_TASK:-${NSLOTS:-100}}}"
 CPUS_PER_TRIAL="${CPUS_PER_TRIAL:-5}"
 MAX_RESTARTS="${MAX_RESTARTS:-10}"
@@ -59,6 +61,11 @@ fi
 usage() {
     cat <<EOF
 Usage: $(basename "$0") [run-all | reselect [OUTPUT_FOLDER]]
+
+  Set LAMBDA_STAR_OFFDIAG_ABS_MIN and LAMBDA_STAR_OFFDIAG_ABS_MAX
+  to bound the absolute values of nonzero Lambda_star off-diagonal entries.
+  Defaults: 0.20 and 0.60. Example:
+    LAMBDA_STAR_OFFDIAG_ABS_MIN=0.30 LAMBDA_STAR_OFFDIAG_ABS_MAX=0.50 OUTPUT_ROOT=experiments/output/custom_bounds bash experiments/run_fixed_support_scaling.sh
 
   run-all   Compute curves, select dimensions, and summarize (default).
   reselect  Discover saved num_samples_*/seed_* curves under OUTPUT_ROOT,
@@ -124,6 +131,8 @@ run_trial() {
             --curve sigma_hat \
             --sigma-hat-output "${curve_path}" \
             --lambda-star-dims "${N}" \
+            --lambda-star-offdiag-abs-min "${LAMBDA_STAR_OFFDIAG_ABS_MIN}" \
+            --lambda-star-offdiag-abs-max "${LAMBDA_STAR_OFFDIAG_ABS_MAX}" \
             --nested-supports "${NESTED_SUPPORTS}" \
             --support-scope "${SUPPORT_SCOPE}" \
             --num-samples "${num_samples}" \
@@ -260,6 +269,12 @@ case "${COMMAND}" in
         exit 2
         ;;
 esac
+
+if ! python -c 'import math, sys; lo, hi = map(float, sys.argv[1:]); sys.exit(0 if math.isfinite(lo) and math.isfinite(hi) and 0 < lo <= hi else 1)' \
+    "${LAMBDA_STAR_OFFDIAG_ABS_MIN}" "${LAMBDA_STAR_OFFDIAG_ABS_MAX}" 2>/dev/null; then
+    echo "Error: Lambda_star off-diagonal absolute-value bounds must satisfy 0 < MIN <= MAX and be finite." >&2
+    exit 2
+fi
 
 worker_count="$((TOTAL_CPUS / CPUS_PER_TRIAL))"
 if ((worker_count > ${#task_seeds[@]})); then

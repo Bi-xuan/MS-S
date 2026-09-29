@@ -10,6 +10,7 @@ from experiments.compute_objective_curve import (
     indexed_upper_support,
     lambda_star_for_dimension,
 )
+from experiments import compute_objective_curve as curve
 from optimizers.support_search import optimize_lambda
 from supports.exact import get_upper_triangular_supports
 
@@ -70,6 +71,48 @@ def test_indexed_true_support_uses_existing_lambda_value_convention():
         if i != j
     }
     assert recovered_support == set(support)
+
+
+def test_true_support_offdiagonal_absolute_bounds_preserve_signs_and_zeros():
+    Lambda_star = lambda_star_for_dimension(
+        4, offdiag_abs_min=0.30, offdiag_abs_max=0.50,
+    )
+
+    np.testing.assert_allclose(Lambda_star[:3, 3], [0.50, 0.30, -0.45])
+    np.testing.assert_allclose(np.diag(Lambda_star), [0.10, 0.25, 0.40, 0.55])
+    assert np.count_nonzero(Lambda_star - np.diag(np.diag(Lambda_star))) == 3
+
+
+@pytest.mark.parametrize("lower,upper", [(0, 0.6), (-0.1, 0.6), (0.7, 0.6), (0.2, np.inf)])
+def test_true_support_rejects_invalid_absolute_bounds(lower, upper):
+    with pytest.raises(ValueError, match="absolute-value bounds"):
+        lambda_star_for_dimension(4, offdiag_abs_min=lower, offdiag_abs_max=upper)
+
+
+def test_curve_cli_saves_and_checks_offdiagonal_absolute_bounds(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        curve, "compute_objective_curve",
+        lambda *args, **kwargs: (
+            np.array([1]), np.array([0.0]), np.array([]), np.array([]),
+            np.eye(2, dtype=bool)[None, :, :], np.array([True]),
+        ),
+    )
+    output = tmp_path / "curve.npz"
+    args = curve.parse_args([
+        "--curve", "sigma_given", "--given-output", str(output),
+        "--lambda-star-dims", "2", "--lambda-star-offdiag-abs-min", "0.30",
+        "--lambda-star-offdiag-abs-max", "0.50",
+    ])
+    curve.run_experiment(args, 2, False)
+
+    with np.load(output) as data:
+        assert data["Lambda_star"][0, 1] == pytest.approx(0.50)
+        assert data["lambda_star_min_edge_magnitude"].item() == pytest.approx(0.30)
+        assert data["lambda_star_max_edge_magnitude"].item() == pytest.approx(0.50)
+
+    args.lambda_star_offdiag_abs_max = 0.60
+    with pytest.raises(ValueError, match="lambda_star_max_edge_magnitude"):
+        curve.run_experiment(args, 2, False)
 
 
 def test_indexed_true_support_rejects_out_of_range_index():
