@@ -39,21 +39,29 @@ def _seed_json_files(sample_dir):
     files = []
     for path in sample_dir.iterdir():
         match = SEED_DIR_RE.fullmatch(path.name)
-        json_path = path / "selection_plateau_bootstrap.json"
-        if path.is_dir() and match and json_path.is_file():
-            files.append((int(match.group(1)), json_path))
+        if not path.is_dir() or not match:
+            continue
+        for name in ("selection_plateau.json", "selection_plateau_bootstrap.json"):
+            json_path = path / name
+            if json_path.is_file():
+                files.append((int(match.group(1)), json_path))
+                break
     return sorted(files)
 
 
-def _load_truth(input_dir, sample_dir):
+def _load_truth(sample_dir):
     files = _seed_json_files(sample_dir)
     if not files:
         raise FileNotFoundError(f"No selection JSON files found under {sample_dir}")
     first = json.loads(files[0][1].read_text())
     npz_path = Path(first["input"])
-    if not npz_path.is_absolute() and not npz_path.is_file():
-        # Resolve paths written relative to the repository root.
-        npz_path = Path(input_dir).parents[2] / npz_path
+    candidates = [npz_path]
+    if not npz_path.is_absolute():
+        candidates.append(PROJECT_ROOT / npz_path)
+    candidates.append(sample_dir / files[0][1].parent.name / npz_path.name)
+    npz_path = next((path for path in candidates if path.is_file()), None)
+    if npz_path is None:
+        raise FileNotFoundError(f"No saved objective curve found for {files[0][1]}")
     with np.load(npz_path, allow_pickle=False) as data:
         n = int(np.asarray(data["n"]))
         true_edges = {tuple(map(int, edge)) for edge in data["lambda_star_support_edges"]}
@@ -67,7 +75,7 @@ def _edge_label(edge):
 def collect_frequencies(input_dir):
     input_dir = Path(input_dir)
     sample_dirs = _sample_directories(input_dir)
-    n, true_edges = _load_truth(input_dir, sample_dirs[0][1])
+    n, true_edges = _load_truth(sample_dirs[0][1])
     candidate_edges = [(i, j) for i in range(n) for j in range(i + 1, n)]
     true_order = [edge for edge in candidate_edges if edge in true_edges]
     false_order = [edge for edge in candidate_edges if edge not in true_edges]

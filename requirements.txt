@@ -1,0 +1,6 @@
+# Use Python 3.10+ to satisfy lambda-support-recovery's declared requirement.
+numpy
+scipy
+matplotlib
+pytest
+lambda-support-recovery @ git+https://github.com/Bi-xuan/lambda-support-recovery.git
