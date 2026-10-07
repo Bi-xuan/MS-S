@@ -1,5 +1,63 @@
 # Objective-curve support recovery
 
+## Fixed-support study with the package API
+
+Run the 40-trial study through `lambda_support_recovery.select_support()`:
+
+```sh
+# Use an environment with Python 3.10+ and requirements.txt installed.
+TOTAL_CPUS=100 CPUS_PER_TRIAL=5 bash experiments/run_fixed_support_scaling_package.sh
+```
+
+The new runner defaults to `N=10`, `support_scope="upper"`, sample sizes
+100, 1000, 10000, and 1000000, and the same ten seeds per sample size as
+`run_fixed_support_scaling.sh`. It runs up to 20 concurrent trials with five
+package workers each, with BLAS/OpenMP threads limited to one per worker.
+`TOTAL_CPUS` defaults to `SLURM_CPUS_PER_TASK`, then `NSLOTS`, then 100.
+All workers for a trial run on its local machine; this is a single-node CPU
+budget. Set `PYTHON=/path/to/python` to select an environment. The installed
+package is used; a local checkout can instead be selected with
+`PYTHONPATH=/path/to/lambda-support-recovery/src`.
+
+The fixed population matrix uses the original construction: diagonal values
+from 0.10 to 0.55 and edges `(i, N-1)` for `i=0,...,N-2`, with magnitudes
+bounded by 0.20 and 0.60 and population noise 1. Change these data-generation
+settings with `N`, `LAMBDA_STAR_OFFDIAG_ABS_MIN`,
+`LAMBDA_STAR_OFFDIAG_ABS_MAX`, and `OMEGA_STAR`. `N` must be at least 3 and
+no greater than the smallest sample size (100).
+
+Trial seeds generate observations using `seed + 2`, matching the original
+experiment. The package's `random_seed` and `bootstrap_seed` stay at their
+defaults. The API receives only `num_samples`, `support_scope="upper"`,
+`n_jobs`, `return_result=True`, and a progress callback. Every statistical
+option retains the installed package default, including estimated fixed
+omega (`fit_omega_ref=True`, `kappa=0.93`), nested supports, ten restarts,
+800 iterations, and 199 bootstrap replicates. Original-runner environment
+variables such as `MAX_RESTARTS`, `OMEGA_REF`, and `BOOTSTRAP_REPLICATES`
+are not estimator overrides in this runner. Installed API defaults, package
+version/path, fitting settings, seeds, and timings are recorded for audit.
+
+The default output folder is
+`experiments/output/fixed_support_scaling_n10_package_fit_omega_ref_true`.
+Each seed has `objective_curve_sigma_hat.npz`,
+`selection_plateau_bootstrap.json`, `selection_plateau_bootstrap.log`, and
+`result.csv`. Once all trials succeed, the existing analysis scripts produce
+`selection_trials.csv`, `selection_summary.md`, `edge_recovery_heatmap.png`,
+`roc_curve.png`, and `final_support_operating_points.png`. A failed trial
+stops its worker and prevents summary/plot generation; its log retains the
+package error, with no change to the estimator settings.
+
+`run-all` recomputes trials in the chosen folder. To regenerate just the
+summary and plots from a completed study:
+
+```sh
+bash experiments/run_fixed_support_scaling_package.sh summarize path/to/output
+```
+
+This runner leaves the original shell script available. Its commands are
+`run-all` and `summarize`; it does not implement the original script's plain
+Plateau `reselect` command.
+
 `compute_objective_curve.py` uses forward-nested support recovery by default
 (`--nested-supports true`). Starting from the diagonal-only model at `D_m=1`,
 each subsequent dimension fits every permitted one-edge extension of the

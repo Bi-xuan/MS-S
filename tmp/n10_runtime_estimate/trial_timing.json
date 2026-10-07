@@ -1,0 +1,393 @@
+{
+  "num_samples": 100,
+  "n_jobs": 5,
+  "total_seconds": 254.88399441700312,
+  "selected_dimension": 2,
+  "comparisons": 2,
+  "events": [
+    {
+      "seconds": 0.0016846250000526197,
+      "message": "Solving for D_m = 1..."
+    },
+    {
+      "seconds": 0.5356608750007581,
+      "message": "  Objective = 0.666968"
+    },
+    {
+      "seconds": 0.5357035830020322,
+      "message": "Solving for D_m = 2..."
+    },
+    {
+      "seconds": 8.433498667000094,
+      "message": "  Objective = 0.513311"
+    },
+    {
+      "seconds": 8.4335929580011,
+      "message": "Solving for D_m = 3..."
+    },
+    {
+      "seconds": 15.672706958001072,
+      "message": "  Objective = 0.510082"
+    },
+    {
+      "seconds": 15.672787625000637,
+      "message": "Solving for D_m = 4..."
+    },
+    {
+      "seconds": 23.151506125002925,
+      "message": "  Objective = 0.507427"
+    },
+    {
+      "seconds": 23.151583000002574,
+      "message": "Solving for D_m = 5..."
+    },
+    {
+      "seconds": 31.03559816699999,
+      "message": "  Objective = 0.509248"
+    },
+    {
+      "seconds": 31.035692749999725,
+      "message": "Solving for D_m = 6..."
+    },
+    {
+      "seconds": 40.03772554200259,
+      "message": "  Objective = 0.517233"
+    },
+    {
+      "seconds": 40.0378633750006,
+      "message": "Solving for D_m = 7..."
+    },
+    {
+      "seconds": 48.02856874999998,
+      "message": "  Objective = 0.459577"
+    },
+    {
+      "seconds": 48.02864970800147,
+      "message": "Solving for D_m = 8..."
+    },
+    {
+      "seconds": 56.20477454200227,
+      "message": "  Objective = 0.410806"
+    },
+    {
+      "seconds": 56.20485358299993,
+      "message": "Solving for D_m = 9..."
+    },
+    {
+      "seconds": 59.83553308300179,
+      "message": "  Objective = 0.285424"
+    },
+    {
+      "seconds": 59.83561662500142,
+      "message": "Solving for D_m = 10..."
+    },
+    {
+      "seconds": 62.43177079200177,
+      "message": "  Objective = 0.242373"
+    },
+    {
+      "seconds": 62.431846917002986,
+      "message": "Solving for D_m = 11..."
+    },
+    {
+      "seconds": 65.0519106669999,
+      "message": "  Objective = 0.196622"
+    },
+    {
+      "seconds": 65.05198587500126,
+      "message": "Solving for D_m = 12..."
+    },
+    {
+      "seconds": 67.51599900000292,
+      "message": "  Objective = 0.170145"
+    },
+    {
+      "seconds": 67.51607220799997,
+      "message": "Solving for D_m = 13..."
+    },
+    {
+      "seconds": 70.17488304200015,
+      "message": "  Objective = 0.156611"
+    },
+    {
+      "seconds": 70.17496112500157,
+      "message": "Solving for D_m = 14..."
+    },
+    {
+      "seconds": 72.79856058299993,
+      "message": "  Objective = 0.143575"
+    },
+    {
+      "seconds": 72.7986422920003,
+      "message": "Solving for D_m = 15..."
+    },
+    {
+      "seconds": 75.54485475000183,
+      "message": "  Objective = 0.132496"
+    },
+    {
+      "seconds": 75.54492729200138,
+      "message": "Solving for D_m = 16..."
+    },
+    {
+      "seconds": 78.13532191700142,
+      "message": "  Objective = 0.112449"
+    },
+    {
+      "seconds": 78.13539612500244,
+      "message": "Solving for D_m = 17..."
+    },
+    {
+      "seconds": 80.60363983299976,
+      "message": "  Objective = 0.098188"
+    },
+    {
+      "seconds": 80.60371708300227,
+      "message": "Solving for D_m = 18..."
+    },
+    {
+      "seconds": 82.76816766699994,
+      "message": "  Objective = 0.091940"
+    },
+    {
+      "seconds": 82.76824345800196,
+      "message": "Solving for D_m = 19..."
+    },
+    {
+      "seconds": 84.85712454200257,
+      "message": "  Objective = 0.086771"
+    },
+    {
+      "seconds": 84.85721037500116,
+      "message": "Solving for D_m = 20..."
+    },
+    {
+      "seconds": 86.94983112500267,
+      "message": "  Objective = 0.078375"
+    },
+    {
+      "seconds": 86.9499065830023,
+      "message": "Solving for D_m = 21..."
+    },
+    {
+      "seconds": 89.05158316700181,
+      "message": "  Objective = 0.070241"
+    },
+    {
+      "seconds": 89.05166845799977,
+      "message": "Solving for D_m = 22..."
+    },
+    {
+      "seconds": 91.43208987500111,
+      "message": "  Objective = 0.066551"
+    },
+    {
+      "seconds": 91.43217100000038,
+      "message": "Solving for D_m = 23..."
+    },
+    {
+      "seconds": 93.57885004200216,
+      "message": "  Objective = 0.063970"
+    },
+    {
+      "seconds": 93.57893100000001,
+      "message": "Solving for D_m = 24..."
+    },
+    {
+      "seconds": 95.72903829200004,
+      "message": "  Objective = 0.051895"
+    },
+    {
+      "seconds": 95.72915241699957,
+      "message": "Solving for D_m = 25..."
+    },
+    {
+      "seconds": 97.90386645800027,
+      "message": "  Objective = 0.047069"
+    },
+    {
+      "seconds": 97.90396033300203,
+      "message": "Solving for D_m = 26..."
+    },
+    {
+      "seconds": 99.96579933300018,
+      "message": "  Objective = 0.042017"
+    },
+    {
+      "seconds": 99.9658765000022,
+      "message": "Solving for D_m = 27..."
+    },
+    {
+      "seconds": 102.12897241700193,
+      "message": "  Objective = 0.039676"
+    },
+    {
+      "seconds": 102.12905445800061,
+      "message": "Solving for D_m = 28..."
+    },
+    {
+      "seconds": 104.11425008300284,
+      "message": "  Objective = 0.037413"
+    },
+    {
+      "seconds": 104.11433204200148,
+      "message": "Solving for D_m = 29..."
+    },
+    {
+      "seconds": 106.20998337499987,
+      "message": "  Objective = 0.028651"
+    },
+    {
+      "seconds": 106.21005825000248,
+      "message": "Solving for D_m = 30..."
+    },
+    {
+      "seconds": 108.08676375000141,
+      "message": "  Objective = 0.014097"
+    },
+    {
+      "seconds": 108.08685079200222,
+      "message": "Solving for D_m = 31..."
+    },
+    {
+      "seconds": 110.11508591700112,
+      "message": "  Objective = 0.009533"
+    },
+    {
+      "seconds": 110.11518483300097,
+      "message": "Solving for D_m = 32..."
+    },
+    {
+      "seconds": 112.01211458300168,
+      "message": "  Objective = 0.008020"
+    },
+    {
+      "seconds": 112.01219604200014,
+      "message": "Solving for D_m = 33..."
+    },
+    {
+      "seconds": 113.75503162500172,
+      "message": "  Objective = 0.007352"
+    },
+    {
+      "seconds": 113.75511258299957,
+      "message": "Solving for D_m = 34..."
+    },
+    {
+      "seconds": 115.48391450000054,
+      "message": "  Objective = 0.006846"
+    },
+    {
+      "seconds": 115.48399383300057,
+      "message": "Solving for D_m = 35..."
+    },
+    {
+      "seconds": 117.19920208300027,
+      "message": "  Objective = 0.006489"
+    },
+    {
+      "seconds": 117.19928383300066,
+      "message": "Solving for D_m = 36..."
+    },
+    {
+      "seconds": 118.87698233300034,
+      "message": "  Objective = 0.006048"
+    },
+    {
+      "seconds": 118.87705612500213,
+      "message": "Solving for D_m = 37..."
+    },
+    {
+      "seconds": 120.53266520800025,
+      "message": "  Objective = 0.005940"
+    },
+    {
+      "seconds": 120.53274466700168,
+      "message": "Solving for D_m = 38..."
+    },
+    {
+      "seconds": 122.15731354200034,
+      "message": "  Objective = 0.005499"
+    },
+    {
+      "seconds": 122.15740025000196,
+      "message": "Solving for D_m = 39..."
+    },
+    {
+      "seconds": 123.71557116700205,
+      "message": "  Objective = 0.005440"
+    },
+    {
+      "seconds": 123.71565525000187,
+      "message": "Solving for D_m = 40..."
+    },
+    {
+      "seconds": 125.28876608300197,
+      "message": "  Objective = 0.005375"
+    },
+    {
+      "seconds": 125.2888554170022,
+      "message": "Solving for D_m = 41..."
+    },
+    {
+      "seconds": 126.81310487500014,
+      "message": "  Objective = 0.005356"
+    },
+    {
+      "seconds": 126.81319379200067,
+      "message": "Solving for D_m = 42..."
+    },
+    {
+      "seconds": 128.32644454200272,
+      "message": "  Objective = 0.005331"
+    },
+    {
+      "seconds": 128.3265296669997,
+      "message": "Solving for D_m = 43..."
+    },
+    {
+      "seconds": 129.62807633299963,
+      "message": "  Objective = 0.002739"
+    },
+    {
+      "seconds": 129.6281574170025,
+      "message": "Solving for D_m = 44..."
+    },
+    {
+      "seconds": 130.81836404200294,
+      "message": "  Objective = 0.002048"
+    },
+    {
+      "seconds": 130.81844616700255,
+      "message": "Solving for D_m = 45..."
+    },
+    {
+      "seconds": 131.87336708300063,
+      "message": "  Objective = 0.000631"
+    },
+    {
+      "seconds": 131.87344504200155,
+      "message": "Solving for D_m = 46..."
+    },
+    {
+      "seconds": 132.0086587500009,
+      "message": "  Objective = 0.000000"
+    },
+    {
+      "seconds": 132.01398866700038,
+      "message": "Bootstrap comparison D_m=32 versus 31 (199 replicates)"
+    },
+    {
+      "seconds": 175.3839074580028,
+      "message": "p=0.67: prefer smaller"
+    },
+    {
+      "seconds": 175.38400575000196,
+      "message": "Bootstrap comparison D_m=31 versus 2 (199 replicates)"
+    },
+    {
+      "seconds": 254.8826058750019,
+      "message": "p=0.7: prefer smaller"
+    }
+  ]
+}

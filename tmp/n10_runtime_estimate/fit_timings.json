@@ -1,0 +1,170 @@
+[
+  {
+    "num_samples": 100,
+    "edges": 0,
+    "seconds": 0.643936999997095,
+    "objective": 0.6669678398107319,
+    "sampling_seconds": 0.0031171669979812577
+  },
+  {
+    "num_samples": 100,
+    "edges": 1,
+    "seconds": 0.5561060420004651,
+    "objective": 15.471769002951108,
+    "sampling_seconds": 0.0031171669979812577
+  },
+  {
+    "num_samples": 100,
+    "edges": 9,
+    "seconds": 0.8635153750001336,
+    "objective": 1.0102328766216222,
+    "sampling_seconds": 0.0031171669979812577
+  },
+  {
+    "num_samples": 100,
+    "edges": 22,
+    "seconds": 0.427209417000995,
+    "objective": 0.2502887981918612,
+    "sampling_seconds": 0.0031171669979812577
+  },
+  {
+    "num_samples": 100,
+    "edges": 36,
+    "seconds": 0.2137315830004809,
+    "objective": 0.17446068115801724,
+    "sampling_seconds": 0.0031171669979812577
+  },
+  {
+    "num_samples": 100,
+    "edges": 45,
+    "seconds": 0.1253145000009681,
+    "objective": 2.851515969018083e-14,
+    "sampling_seconds": 0.0031171669979812577
+  },
+  {
+    "num_samples": 1000,
+    "edges": 0,
+    "seconds": 0.5146490829974937,
+    "objective": 0.3039552697922107,
+    "sampling_seconds": 0.0007966249977471307
+  },
+  {
+    "num_samples": 1000,
+    "edges": 1,
+    "seconds": 0.5219823750012438,
+    "objective": 0.30405895460950244,
+    "sampling_seconds": 0.0007966249977471307
+  },
+  {
+    "num_samples": 1000,
+    "edges": 9,
+    "seconds": 0.1608970000015688,
+    "objective": 0.16117931633255464,
+    "sampling_seconds": 0.0007966249977471307
+  },
+  {
+    "num_samples": 1000,
+    "edges": 22,
+    "seconds": 0.14479783400020096,
+    "objective": 0.10077800350668552,
+    "sampling_seconds": 0.0007966249977471307
+  },
+  {
+    "num_samples": 1000,
+    "edges": 36,
+    "seconds": 0.11359770800117985,
+    "objective": 0.07236791092212512,
+    "sampling_seconds": 0.0007966249977471307
+  },
+  {
+    "num_samples": 1000,
+    "edges": 45,
+    "seconds": 0.09462120899843285,
+    "objective": 2.856054635550436e-14,
+    "sampling_seconds": 0.0007966249977471307
+  },
+  {
+    "num_samples": 10000,
+    "edges": 0,
+    "seconds": 0.282714582997869,
+    "objective": 0.2070836806479653,
+    "sampling_seconds": 0.0029142499988665804
+  },
+  {
+    "num_samples": 10000,
+    "edges": 1,
+    "seconds": 0.31863145800161874,
+    "objective": 0.20053837343837816,
+    "sampling_seconds": 0.0029142499988665804
+  },
+  {
+    "num_samples": 10000,
+    "edges": 9,
+    "seconds": 0.15203254199877847,
+    "objective": 0.0850745384458947,
+    "sampling_seconds": 0.0029142499988665804
+  },
+  {
+    "num_samples": 10000,
+    "edges": 22,
+    "seconds": 0.1593680839978333,
+    "objective": 0.0713347559713838,
+    "sampling_seconds": 0.0029142499988665804
+  },
+  {
+    "num_samples": 10000,
+    "edges": 36,
+    "seconds": 0.16063358300016262,
+    "objective": 0.012814762095278362,
+    "sampling_seconds": 0.0029142499988665804
+  },
+  {
+    "num_samples": 10000,
+    "edges": 45,
+    "seconds": 0.08613087500270922,
+    "objective": 2.2117775800511794e-11,
+    "sampling_seconds": 0.0029142499988665804
+  },
+  {
+    "num_samples": 1000000,
+    "edges": 0,
+    "seconds": 0.24747041699811234,
+    "objective": 0.1863361748275549,
+    "sampling_seconds": 0.2746144170014304
+  },
+  {
+    "num_samples": 1000000,
+    "edges": 1,
+    "seconds": 0.26379283300047973,
+    "objective": 0.18289492590682013,
+    "sampling_seconds": 0.2746144170014304
+  },
+  {
+    "num_samples": 1000000,
+    "edges": 9,
+    "seconds": 0.13110704199789325,
+    "objective": 0.07068671473764279,
+    "sampling_seconds": 0.2746144170014304
+  },
+  {
+    "num_samples": 1000000,
+    "edges": 22,
+    "seconds": 0.16358787500212202,
+    "objective": 0.06232490915072351,
+    "sampling_seconds": 0.2746144170014304
+  },
+  {
+    "num_samples": 1000000,
+    "edges": 36,
+    "seconds": 0.3398957919998793,
+    "objective": 0.012876245745253971,
+    "sampling_seconds": 0.2746144170014304
+  },
+  {
+    "num_samples": 1000000,
+    "edges": 45,
+    "seconds": 0.10136583400162635,
+    "objective": 4.938428166432623e-11,
+    "sampling_seconds": 0.2746144170014304
+  }
+]
