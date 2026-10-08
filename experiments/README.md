@@ -158,21 +158,52 @@ selected model mask, including coefficients fitted to zero. Truth is used
 only for reporting. Optional JSON includes plateau intervals, pairwise
 p-values, all bootstrap gains, settings, and precision as a fraction.
 
-The upper-support study now runs `window`, `plateau`, and `plateau-bootstrap`.
-It writes `selection_bootstrap.log` and `.json` per trial, and appends bootstrap
-status, dimension, correctness, and precision to its CSVs. Its existing coverage
-plots still compare window and ordinary plateau. Configure bootstrap through:
+The upper-support study runs the same sample-size study as
+`run_fixed_support_scaling.sh` for each of the 20 strict-upper true supports
+with `n=4` and true `D_m=4`. It uses sample sizes 100, 1000, 10000, and 1000000,
+with the same ten seeds per sample size (800 trials total). Each
+`OUTPUT_ROOT/support_XX/num_samples_N/seed_S/` directory contains the curve,
+compute log, `selection_plateau_bootstrap.log` and `.json`, and `result.csv`.
+Each support has its own `selection_trials.csv` and `selection_summary.md`
+with average precision, exact support recovery, MC recovery, average score,
+best-on-path selection, and true-support-on-path metrics. MC recovery means
+the selected and true supports have the same full maximal-class family.
+Jaccard distances exclude diagonal edges. The score is
+`a + (1-a) exp(-d(selected, truth))` for MC recovery, and
+`a exp(-min d(selected, member))` otherwise, minimizing over all directed
+members of the true MC (including members with lower-triangular edges).
+Set `SCORE_A` to configure `a` (default `0.5`, strictly between 0 and 1).
+Best-on-path selection continues to mean minimum `FP + FN`, including ties.
+The study also writes `OUTPUT_ROOT/selection_summary.md` with only sample
+size and average score, pooling individual trials across all supports.
+Configure bootstrap through:
 
 ```sh
 TOP_PLATEAUS=2 BOOTSTRAP_REPLICATES=399 BOOTSTRAP_ALPHA=0.05 \
   bash experiments/run_upper_support_scaling_study.sh trial 0
 ```
 
-`BOOTSTRAP_SEED` is also configurable. `N_JOBS` controls refit workers for an
-individual trial; `reselect` parallelizes trials with one refit worker each.
-After upgrading an existing study, rerun `reselect` across its saved nested
-curves to refresh all CSV headers before aggregation. Selection does not
-reconstruct older unrestricted curves automatically.
+`BOOTSTRAP_SEED` is also configurable. All environment settings from
+`run_fixed_support_scaling.sh` are available, including coefficient bounds,
+fitting settings, `SUPPORT_SCOPE`, `NESTED_SUPPORTS`, and `OBJECTIVE_FLOOR`.
+`TOTAL_CPUS=100 CPUS_PER_TRIAL=5` defaults to 20 concurrent trials with five
+CPUs each. Set `NUM_SUPPORTS` to run fewer supports (default 20). The default
+output root is `experiments/output/upper_support_scaling_n4_dm4`.
+
+Use `trial TASK_ID` (0 through 799 by default) for Slurm arrays, then
+`aggregate` after all trials finish. Task order is support, sample size, then
+seed. With no command, a set `SLURM_ARRAY_TASK_ID` selects one trial;
+otherwise all trials run.
+
+`reselect [OUTPUT_FOLDER]` discovers saved support/sample-size/seed curves,
+runs curve-only `plateau` selections with `--lm-mode support-count` and
+`--Lm "${LM_WEIGHT}"` (default 0.1), and uses up to `N_JOBS` concurrent trials
+with one CPU each. New selections and summaries go under each support's
+`reselect_lm_support_count_plateau/` directory; the pooled score table goes
+under `OUTPUT_ROOT/reselect_lm_support_count_plateau/selection_summary.md`.
+The earlier
+`support_XX/seed_S/` layout and window-versus-plateau coverage plots are
+replaced by the per-support sample-size summaries.
 
 # Reselect fixed-support curves without fitting
 

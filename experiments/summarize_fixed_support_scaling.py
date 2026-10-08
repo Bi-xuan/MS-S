@@ -7,13 +7,20 @@ import argparse
 import csv
 import json
 import re
+import sys
+from collections import defaultdict
 from dataclasses import dataclass
+from math import fsum, isfinite
 from pathlib import Path
 
 import numpy as np
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from score_support import same_maximal_class, score_support, validate_score_a
+
 DEFAULT_INPUT = PROJECT_ROOT / "experiments" / "output" / "fixed_support_scaling_n4"
 DEFAULT_SAMPLE_SIZES = (100, 1_000, 10_000, 1_000_000)
 SEED_DIR_RE = re.compile(r"seed_(\d+)$")
@@ -26,6 +33,8 @@ class TrialSummary:
     selected_dimension: int
     precision: float
     exact_support_recovery: bool
+    mc_recovery: bool
+    score: float
     best_on_path_selection: bool
     true_support_on_path: bool
 
@@ -44,6 +53,7 @@ def _load_trial(
     selection_path: Path,
     expected_num_samples: int,
     expected_seed: int,
+    score_a: float = 0.5,
 ) -> TrialSummary:
     """Load one trial and compare its final support with its full path."""
 
@@ -170,6 +180,8 @@ def _load_trial(
         selected_dimension=selected_dimension,
         precision=float(precision),
         exact_support_recovery=selected_edges == true_edges,
+        mc_recovery=same_maximal_class(selected_edges, true_edges, n),
+        score=score_support(selected_edges, true_edges, n, a=score_a),
         best_on_path_selection=selected_error == best_error,
         true_support_on_path=best_error == 0,
     )
@@ -181,6 +193,7 @@ def collect_trials(
     expected_seeds: int,
     selection_file: str = "selection_plateau_bootstrap.json",
     selection_root: Path | None = None,
+    score_a: float = 0.5,
 ) -> list[TrialSummary]:
     """Collect validated trials in sample-size and numeric-seed order."""
 
@@ -210,6 +223,7 @@ def collect_trials(
                     selection_root / sample_dir.name / seed_dir.name / selection_file,
                     num_samples,
                     random_seed,
+                    score_a,
                 )
             )
     return trials
@@ -228,6 +242,8 @@ def write_trials_csv(trials: list[TrialSummary], output_path: Path) -> None:
                 "selected_dimension",
                 "precision",
                 "exact_support_recovery",
+                "mc_recovery",
+                "score",
                 "best_on_path_selection",
                 "true_support_on_path",
             )
@@ -240,6 +256,8 @@ def write_trials_csv(trials: list[TrialSummary], output_path: Path) -> None:
                     trial.selected_dimension,
                     f"{trial.precision:.12g}",
                     str(trial.exact_support_recovery).lower(),
+                    str(trial.mc_recovery).lower(),
+                    f"{trial.score:.17g}",
                     str(trial.best_on_path_selection).lower(),
                     str(trial.true_support_on_path).lower(),
                 )
@@ -257,9 +275,11 @@ def write_markdown_summary(
     lines = [
         f"| Number of samples | Average precision over {expected_seeds} seeds | "
         f"Exact support recovery (x/{expected_seeds}) | "
+        f"MC recovery (x/{expected_seeds}) | "
+        f"Average score over {expected_seeds} seeds | "
         f"Best on path selection (x/{expected_seeds}) | "
         f"True support on path (x/{expected_seeds}) |",
-        "|---:|---:|---:|---:|---:|",
+        "|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for num_samples in sample_sizes:
         sample_trials = [
@@ -272,14 +292,44 @@ def write_markdown_summary(
             )
         mean_precision = float(np.mean([trial.precision for trial in sample_trials]))
         exact_count = sum(trial.exact_support_recovery for trial in sample_trials)
+        mc_count = sum(trial.mc_recovery for trial in sample_trials)
+        mean_score = fsum(trial.score for trial in sample_trials) / len(sample_trials)
         best_count = sum(trial.best_on_path_selection for trial in sample_trials)
         truth_count = sum(trial.true_support_on_path for trial in sample_trials)
         lines.append(
             f"| {num_samples} | {mean_precision:.6f} | "
-            f"{exact_count}/{expected_seeds} | {best_count}/{expected_seeds} | "
+            f"{exact_count}/{expected_seeds} | {mc_count}/{expected_seeds} | "
+            f"{mean_score:.6f} | {best_count}/{expected_seeds} | "
             f"{truth_count}/{expected_seeds} |"
         )
 
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def write_overall_score_summary(trial_paths: list[Path], output_path: Path) -> None:
+    """Average individual trial scores by sample size across all supports."""
+
+    scores = defaultdict(list)
+    for trial_path in trial_paths:
+        with trial_path.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            if not {"num_samples", "score"} <= set(reader.fieldnames or ()):
+                raise ValueError(f"{trial_path} must contain num_samples and score columns.")
+            row_count = 0
+            for row in reader:
+                num_samples, score = int(row["num_samples"]), float(row["score"])
+                if num_samples < 1 or not isfinite(score) or not 0 <= score <= 1:
+                    raise ValueError(f"{trial_path} contains an invalid sample size or score.")
+                scores[num_samples].append(score)
+                row_count += 1
+            if not row_count:
+                raise ValueError(f"{trial_path} contains no trials.")
+    if not scores:
+        raise ValueError("No trial scores to summarize.")
+    lines = ["| Number of samples | Average score |", "|---:|---:|"]
+    for num_samples, values in sorted(scores.items()):
+        lines.append(f"| {num_samples} | {fsum(values) / len(values):.6f} |")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -318,6 +368,18 @@ def parse_args() -> argparse.Namespace:
         help="Root containing per-trial selection JSONs (default: input directory).",
     )
     parser.add_argument(
+        "--score-a",
+        type=validate_score_a,
+        default=0.5,
+        help="Maximal-class score weight, strictly between 0 and 1 (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--overall-trials",
+        nargs="+",
+        type=Path,
+        help="Write only an overall score table from these per-support trial CSVs.",
+    )
+    parser.add_argument(
         "--trials-output",
         type=Path,
         default=None,
@@ -334,6 +396,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    if args.overall_trials:
+        summary_output = args.summary_output or args.input_dir / "selection_summary.md"
+        write_overall_score_summary(args.overall_trials, summary_output)
+        print(f"Saved overall score table to {summary_output}")
+        return
     if args.expected_seeds < 1:
         raise ValueError("expected-seeds must be positive.")
     sample_sizes = tuple(args.sample_sizes)
@@ -345,7 +412,7 @@ def main() -> None:
     trials_output = args.trials_output or args.input_dir / "selection_trials.csv"
     summary_output = args.summary_output or args.input_dir / "selection_summary.md"
     trials = collect_trials(args.input_dir, sample_sizes, args.expected_seeds,
-                            args.selection_file, args.selection_root)
+                            args.selection_file, args.selection_root, args.score_a)
     write_trials_csv(trials, trials_output)
     write_markdown_summary(
         trials,
