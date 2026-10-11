@@ -49,34 +49,45 @@ def _seed_json_files(sample_dir):
     return sorted(files)
 
 
-def _load_truth(sample_dir):
-    files = _seed_json_files(sample_dir)
-    if not files:
-        raise FileNotFoundError(f"No selection JSON files found under {sample_dir}")
-    first = json.loads(files[0][1].read_text())
+def _load_truth(sample_dir, selection_path=None):
+    if selection_path is None:
+        files = _seed_json_files(sample_dir)
+        if not files:
+            raise FileNotFoundError(f"No selection JSON files found under {sample_dir}")
+        selection_path = files[0][1]
+    first = json.loads(selection_path.read_text())
     npz_path = Path(first["input"])
     candidates = [npz_path]
     if not npz_path.is_absolute():
         candidates.append(PROJECT_ROOT / npz_path)
-    candidates.append(sample_dir / files[0][1].parent.name / npz_path.name)
+    candidates.append(sample_dir / selection_path.parent.name / npz_path.name)
     npz_path = next((path for path in candidates if path.is_file()), None)
     if npz_path is None:
-        raise FileNotFoundError(f"No saved objective curve found for {files[0][1]}")
+        raise FileNotFoundError(f"No saved objective curve found for {selection_path}")
     with np.load(npz_path, allow_pickle=False) as data:
         n = int(np.asarray(data["n"]))
         true_edges = {tuple(map(int, edge)) for edge in data["lambda_star_support_edges"]}
-    return n, true_edges
+        support_scope = str(np.asarray(data["support_scope"]))
+    if support_scope not in ("all", "upper"):
+        raise ValueError(f"{npz_path} has unsupported support_scope={support_scope!r}.")
+    return n, true_edges, support_scope
 
 
 def _edge_label(edge):
     return f"({edge[0] + 1},{edge[1] + 1})"
 
 
-def collect_frequencies(input_dir):
+def collect_frequencies(input_dir, support_scope=None):
     input_dir = Path(input_dir)
     sample_dirs = _sample_directories(input_dir)
-    n, true_edges = _load_truth(sample_dirs[0][1])
-    candidate_edges = [(i, j) for i in range(n) for j in range(i + 1, n)]
+    n, true_edges, saved_scope = _load_truth(sample_dirs[0][1])
+    if support_scope is not None and saved_scope != support_scope:
+        raise ValueError(f"Saved support_scope={saved_scope!r}, expected {support_scope!r}.")
+    candidate_edges = [(i, j) for i in range(n) for j in range(n)
+                       if i != j and (saved_scope == "all" or i < j)]
+    candidate_set = set(candidate_edges)
+    if not true_edges <= candidate_set:
+        raise ValueError(f"Ground-truth edges are outside support_scope={saved_scope!r}.")
     true_order = [edge for edge in candidate_edges if edge in true_edges]
     false_order = [edge for edge in candidate_edges if edge not in true_edges]
     edges = true_order + false_order
@@ -89,30 +100,37 @@ def collect_frequencies(input_dir):
         if not files:
             raise FileNotFoundError(f"No selection JSON files found under {sample_dir}")
         denominators.append(len(files))
+        selected_supports = []
+        for _, path in files:
+            if _load_truth(sample_dir, path) != (n, true_edges, saved_scope):
+                raise ValueError(f"{path} has inconsistent dimension, truth, or support scope.")
+            selected = {tuple(map(int, edge)) for edge in json.loads(path.read_text())["selected_edges"]}
+            if not selected <= candidate_set:
+                raise ValueError(f"{path} contains edges outside support_scope={saved_scope!r}.")
+            selected_supports.append(selected)
         for row, edge in enumerate(edges):
-            counts[row, column] = sum(
-                edge in {tuple(map(int, selected)) for selected in json.loads(path.read_text())["selected_edges"]}
-                for _, path in files
-            )
+            counts[row, column] = sum(edge in selected for selected in selected_supports)
         frequencies[:, column] = counts[:, column] / len(files)
     return edges, true_edges, [sample_count for sample_count, _ in sample_dirs], frequencies, counts, denominators
 
 
-def plot_heatmap(input_dir, output_path):
-    edges, true_edges, sample_counts, frequencies, counts, denominators = collect_frequencies(input_dir)
+def plot_heatmap(input_dir, output_path, support_scope=None):
+    edges, true_edges, sample_counts, frequencies, counts, denominators = collect_frequencies(input_dir, support_scope)
     row_count, column_count = frequencies.shape
     colors = np.ones((row_count, column_count, 4), dtype=float)
     for row, edge in enumerate(edges):
         cmap = plt.get_cmap("Reds" if edge in true_edges else "Blues")
         colors[row] = cmap(frequencies[row])
 
-    fig, ax = plt.subplots(figsize=(9.2, 5.8))
+    fig, ax = plt.subplots(figsize=(9.2, max(5.8, 0.28 * row_count + 2)))
     ax.imshow(colors, aspect="auto", interpolation="nearest", vmin=0, vmax=1)
     ax.set_xticks(range(column_count), [f"{value:,}" for value in sample_counts])
     ax.set_yticks(range(row_count), [_edge_label(edge) for edge in edges])
     ax.set_xlabel("Number of samples")
     ax.set_ylabel("Edge (true edges first)")
-    ax.set_title("Edge selection frequency across 10-seed runs (n=4)")
+    n = max(max(edge) for edge in edges) + 1
+    saved_scope = "all" if any(i > j for i, j in edges) else "upper"
+    ax.set_title(f"Edge selection frequency (n={n}; scope={saved_scope})")
     ax.set_axisbelow(True)
     ax.set_xticks(np.arange(-0.5, column_count, 1), minor=True)
     ax.set_yticks(np.arange(-0.5, row_count, 1), minor=True)
@@ -159,9 +177,11 @@ def main():
         help="Experiment output directory (default: %(default)s)",
     )
     parser.add_argument("-o", "--output", default=None, help="Output image path (default: <input_dir>/edge_recovery_heatmap.png)")
+    parser.add_argument("--support-scope", choices=("all", "upper"), default=None,
+                        help="Require this scope; otherwise infer it from the saved curves.")
     args = parser.parse_args()
     output = args.output or args.input_dir / "edge_recovery_heatmap.png"
-    plot_heatmap(args.input_dir, output)
+    plot_heatmap(args.input_dir, output, args.support_scope)
     print(f"Saved heatmap to {output}")
 
 

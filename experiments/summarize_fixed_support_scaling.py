@@ -39,12 +39,16 @@ class TrialSummary:
     true_support_on_path: bool
 
 
-def _mask_edges(mask: np.ndarray) -> frozenset[tuple[int, int]]:
-    """Return zero-based upper-triangular edges from a support mask."""
+def _mask_edges(mask: np.ndarray, support_scope: str = "all") -> frozenset[tuple[int, int]]:
+    """Return directed edges within the requested scope, excluding the diagonal."""
 
+    mask = np.asarray(mask, dtype=bool).copy()
+    np.fill_diagonal(mask, False)
+    if support_scope == "upper":
+        mask = np.triu(mask, k=1)
     return frozenset(
         (int(i), int(j))
-        for i, j in np.argwhere(np.triu(np.asarray(mask, dtype=bool), k=1))
+        for i, j in np.argwhere(mask)
     )
 
 
@@ -54,6 +58,7 @@ def _load_trial(
     expected_num_samples: int,
     expected_seed: int,
     score_a: float = 0.5,
+    support_scope: str | None = None,
 ) -> TrialSummary:
     """Load one trial and compare its final support with its full path."""
 
@@ -79,7 +84,7 @@ def _load_trial(
         n = int(np.asarray(data["n"]))
         num_samples = int(np.asarray(data["num_samples"]))
         random_seed = int(np.asarray(data["random_seed"]))
-        support_scope = str(np.asarray(data["support_scope"]))
+        saved_scope = str(np.asarray(data["support_scope"]))
         nested_supports = bool(np.asarray(data["nested_supports"]))
         dimensions = np.asarray(data["d_m_values"], dtype=int)
         masks = np.asarray(data["selected_support_masks"], dtype=bool)
@@ -99,8 +104,10 @@ def _load_trial(
             f"{curve_path} records random_seed={random_seed}, expected "
             f"{expected_seed}."
         )
-    if support_scope != "upper":
-        raise ValueError(f"{curve_path} must use support_scope='upper'.")
+    if saved_scope not in ("all", "upper"):
+        raise ValueError(f"{curve_path} has unsupported support_scope={saved_scope!r}.")
+    if support_scope is not None and saved_scope != support_scope:
+        raise ValueError(f"{curve_path} records support_scope={saved_scope!r}, expected {support_scope!r}.")
     if not nested_supports:
         raise ValueError(f"{curve_path} must contain nested supports.")
     if masks.shape != (len(dimensions), n, n):
@@ -113,13 +120,15 @@ def _load_trial(
     if len(set(map(int, dimensions))) != len(dimensions):
         raise ValueError(f"{curve_path} contains duplicate model dimensions.")
 
-    candidate_edges = frozenset(_mask_edges(np.ones((n, n), dtype=bool)))
+    candidate_edges = _mask_edges(np.ones((n, n), dtype=bool), saved_scope)
     if not true_edges or not true_edges < candidate_edges:
         raise ValueError(
-            f"{curve_path} must have at least one true and one false upper edge."
+            f"{curve_path} must have at least one true and one false edge within scope={saved_scope!r}."
         )
 
     path_edges = tuple(_mask_edges(mask) for mask in masks)
+    if any(not edges <= candidate_edges for edges in path_edges):
+        raise ValueError(f"{curve_path} contains edges outside support_scope={saved_scope!r}.")
     # Symmetric-difference size is exactly FP + FN for edge supports.
     path_errors = np.asarray(
         [len(edges.symmetric_difference(true_edges)) for edges in path_edges],
@@ -150,7 +159,7 @@ def _load_trial(
     if len(selected_edges) != len(selected_edge_list):
         raise ValueError(f"{selection_path} contains duplicate selected edges.")
     if not selected_edges <= candidate_edges:
-        raise ValueError(f"{selection_path} contains edges outside the upper triangle.")
+        raise ValueError(f"{selection_path} contains edges outside support_scope={saved_scope!r}.")
     if selected_edges != path_edges[selected_index]:
         raise ValueError(
             f"{selection_path} final support does not match the saved support "
@@ -194,11 +203,13 @@ def collect_trials(
     selection_file: str = "selection_plateau_bootstrap.json",
     selection_root: Path | None = None,
     score_a: float = 0.5,
+    support_scope: str | None = None,
 ) -> list[TrialSummary]:
     """Collect validated trials in sample-size and numeric-seed order."""
 
     selection_root = selection_root or input_dir
     trials = []
+    resolved_scope = support_scope
     for num_samples in sample_sizes:
         sample_dir = input_dir / f"num_samples_{num_samples}"
         if not sample_dir.is_dir():
@@ -217,13 +228,18 @@ def collect_trials(
             )
 
         for random_seed, seed_dir in seed_directories:
+            curve_path = seed_dir / "objective_curve_sigma_hat.npz"
+            if resolved_scope is None:
+                with np.load(curve_path, allow_pickle=False) as data:
+                    resolved_scope = str(np.asarray(data["support_scope"]))
             trials.append(
                 _load_trial(
-                    seed_dir / "objective_curve_sigma_hat.npz",
+                    curve_path,
                     selection_root / sample_dir.name / seed_dir.name / selection_file,
                     num_samples,
                     random_seed,
                     score_a,
+                    resolved_scope,
                 )
             )
     return trials
@@ -357,6 +373,12 @@ def parse_args() -> argparse.Namespace:
         help="Required number of seeds per sample size (default: %(default)s)",
     )
     parser.add_argument(
+        "--support-scope",
+        choices=("all", "upper"),
+        default=None,
+        help="Require this scope; otherwise infer it from the saved curves.",
+    )
+    parser.add_argument(
         "--selection-file",
         default="selection_plateau_bootstrap.json",
         help="Selection JSON filename within each seed directory.",
@@ -412,7 +434,8 @@ def main() -> None:
     trials_output = args.trials_output or args.input_dir / "selection_trials.csv"
     summary_output = args.summary_output or args.input_dir / "selection_summary.md"
     trials = collect_trials(args.input_dir, sample_sizes, args.expected_seeds,
-                            args.selection_file, args.selection_root, args.score_a)
+                            args.selection_file, args.selection_root, args.score_a,
+                            args.support_scope)
     write_trials_csv(trials, trials_output)
     write_markdown_summary(
         trials,

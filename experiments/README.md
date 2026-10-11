@@ -9,11 +9,18 @@ Run the 40-trial study through `lambda_support_recovery.select_support()`:
 TOTAL_CPUS=100 CPUS_PER_TRIAL=5 bash experiments/run_fixed_support_scaling_package.sh
 ```
 
-The new runner defaults to `N=10`, `support_scope="upper"`, sample sizes
+The new runner defaults to `N=10`, `SUPPORT_SCOPE=all`, sample sizes
 100, 1000, 10000, and 1000000, and the same ten seeds per sample size as
 `run_fixed_support_scaling.sh`. It runs up to 20 concurrent trials with five
 package workers each, with BLAS/OpenMP threads limited to one per worker.
 `TOTAL_CPUS` defaults to `SLURM_CPUS_PER_TASK`, then `NSLOTS`, then 100.
+Set `SUPPORT_SCOPE=upper` to restrict candidate edges to the strict upper
+triangle; `all` includes every directed off-diagonal edge. The launcher passes
+the scope to the trial, summary, heatmap, and ROC scripts. When used directly,
+the trial accepts `--support-scope all|upper` (default `all`); analysis scripts
+infer the scope from saved curves unless `--support-scope` is supplied to
+require a matching scope. ROC false-positive rates and heatmap rows use the
+candidate edges for that scope, including lower-triangular edges for `all`.
 All workers for a trial run on its local machine; this is a single-node CPU
 budget. Set `PYTHON=/path/to/python` to select an environment. The installed
 package is used; a local checkout can instead be selected with
@@ -28,7 +35,7 @@ no greater than the smallest sample size (100).
 
 Trial seeds generate observations using `seed + 2`, matching the original
 experiment. The package's `random_seed` and `bootstrap_seed` stay at their
-defaults. The API receives only `num_samples`, `support_scope="upper"`,
+defaults. The API receives only `num_samples`, the configured `support_scope`,
 `n_jobs`, `return_result=True`, and a progress callback. Every statistical
 option retains the installed package default, including estimated fixed
 omega (`fit_omega_ref=True`, `kappa=0.93`), nested supports, ten restarts,
@@ -53,6 +60,9 @@ summary and plots from a completed study:
 ```sh
 bash experiments/run_fixed_support_scaling_package.sh summarize path/to/output
 ```
+
+For saved upper-scope trials, set `SUPPORT_SCOPE=upper` when running this
+launcher command. Direct analysis commands can infer the saved scope.
 
 This runner leaves the original shell script available. Its commands are
 `run-all` and `summarize`; it does not implement the original script's plain

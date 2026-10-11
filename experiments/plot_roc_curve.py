@@ -56,13 +56,15 @@ def _seed_curve_files(sample_dir: Path) -> list[tuple[int, Path]]:
     return files
 
 
-def _upper_edges(n: int) -> tuple[tuple[int, int], ...]:
-    return tuple((i, j) for i in range(n) for j in range(i + 1, n))
+def _candidate_edges(n: int, support_scope: str) -> tuple[tuple[int, int], ...]:
+    return tuple((i, j) for i in range(n) for j in range(n)
+                 if i != j and (support_scope == "all" or i < j))
 
 
 def _load_seed_path(
     curve_path: Path,
     expected_num_samples: int,
+    support_scope: str | None = None,
 ) -> tuple[
     np.ndarray,
     np.ndarray,
@@ -70,7 +72,7 @@ def _load_seed_path(
     frozenset[tuple[int, int]],
     tuple[frozenset[tuple[int, int]], ...],
 ]:
-    """Load and validate one nested upper-support recovery path."""
+    """Load and validate a nested path using the saved candidate-edge scope."""
 
     with np.load(curve_path, allow_pickle=False) as data:
         required = {
@@ -92,7 +94,7 @@ def _load_seed_path(
 
         n = int(np.asarray(data["n"]))
         num_samples = int(np.asarray(data["num_samples"]))
-        support_scope = str(np.asarray(data["support_scope"]))
+        saved_scope = str(np.asarray(data["support_scope"]))
         nested_supports = bool(np.asarray(data["nested_supports"]))
         dimensions = np.asarray(data["d_m_values"], dtype=int)
         masks = np.asarray(data["selected_support_masks"], dtype=bool)
@@ -107,12 +109,14 @@ def _load_seed_path(
             f"{curve_path} records num_samples={num_samples}, expected "
             f"{expected_num_samples}."
         )
-    if support_scope != "upper":
-        raise ValueError(f"{curve_path} must use support_scope='upper'.")
+    if saved_scope not in ("all", "upper"):
+        raise ValueError(f"{curve_path} has unsupported support_scope={saved_scope!r}.")
+    if support_scope is not None and saved_scope != support_scope:
+        raise ValueError(f"{curve_path} records support_scope={saved_scope!r}, expected {support_scope!r}.")
     if not nested_supports:
         raise ValueError(f"{curve_path} must contain nested supports.")
 
-    candidate_edges = _upper_edges(n)
+    candidate_edges = _candidate_edges(n, saved_scope)
     expected_dimensions = np.arange(1, len(candidate_edges) + 2)
     if not np.array_equal(dimensions, expected_dimensions):
         raise ValueError(
@@ -130,15 +134,17 @@ def _load_seed_path(
     candidate_set = frozenset(candidate_edges)
     if not true_edges or not true_edges < candidate_set:
         raise ValueError(
-            f"{curve_path} must have at least one true and one false upper edge."
+            f"{curve_path} must have at least one true and one false edge within scope={saved_scope!r}."
         )
 
     off_diagonal_masks = masks.copy()
     diagonal = np.arange(n)
     off_diagonal_masks[:, diagonal, diagonal] = False
-    upper_triangle = np.triu(np.ones((n, n), dtype=bool), k=1)
-    if np.any(off_diagonal_masks & ~upper_triangle):
-        raise ValueError(f"{curve_path} contains selected edges outside the upper triangle.")
+    candidate_mask = np.zeros((n, n), dtype=bool)
+    for i, j in candidate_edges:
+        candidate_mask[i, j] = True
+    if np.any(off_diagonal_masks & ~candidate_mask):
+        raise ValueError(f"{curve_path} contains selected edges outside support_scope={saved_scope!r}.")
     if np.any(off_diagonal_masks[:-1] & ~off_diagonal_masks[1:]):
         raise ValueError(f"{curve_path} support masks are not nested.")
     selected_counts = off_diagonal_masks.sum(axis=(1, 2))
@@ -150,7 +156,7 @@ def _load_seed_path(
     true_mask = np.zeros((n, n), dtype=bool)
     for i, j in true_edges:
         true_mask[i, j] = True
-    false_mask = upper_triangle & ~true_mask
+    false_mask = candidate_mask & ~true_mask
     true_positive_rates = np.count_nonzero(
         off_diagonal_masks & true_mask,
         axis=(1, 2),
@@ -212,6 +218,7 @@ def _load_selected_index(
 
 def collect_mean_roc(
     input_dir: Path,
+    support_scope: str | None = None,
 ) -> dict[
     int,
     tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray],
@@ -221,6 +228,8 @@ def collect_mean_roc(
     curves = {}
     reference_dimensions = None
     reference_truth = None
+    reference_n = None
+    resolved_scope = support_scope
     for sample_size in SAMPLE_SIZES:
         sample_dir = input_dir / f"num_samples_{sample_size}"
         false_positive_rates = []
@@ -228,8 +237,16 @@ def collect_mean_roc(
         selected_false_positive_rates = []
         selected_true_positive_rates = []
         for _, curve_path in _seed_curve_files(sample_dir):
+            with np.load(curve_path, allow_pickle=False) as data:
+                n = int(np.asarray(data["n"]))
+                if resolved_scope is None:
+                    resolved_scope = str(np.asarray(data["support_scope"]))
+            if reference_n is None:
+                reference_n = n
+            elif n != reference_n:
+                raise ValueError(f"{curve_path} has an inconsistent matrix dimension.")
             dimensions, fpr, tpr, true_edges, path_edges = _load_seed_path(
-                curve_path, sample_size
+                curve_path, sample_size, resolved_scope
             )
             if reference_dimensions is None:
                 reference_dimensions = dimensions
@@ -281,10 +298,10 @@ def _jitter_overlaps(
     return x_display, y_display
 
 
-def plot_mean_roc(input_dir: Path, output_path: Path) -> None:
+def plot_mean_roc(input_dir: Path, output_path: Path, support_scope: str | None = None) -> None:
     """Draw only the sample-size mean ROC paths on one set of axes."""
 
-    curves = collect_mean_roc(input_dir)
+    curves = collect_mean_roc(input_dir, support_scope)
     figure, axis = plt.subplots(figsize=(7.2, 6.4))
     colors = ("#0072B2", "#E69F00", "#009E73", "#CC79A7")
     for color, sample_size in zip(colors, SAMPLE_SIZES):
@@ -313,7 +330,7 @@ def plot_mean_roc(input_dir: Path, output_path: Path) -> None:
     axis.set_aspect("equal", adjustable="box")
     axis.set_xlabel("False positive rate")
     axis.set_ylabel("True positive rate")
-    axis.set_title("Mean edge-recovery ROC curves across 10 seeds (n=4)")
+    axis.set_title(f"Mean edge-recovery ROC curves across {EXPECTED_SEED_COUNT} seeds")
     axis.grid(True, color="0.88", linewidth=0.8)
     axis.set_axisbelow(True)
     axis.legend(loc="lower right", frameon=True)
@@ -324,10 +341,10 @@ def plot_mean_roc(input_dir: Path, output_path: Path) -> None:
     plt.close(figure)
 
 
-def plot_final_selections(input_dir: Path, output_path: Path) -> None:
+def plot_final_selections(input_dir: Path, output_path: Path, support_scope: str | None = None) -> None:
     """Draw seed-level and mean final-support operating points separately."""
 
-    curves = collect_mean_roc(input_dir)
+    curves = collect_mean_roc(input_dir, support_scope)
     figure, axis = plt.subplots(figsize=(9.2, 6.4))
     colors = ("#0072B2", "#E69F00", "#009E73", "#CC79A7")
     sample_handles = []
@@ -385,7 +402,7 @@ def plot_final_selections(input_dir: Path, output_path: Path) -> None:
     axis.set_aspect("equal", adjustable="box")
     axis.set_xlabel("False positive rate")
     axis.set_ylabel("True positive rate")
-    axis.set_title("Final support operating points across 10 seeds (n=4)")
+    axis.set_title(f"Final support operating points across {EXPECTED_SEED_COUNT} seeds")
     axis.grid(True, color="0.88", linewidth=0.8)
     axis.set_axisbelow(True)
     sample_legend = axis.legend(
@@ -463,6 +480,12 @@ def parse_args() -> argparse.Namespace:
         help="Output PNG path (default: <input-dir>/roc_curve.png)",
     )
     parser.add_argument(
+        "--support-scope",
+        choices=("all", "upper"),
+        default=None,
+        help="Require this scope; otherwise infer it from the saved curves.",
+    )
+    parser.add_argument(
         "--selection-output",
         type=Path,
         default=None,
@@ -481,8 +504,8 @@ def main() -> None:
         args.selection_output
         or args.input_dir / "final_support_operating_points.png"
     )
-    plot_mean_roc(args.input_dir, output_path)
-    plot_final_selections(args.input_dir, selection_output_path)
+    plot_mean_roc(args.input_dir, output_path, args.support_scope)
+    plot_final_selections(args.input_dir, selection_output_path, args.support_scope)
     print(f"Saved ROC plot to {output_path}")
     print(f"Saved final-support plot to {selection_output_path}")
 

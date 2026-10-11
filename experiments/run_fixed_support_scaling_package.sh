@@ -32,7 +32,8 @@ Usage: $(basename "$0") [run-all | summarize [OUTPUT_FOLDER]]
   run-all    Run 40 package-based trials, then write the summary and plots.
   summarize  Regenerate the summary and plots from completed package trials.
 
-Defaults: N=10, SUPPORT_SCOPE=upper, TOTAL_CPUS=100, CPUS_PER_TRIAL=5.
+Defaults: N=10, SUPPORT_SCOPE=all, TOTAL_CPUS=100, CPUS_PER_TRIAL=5.
+SUPPORT_SCOPE accepts all (every directed off-diagonal edge) or upper.
 Sample sizes: 100, 1000, 10000, 1000000; ten seeds per sample size.
 Set PYTHON to a Python 3.10+ executable with requirements.txt installed.
 OUTPUT_ROOT defaults to experiments/output/fixed_support_scaling_n\${N}_package_fit_omega_ref_true.
@@ -57,14 +58,14 @@ case "${COMMAND}" in
     *) usage >&2; exit 2 ;;
 esac
 
-if [[ "${SUPPORT_SCOPE}" != "upper" ]]; then
-    echo "Error: this summary/plot workflow requires SUPPORT_SCOPE=upper." >&2
+if [[ "${SUPPORT_SCOPE}" != "all" && "${SUPPORT_SCOPE}" != "upper" ]]; then
+    echo "Error: SUPPORT_SCOPE must be all or upper." >&2
     exit 2
 fi
 
 if [[ "${COMMAND}" == "run-all" ]]; then
     if [[ ! "${N}" =~ ^[1-9][0-9]*$ ]] || ((N < 3)); then
-        echo "Error: N must be at least 3 so the study has true and false upper edges." >&2
+        echo "Error: N must be at least 3 so the study has true and false edges." >&2
         exit 2
     fi
     if [[ ! "${TOTAL_CPUS}" =~ ^[1-9][0-9]*$ || ! "${CPUS_PER_TRIAL}" =~ ^[1-9][0-9]*$ ]] \
@@ -75,6 +76,7 @@ if [[ "${COMMAND}" == "run-all" ]]; then
     # Check dependencies and data-generation settings before launching workers.
     "${PYTHON}" experiments/run_fixed_support_scaling_package_trial.py \
         --n "${N}" --num-samples 100 --seed 124 --n-jobs "${CPUS_PER_TRIAL}" \
+        --support-scope "${SUPPORT_SCOPE}" \
         --offdiag-abs-min "${LAMBDA_STAR_OFFDIAG_ABS_MIN}" \
         --offdiag-abs-max "${LAMBDA_STAR_OFFDIAG_ABS_MAX}" \
         --omega-star "${OMEGA_STAR}" --check-only
@@ -104,6 +106,7 @@ run_trial() {
     "${PYTHON}" -u experiments/run_fixed_support_scaling_package_trial.py \
         --n "${N}" --num-samples "${num_samples}" --seed "${random_seed}" \
         --n-jobs "${CPUS_PER_TRIAL}" --output-dir "${trial_dir}" \
+        --support-scope "${SUPPORT_SCOPE}" \
         --offdiag-abs-min "${LAMBDA_STAR_OFFDIAG_ABS_MIN}" \
         --offdiag-abs-max "${LAMBDA_STAR_OFFDIAG_ABS_MAX}" \
         --omega-star "${OMEGA_STAR}" \
@@ -139,7 +142,8 @@ if [[ "${COMMAND}" == "run-all" ]]; then
 fi
 
 "${PYTHON}" experiments/summarize_fixed_support_scaling.py \
-    "${OUTPUT_ROOT}" --sample-sizes "${NUM_SAMPLE_VALUES[@]}" --expected-seeds 10
-"${PYTHON}" experiments/plot_edge_recovery_heatmap.py --input-dir "${OUTPUT_ROOT}"
-"${PYTHON}" experiments/plot_roc_curve.py --input-dir "${OUTPUT_ROOT}"
+    "${OUTPUT_ROOT}" --sample-sizes "${NUM_SAMPLE_VALUES[@]}" --expected-seeds 10 \
+    --support-scope "${SUPPORT_SCOPE}"
+"${PYTHON}" experiments/plot_edge_recovery_heatmap.py --input-dir "${OUTPUT_ROOT}" --support-scope "${SUPPORT_SCOPE}"
+"${PYTHON}" experiments/plot_roc_curve.py --input-dir "${OUTPUT_ROOT}" --support-scope "${SUPPORT_SCOPE}"
 echo "Results, summary, and plots: ${OUTPUT_ROOT}"

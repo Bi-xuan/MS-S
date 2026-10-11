@@ -33,8 +33,12 @@ def test_api_keeps_statistical_defaults_and_exports_compatible_files(
     tmp_path, monkeypatch, scope_options, expected_scope,
 ):
     calls = []
-    masks = np.repeat(np.eye(3, dtype=bool)[None], 4, axis=0)
-    for index, edge in enumerate(((0, 2), (1, 2), (0, 1)), 1):
+    edge_order = [(0, 2), (1, 2), (0, 1)]
+    if expected_scope == "all":
+        edge_order += [(1, 0), (2, 0), (2, 1)]
+    path_length = len(edge_order) + 1
+    masks = np.repeat(np.eye(3, dtype=bool)[None], path_length, axis=0)
+    for index, edge in enumerate(edge_order, 1):
         masks[index:] = masks[index - 1]
         masks[index:, edge[0], edge[1]] = True
 
@@ -45,14 +49,14 @@ def test_api_keeps_statistical_defaults_and_exports_compatible_files(
         curve = SimpleNamespace(
             fit_settings=settings, resolved_omega_ref=.5,
             support_scope=kwargs["support_scope"], nested_supports=True,
-            dimensions=np.arange(1, 5), raw_objectives=np.array([3., 2., 1., 0.]),
-            support_masks=masks, support_valid=np.ones(4, dtype=bool),
-            fitted_lambdas=np.zeros((4, 3, 3)), fitted_omegas=np.full(4, .5),
+            dimensions=np.arange(1, path_length + 1), raw_objectives=np.arange(path_length)[::-1].astype(float),
+            support_masks=masks, support_valid=np.ones(path_length, dtype=bool),
+            fitted_lambdas=np.zeros((path_length, 3, 3)), fitted_omegas=np.full(path_length, .5),
         )
         return SimpleNamespace(
             curve=curve, selected_edges=((0, 2), (1, 2)), selected_dimension=3,
             diagnostics=Diagnostics(), method="plateau-bootstrap", objective_floor=1e-8,
-            lm_values=np.ones(4),
+            lm_values=np.ones(path_length),
             lm_mode="constant",
         )
 
@@ -72,16 +76,14 @@ def test_api_keeps_statistical_defaults_and_exports_compatible_files(
 
     curve_path = tmp_path / "objective_curve_sigma_hat.npz"
     selection_path = tmp_path / "selection_plateau_bootstrap.json"
-    # Existing summary and ROC consumers currently support only upper scope.
-    if expected_scope == "upper":
-        summary = _load_trial(curve_path, selection_path, 100, 124)
-        assert summary.exact_support_recovery
-        assert summary.best_on_path_selection
-        assert summary.true_support_on_path
-        assert summary.precision == 1.
-        dimensions, fpr, tpr, _, _ = _load_seed_path(curve_path, 100)
-        np.testing.assert_array_equal(dimensions, np.arange(1, 5))
-        assert fpr[-1] == tpr[-1] == 1.
+    summary = _load_trial(curve_path, selection_path, 100, 124)
+    assert summary.exact_support_recovery
+    assert summary.best_on_path_selection
+    assert summary.true_support_on_path
+    assert summary.precision == 1.
+    dimensions, fpr, tpr, _, _ = _load_seed_path(curve_path, 100)
+    np.testing.assert_array_equal(dimensions, np.arange(1, path_length + 1))
+    assert fpr[-1] == tpr[-1] == 1.
     report = json.loads(selection_path.read_text())
     assert report["input"] == str(curve_path)
     assert report["sample_seed"] == 126
@@ -116,7 +118,7 @@ def test_invalid_trial_settings_fail_before_fitting(arguments):
 
 @pytest.mark.parametrize("settings", [
     {"TOTAL_CPUS": "4", "CPUS_PER_TRIAL": "5"}, {"TOTAL_CPUS": "0"},
-    {"CPUS_PER_TRIAL": "bad"}, {"N": "2"}, {"SUPPORT_SCOPE": "all"},
+    {"CPUS_PER_TRIAL": "bad"}, {"N": "2"}, {"SUPPORT_SCOPE": "invalid"},
 ])
 def test_launcher_rejects_invalid_settings_before_starting_workers(settings, tmp_path):
     env = dict(os.environ, TOTAL_CPUS="100", CPUS_PER_TRIAL="5", N="10",
@@ -129,7 +131,8 @@ def test_launcher_rejects_invalid_settings_before_starting_workers(settings, tmp
 
 
 @pytest.mark.parametrize("fail_seed", [None, "124"])
-def test_launcher_schedules_all_trials_and_skips_summary_after_failure(tmp_path, fail_seed):
+@pytest.mark.parametrize("support_scope", [None, "all", "upper"])
+def test_launcher_schedules_all_trials_and_skips_summary_after_failure(tmp_path, fail_seed, support_scope):
     # Exercise the real Bash orchestration; record Python calls without running
     # numerical fitting or plotting in the scheduling test.
     stub = tmp_path / "python-stub"
@@ -153,14 +156,20 @@ if "--seed" in args and "--check-only" not in args:
     calls_path = tmp_path / "calls.jsonl"
     events_path = tmp_path / "events.jsonl"
     env = dict(os.environ, TOTAL_CPUS="10", CPUS_PER_TRIAL="5", N="10",
-               SUPPORT_SCOPE="upper", OUTPUT_ROOT=str(tmp_path / "output"),
+               OUTPUT_ROOT=str(tmp_path / "output"),
                PYTHON=str(stub), CALLS=str(calls_path), EVENTS=str(events_path))
+    if support_scope is None:
+        env.pop("SUPPORT_SCOPE", None)
+    else:
+        env["SUPPORT_SCOPE"] = support_scope
     if fail_seed:
         env["FAIL_SEED"] = fail_seed
     else:
         env.pop("FAIL_SEED", None)
     completed = subprocess.run(["bash", str(SCRIPT)], env=env, capture_output=True, text=True, timeout=30)
     calls = [json.loads(line) for line in calls_path.read_text().splitlines()]
+    assert all(args[args.index("--support-scope") + 1] == (support_scope or "all")
+               for args in calls)
     fits = [args for args in calls if "--seed" in args and "--check-only" not in args]
     summaries = [args for args in calls if any("summarize_fixed_support" in value for value in args)]
     if fail_seed:
