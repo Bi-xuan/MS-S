@@ -57,7 +57,8 @@ def write_json(path, value):
 
 
 def run_trial(*, n, num_samples, seed, n_jobs, output_dir,
-              offdiag_abs_min=0.20, offdiag_abs_max=0.60, omega_star=1.0):
+              offdiag_abs_min=0.20, offdiag_abs_max=0.60, omega_star=1.0,
+              support_scope="all"):
     """Use default statistical parameters; the trial seed changes only the data."""
     output_dir = Path(output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -75,7 +76,7 @@ def run_trial(*, n, num_samples, seed, n_jobs, output_dir,
     print(f"Lambda_star:\n{lambda_star}", flush=True)
     started = time.perf_counter()
     result = lambda_support_recovery.select_support(
-        sigma_hat, num_samples=num_samples, support_scope="upper", n_jobs=n_jobs,
+        sigma_hat, num_samples=num_samples, support_scope=support_scope, n_jobs=n_jobs,
         return_result=True, progress=lambda message: print(message, flush=True),
     )
     elapsed = time.perf_counter() - started
@@ -141,6 +142,8 @@ def parse_args(argv=None):
     parser.add_argument("--num-samples", type=int, required=True)
     parser.add_argument("--seed", type=int, required=True)
     parser.add_argument("--n-jobs", type=int, default=5)
+    parser.add_argument("--support-scope", choices=["all", "upper"], default="all",
+                        help="Candidate edge scope (default: all).")
     parser.add_argument("--offdiag-abs-min", type=float, default=0.20)
     parser.add_argument("--offdiag-abs-max", type=float, default=0.60)
     parser.add_argument("--omega-star", type=float, default=1.0)

@@ -26,7 +26,12 @@ class Diagnostics:
     selected_edges: tuple = ((0, 2), (1, 2))
 
 
-def test_api_keeps_statistical_defaults_and_exports_compatible_files(tmp_path, monkeypatch):
+@pytest.mark.parametrize("scope_options, expected_scope", [
+    ({}, "all"), ({"support_scope": "upper"}, "upper"),
+])
+def test_api_keeps_statistical_defaults_and_exports_compatible_files(
+    tmp_path, monkeypatch, scope_options, expected_scope,
+):
     calls = []
     masks = np.repeat(np.eye(3, dtype=bool)[None], 4, axis=0)
     for index, edge in enumerate(((0, 2), (1, 2), (0, 1)), 1):
@@ -39,7 +44,7 @@ def test_api_keeps_statistical_defaults_and_exports_compatible_files(tmp_path, m
         settings = trial.lambda_support_recovery.FitSettings(omega_fixed=.5)
         curve = SimpleNamespace(
             fit_settings=settings, resolved_omega_ref=.5,
-            support_scope="upper", nested_supports=True,
+            support_scope=kwargs["support_scope"], nested_supports=True,
             dimensions=np.arange(1, 5), raw_objectives=np.array([3., 2., 1., 0.]),
             support_masks=masks, support_valid=np.ones(4, dtype=bool),
             fitted_lambdas=np.zeros((4, 3, 3)), fitted_omegas=np.full(4, .5),
@@ -52,11 +57,12 @@ def test_api_keeps_statistical_defaults_and_exports_compatible_files(tmp_path, m
         )
 
     monkeypatch.setattr(trial.lambda_support_recovery, "select_support", select)
-    trial.run_trial(n=3, num_samples=100, seed=124, n_jobs=5, output_dir=tmp_path)
+    trial.run_trial(n=3, num_samples=100, seed=124, n_jobs=5, output_dir=tmp_path,
+                    **scope_options)
     covariance, options = calls[0]
     assert set(options) == {"num_samples", "support_scope", "n_jobs", "return_result", "progress"}
     assert options["num_samples"] == 100
-    assert options["support_scope"] == "upper"
+    assert options["support_scope"] == expected_scope
     assert options["n_jobs"] == 5
     assert options["return_result"] is True
     expected = trial.sample_empirical_covariance(
@@ -66,28 +72,42 @@ def test_api_keeps_statistical_defaults_and_exports_compatible_files(tmp_path, m
 
     curve_path = tmp_path / "objective_curve_sigma_hat.npz"
     selection_path = tmp_path / "selection_plateau_bootstrap.json"
-    summary = _load_trial(curve_path, selection_path, 100, 124)
-    assert summary.exact_support_recovery
-    assert summary.best_on_path_selection
-    assert summary.true_support_on_path
-    assert summary.precision == 1.
-    dimensions, fpr, tpr, _, _ = _load_seed_path(curve_path, 100)
-    np.testing.assert_array_equal(dimensions, np.arange(1, 5))
-    assert fpr[-1] == tpr[-1] == 1.
+    # Existing summary and ROC consumers currently support only upper scope.
+    if expected_scope == "upper":
+        summary = _load_trial(curve_path, selection_path, 100, 124)
+        assert summary.exact_support_recovery
+        assert summary.best_on_path_selection
+        assert summary.true_support_on_path
+        assert summary.precision == 1.
+        dimensions, fpr, tpr, _, _ = _load_seed_path(curve_path, 100)
+        np.testing.assert_array_equal(dimensions, np.arange(1, 5))
+        assert fpr[-1] == tpr[-1] == 1.
     report = json.loads(selection_path.read_text())
     assert report["input"] == str(curve_path)
     assert report["sample_seed"] == 126
     assert report["api_defaults"]["random_seed"] == 42
     assert report["api_defaults"]["bootstrap_replicates"] == 199
     with np.load(curve_path, allow_pickle=False) as saved:
+        assert str(saved["support_scope"]) == expected_scope
         np.testing.assert_array_equal(saved["Sigma"], covariance)
         assert saved["solve_seed"] == 42
         assert json.loads(str(saved["fit_settings_json"]))["max_restarts"] == 10
 
 
+@pytest.mark.parametrize("arguments, expected_scope", [
+    ([], "all"), (["--support-scope", "all"], "all"),
+    (["--support-scope", "upper"], "upper"),
+])
+def test_trial_support_scope_argument(arguments, expected_scope):
+    args = trial.parse_args(["--num-samples", "100", "--seed", "124",
+                             "--check-only", *arguments])
+    assert args.support_scope == expected_scope
+
+
 @pytest.mark.parametrize("arguments", [
     ["--n", "2"], ["--num-samples", "5"], ["--seed", "-1"],
     ["--n-jobs", "0"], ["--omega-star", "0"], ["--offdiag-abs-min", "0.7"],
+    ["--support-scope", "invalid"],
 ])
 def test_invalid_trial_settings_fail_before_fitting(arguments):
     with pytest.raises(SystemExit):
