@@ -311,6 +311,11 @@ def run_bootstrap(input_path, selection_data, args):
             print("Legacy curve: using 800 iterations, tol=1e-7 and 10 Halton restarts; verifying refit objectives.")
         if args.fit_max_restarts is not None:
             settings = FitSettings(**{**asdict(settings), "max_restarts": args.fit_max_restarts})
+        nested_option = getattr(args, "nested", None)
+        if nested_option is None:
+            nested = bool(data["nested_supports"].item()) if "nested_supports" in data else True
+        else:
+            nested = nested_option == "true"
         result = select_plateau_bootstrap(
             selection_data["d_m_values"], selection_data["objective_values"],
             selection_data["penalty_values"], selection_data["raw_objective_values"],
@@ -320,9 +325,11 @@ def run_bootstrap(input_path, selection_data, args):
             seed=args.bootstrap_seed, n_jobs=args.n_jobs, fit_settings=settings,
             true_support=(np.abs(data["Lambda_star"]) > 1e-10) if "Lambda_star" in data else None,
             progress=lambda message: print(message, flush=True),
+            nested=nested,
         )
     print(f"Loaded: {input_path}")
     print(f"Method: {result.method}")
+    print(f"Nested supports: {result.nested}")
     print(f"Top plateaus requested: {result.top_plateaus}")
     print(f"Candidate dimensions (decreasing): {', '.join(map(str, result.candidate_dimensions))}")
     print(f"Bootstrap replicates: {result.bootstrap_replicates}; alpha: {result.alpha}; seed: {result.seed}")
@@ -372,6 +379,8 @@ def parse_args(argv=None):
     )
     parser.add_argument("--top-plateaus", type=int, default=3,
                         help="Number of longest bounded plateaus to keep for bootstrap selection. Default: 3.")
+    parser.add_argument("--nested", "--nested-supports", type=str.lower, choices=("true", "false"),
+                        help="Require nested bootstrap candidate supports. Defaults to the saved curve mode (true for legacy curves).")
     parser.add_argument("--bootstrap-replicates", type=int, default=199,
                         help="Bootstrap draws per candidate pair. Default: 199.")
     parser.add_argument("--bootstrap-alpha", type=float, default=0.05,

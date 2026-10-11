@@ -81,6 +81,7 @@ def test_top_k_one_and_more_than_available(monkeypatch, curve, mock_fits):
     ("top_plateaus", 0), ("top_plateaus", 1.5), ("bootstrap_replicates", 0),
     ("alpha", 0), ("alpha", 1), ("alpha", np.nan), ("n_jobs", 0),
     ("num_samples", -1), ("seed", -1),
+    ("nested", "false"), ("nested", 0),
 ])
 def test_invalid_configuration(curve, option, value):
     with pytest.raises(ValueError):
@@ -92,6 +93,38 @@ def test_reject_non_nested_candidates_before_bootstrapping(curve):
     curve["support_masks"][1, 2, 0] = True
     with pytest.raises(ValueError, match="must be nested"):
         bootstrap.select_plateau_bootstrap(**curve)
+
+
+def test_non_nested_optimal_masks_and_signed_gains(monkeypatch, curve):
+    masks = curve["support_masks"]
+    masks[2, 0, 1] = False
+    masks[2, 2, 0] = True
+    curve["raw_objectives"][2] = .5  # Observed gain against dimension 4 is -.5.
+    calls = []
+
+    def fit(sigma, mask, settings, *, bootstrap=False):
+        calls.append((sigma.copy(), mask.copy(), bootstrap))
+        dimension = int(mask.sum()) - 2
+        objective = (1. if dimension == 3 else 2.) if bootstrap \
+            else curve["raw_objectives"][dimension - 1]
+        return np.eye(3) / 2, 1., objective
+
+    monkeypatch.setattr(bootstrap, "_fit", fit)
+    result = bootstrap.select_plateau_bootstrap(
+        **curve, nested=False, bootstrap_replicates=19, alpha=.051,
+    )
+    assert result.nested is False
+    assert result.selected_dimension == 4
+    comparison, = result.comparisons
+    assert comparison.observed_gain == -.5
+    assert comparison.bootstrap_gains == (-1.,) * 19
+    assert comparison.p_value == .05
+    assert result.selected_edges == ((0, 1), (0, 2), (1, 2))
+    for small_call, large_call in zip(calls[2::2], calls[3::2]):
+        np.testing.assert_array_equal(small_call[0], large_call[0])
+        np.testing.assert_array_equal(small_call[1], masks[2])
+        np.testing.assert_array_equal(large_call[1], masks[3])
+        assert small_call[2] and large_call[2]
 
 
 def test_refit_mismatch_rejects_calibration(monkeypatch, curve):
@@ -114,7 +147,7 @@ def test_both_fixed_masks_refit_same_sample_and_negative_gain_clipped(monkeypatc
     monkeypatch.setattr(bootstrap, "solve_support_with_restarts", solver)
     small, large = curve["support_masks"][1:3]
     sigma = np.eye(3) * .9  # Fixed omega=1 must remain admissible in this draw.
-    gain = bootstrap._bootstrap_gain((sigma, small, large, bootstrap.FitSettings()))
+    gain = bootstrap._bootstrap_gain((sigma, small, large, bootstrap.FitSettings(), True))
     assert gain == 0
     assert len(calls) == 2
     assert calls[0][0] is sigma and calls[1][0] is sigma
@@ -149,6 +182,36 @@ def test_cli_defaults_and_json_original_sample_size(tmp_path, monkeypatch, curve
     defaults = parse_args([str(source)])
     assert defaults.top_plateaus == 3 and defaults.bootstrap_replicates == 199
     assert defaults.bootstrap_alpha == .05
+    assert defaults.nested is None
+    assert report["nested"] is True
+
+
+@pytest.mark.parametrize("saved_nested, option", [
+    (False, []), (True, ["--nested", "false"]),
+    (None, ["--nested-supports", "false"]),
+])
+def test_cli_compares_non_nested_saved_supports(
+    tmp_path, monkeypatch, curve, mock_fits, saved_nested, option,
+):
+    curve["support_masks"][1, 0, 1] = False
+    curve["support_masks"][1, 2, 0] = True
+    monkeypatch.setattr(bootstrap, "_bootstrap_gain", lambda task: 1e6)
+    source = tmp_path / "curve.npz"
+    output = tmp_path / "selection.json"
+    metadata = {} if saved_nested is None else {"nested_supports": saved_nested}
+    np.savez(source, d_m_values=curve["dimensions"], objective_values=curve["objectives"],
+             Sigma=curve["Sigma"], selected_support_masks=curve["support_masks"],
+             selected_support_valid=curve["support_valid"], num_samples=100, n=3,
+             fit_settings_json=json.dumps(asdict(bootstrap.FitSettings())), **metadata)
+    args = parse_args([str(source), "--method", "plateau-bootstrap",
+                       "--bootstrap-replicates", "1", "--output-json", str(output), *option])
+    result = run(args)
+    assert result.selected_dimension == 2
+    assert result.selected_edges == ((2, 0),)
+    assert json.loads(output.read_text())["nested"] is False
+    args.nested = "true"
+    with pytest.raises(ValueError, match="must be nested"):
+        run(args)
 
 
 def test_bootstrap_covariances_use_original_N_and_deterministic_seed(monkeypatch, curve, mock_fits):
@@ -162,11 +225,15 @@ def test_bootstrap_covariances_use_original_N_and_deterministic_seed(monkeypatch
     assert not np.array_equal(first[0], first[1])
 
 
-def test_native_refits_serial_and_parallel_agree(curve):
+@pytest.mark.parametrize("nested", [True, False])
+def test_native_refits_serial_and_parallel_agree(curve, nested):
+    if not nested:
+        curve["support_masks"][1, 0, 1] = False
+        curve["support_masks"][1, 2, 0] = True
     settings = bootstrap.FitSettings(max_iter=8, max_restarts=1)
     curve["raw_objectives"] = np.array([
         bootstrap._fit(curve["Sigma"], mask, settings)[2] for mask in curve["support_masks"]
     ])
-    serial = bootstrap.select_plateau_bootstrap(**curve, fit_settings=settings, bootstrap_replicates=2)
-    parallel = bootstrap.select_plateau_bootstrap(**curve, fit_settings=settings, bootstrap_replicates=2, n_jobs=2)
+    serial = bootstrap.select_plateau_bootstrap(**curve, fit_settings=settings, bootstrap_replicates=2, nested=nested)
+    parallel = bootstrap.select_plateau_bootstrap(**curve, fit_settings=settings, bootstrap_replicates=2, n_jobs=2, nested=nested)
     assert serial == parallel

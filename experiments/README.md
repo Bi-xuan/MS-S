@@ -112,7 +112,7 @@ differ.
 
 # Plateau plus bootstrap dimension selection
 
-Run the new method on a saved nested objective curve:
+Run the method on a saved objective curve:
 
 ```sh
 python experiments/select_scaling_parameter.py path/to/objective_curve_sigma_hat.npz \
@@ -131,8 +131,12 @@ existing penalty (`Lm=1` by default) and objective floor (`1e-8` by default).
 The intervals starting at zero and extending to infinity are excluded. Exact
 width ties favor the smaller dimension. If fewer than the requested number
 exist, it uses all available candidates; a single candidate requires no test.
-No bounded plateau, missing model masks, or nonnested candidates cause an
-explicit failure.
+No bounded plateau or missing model masks cause an explicit failure.
+The CLI uses the saved curve's `nested_supports` mode, defaulting to true for
+legacy files. Use `--nested false` (also `--nested-supports false`) to compare
+the corresponding optimal supports from an unrestricted search. The Python
+selector accepts `select_plateau_bootstrap(..., nested=False)`. Nested mode
+still requires candidate supports to contain the smaller candidates.
 
 Candidates are tested in decreasing dimension. For each adjacent larger/smaller
 pair, the null is the smaller fitted model's stationary Gaussian covariance.
@@ -142,8 +146,10 @@ objectives, with `p = (1 + count(T_boot >= T_observed)) / (B + 1)`.
 Only `p < alpha` retains the larger model and stops. Otherwise the procedure
 moves to the next pair, or selects the smallest candidate after all tests fail
 to reject. There is no multiple-testing correction or recommended-scale
-multiplier in this procedure. The smaller fit is feasible on the larger mask,
-so negative gains from local optimization are clipped to zero.
+multiplier in this procedure. In nested mode the smaller fit is feasible on
+the larger mask, so negative gains from local optimization are clipped to
+zero. With `nested=False`, observed and bootstrap gains retain their signs,
+and each draw refits the saved optimal masks without searching for new supports.
 
 Bootstrap sample size is the original positive `num_samples` in the NPZ;
 `--num-samples` changes only the penalty. Sampling uses the exact distribution

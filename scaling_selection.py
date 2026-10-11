@@ -851,6 +851,7 @@ class BootstrapSelection:
     fit_settings: FitSettings
     precision: float | None
     method: str = "plateau-bootstrap"
+    nested: bool = True
 
 
 def _fit(Sigma, mask, settings, *, bootstrap=False):
@@ -867,12 +868,13 @@ def _fit(Sigma, mask, settings, *, bootstrap=False):
 
 
 def _bootstrap_gain(task):
-    Sigma, smaller, larger, settings = task
+    Sigma, smaller, larger, settings, nested = task
     small_fit = _fit(Sigma, smaller, settings, bootstrap=True)
     large_fit = _fit(Sigma, larger, settings, bootstrap=True)
-    # The smaller fit is also feasible on the larger mask. This protects
-    # against a worse local optimizer solution without changing supports.
-    return float(max(0.0, small_fit[2] - large_fit[2]))
+    gain = float(small_fit[2] - large_fit[2])
+    # Only nested masks make the smaller fit feasible on the larger mask.
+    # For independent optimal supports, a negative gain is a valid outcome.
+    return max(0.0, gain) if nested else gain
 
 
 def _null_covariance(fit):
@@ -892,7 +894,7 @@ def select_plateau_bootstrap(
     dimensions, objectives, penalties, raw_objectives, Sigma, support_masks,
     support_valid, num_samples, *, top_plateaus=3, bootstrap_replicates=199,
     alpha=0.05, seed=20260913, n_jobs=1, fit_settings=None,
-    true_support=None, progress=None,
+    true_support=None, progress=None, nested=True,
 ):
     """Screen top log-width plateaus, then test adjacent descending dimensions.
 
@@ -900,7 +902,11 @@ def select_plateau_bootstrap(
     objectives, refitting both original masks for every draw. Gaussian samples
     have known zero mean: Wishart(N, Sigma)/N is exactly X.T @ X/N. For N < n,
     draw X explicitly because the Wishart sampler requires N >= n.
+    With nested=False, compare each dimension's supplied optimal support
+    without requiring containment, and preserve signed objective differences.
     """
+    if not isinstance(nested, (bool, np.bool_)):
+        raise ValueError("nested must be a boolean.")
     for name, value in (("top_plateaus", top_plateaus),
                         ("bootstrap_replicates", bootstrap_replicates),
                         ("num_samples", num_samples), ("n_jobs", n_jobs)):
@@ -938,9 +944,10 @@ def select_plateau_bootstrap(
         if not valid[i] or not np.isfinite(raw[i]):
             raise ValueError(f"Missing valid support/objective at dimension {d}.")
         validate_support_mask(masks[i], n, d - 1, off_diagonal_edges(n))
-    for larger, smaller in zip(candidates, candidates[1:]):
-        if np.any(masks[indices[smaller]] & ~masks[indices[larger]]):
-            raise ValueError("Plateau candidates must be nested; recompute with --nested-supports true.")
+    if nested:
+        for larger, smaller in zip(candidates, candidates[1:]):
+            if np.any(masks[indices[smaller]] & ~masks[indices[larger]]):
+                raise ValueError("Plateau candidates must be nested; use nested=False to compare independent supports.")
 
     fits = {}
     comparisons = []
@@ -958,7 +965,9 @@ def select_plateau_bootstrap(
                         f"Refitted objective at D_m={d} differs from the saved curve; "
                         "use matching fitting settings or regenerate the curve."
                     )
-        observed = float(max(0.0, raw[indices[smaller]] - raw[indices[larger]]))
+        observed = float(raw[indices[smaller]] - raw[indices[larger]])
+        if nested:
+            observed = max(0.0, observed)
         null_sigma, radius = _null_covariance(fits[smaller])
         rng = np.random.default_rng(np.random.SeedSequence([seed, smaller, larger]))
         if num_samples >= n:
@@ -968,7 +977,7 @@ def select_plateau_bootstrap(
         else:
             x = rng.multivariate_normal(np.zeros(n), null_sigma, size=(bootstrap_replicates, num_samples))
             samples = x.swapaxes(-1, -2) @ x / num_samples
-        tasks = [(s, masks[indices[smaller]], masks[indices[larger]], settings) for s in samples]
+        tasks = [(s, masks[indices[smaller]], masks[indices[larger]], settings, nested) for s in samples]
         if n_jobs == 1:
             gains = tuple(map(_bootstrap_gain, tasks))
         else:
@@ -998,4 +1007,5 @@ def select_plateau_bootstrap(
     return BootstrapSelection(
         selected, candidates, plateaus, tuple(comparisons), edges, top_plateaus,
         bootstrap_replicates, float(alpha), int(seed), int(num_samples), settings, precision,
+        nested=bool(nested),
     )
