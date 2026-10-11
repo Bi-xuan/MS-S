@@ -72,7 +72,7 @@ def _load_seed_path(
     frozenset[tuple[int, int]],
     tuple[frozenset[tuple[int, int]], ...],
 ]:
-    """Load and validate a nested path using the saved candidate-edge scope."""
+    """Load and validate a support path using the saved candidate-edge scope."""
 
     with np.load(curve_path, allow_pickle=False) as data:
         required = {
@@ -113,8 +113,6 @@ def _load_seed_path(
         raise ValueError(f"{curve_path} has unsupported support_scope={saved_scope!r}.")
     if support_scope is not None and saved_scope != support_scope:
         raise ValueError(f"{curve_path} records support_scope={saved_scope!r}, expected {support_scope!r}.")
-    if not nested_supports:
-        raise ValueError(f"{curve_path} must contain nested supports.")
 
     candidate_edges = _candidate_edges(n, saved_scope)
     expected_dimensions = np.arange(1, len(candidate_edges) + 2)
@@ -145,7 +143,7 @@ def _load_seed_path(
         candidate_mask[i, j] = True
     if np.any(off_diagonal_masks & ~candidate_mask):
         raise ValueError(f"{curve_path} contains selected edges outside support_scope={saved_scope!r}.")
-    if np.any(off_diagonal_masks[:-1] & ~off_diagonal_masks[1:]):
+    if nested_supports and np.any(off_diagonal_masks[:-1] & ~off_diagonal_masks[1:]):
         raise ValueError(f"{curve_path} support masks are not nested.")
     selected_counts = off_diagonal_masks.sum(axis=(1, 2))
     if not np.array_equal(selected_counts, dimensions - 1):

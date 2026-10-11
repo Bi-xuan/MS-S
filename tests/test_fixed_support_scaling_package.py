@@ -29,8 +29,9 @@ class Diagnostics:
 @pytest.mark.parametrize("scope_options, expected_scope", [
     ({}, "all"), ({"support_scope": "upper"}, "upper"),
 ])
+@pytest.mark.parametrize("nested_supports", [True, False])
 def test_api_keeps_statistical_defaults_and_exports_compatible_files(
-    tmp_path, monkeypatch, scope_options, expected_scope,
+    tmp_path, monkeypatch, scope_options, expected_scope, nested_supports,
 ):
     calls = []
     edge_order = [(0, 2), (1, 2), (0, 1)]
@@ -48,7 +49,7 @@ def test_api_keeps_statistical_defaults_and_exports_compatible_files(
         settings = trial.lambda_support_recovery.FitSettings(omega_fixed=.5)
         curve = SimpleNamespace(
             fit_settings=settings, resolved_omega_ref=.5,
-            support_scope=kwargs["support_scope"], nested_supports=True,
+            support_scope=kwargs["support_scope"], nested_supports=kwargs["nested_supports"],
             dimensions=np.arange(1, path_length + 1), raw_objectives=np.arange(path_length)[::-1].astype(float),
             support_masks=masks, support_valid=np.ones(path_length, dtype=bool),
             fitted_lambdas=np.zeros((path_length, 3, 3)), fitted_omegas=np.full(path_length, .5),
@@ -62,11 +63,12 @@ def test_api_keeps_statistical_defaults_and_exports_compatible_files(
 
     monkeypatch.setattr(trial.lambda_support_recovery, "select_support", select)
     trial.run_trial(n=3, num_samples=100, seed=124, n_jobs=5, output_dir=tmp_path,
-                    **scope_options)
+                    nested_supports=nested_supports, **scope_options)
     covariance, options = calls[0]
-    assert set(options) == {"num_samples", "support_scope", "n_jobs", "return_result", "progress"}
+    assert set(options) == {"num_samples", "support_scope", "nested_supports", "n_jobs", "return_result", "progress"}
     assert options["num_samples"] == 100
     assert options["support_scope"] == expected_scope
+    assert options["nested_supports"] is nested_supports
     assert options["n_jobs"] == 5
     assert options["return_result"] is True
     expected = trial.sample_empirical_covariance(
@@ -91,6 +93,7 @@ def test_api_keeps_statistical_defaults_and_exports_compatible_files(
     assert report["api_defaults"]["bootstrap_replicates"] == 199
     with np.load(curve_path, allow_pickle=False) as saved:
         assert str(saved["support_scope"]) == expected_scope
+        assert bool(saved["nested_supports"]) is nested_supports
         np.testing.assert_array_equal(saved["Sigma"], covariance)
         assert saved["solve_seed"] == 42
         assert json.loads(str(saved["fit_settings_json"]))["max_restarts"] == 10
@@ -106,10 +109,21 @@ def test_trial_support_scope_argument(arguments, expected_scope):
     assert args.support_scope == expected_scope
 
 
+@pytest.mark.parametrize("arguments, expected", [
+    ([], True), (["--nested-supports", "true"], True),
+    (["--nested-supports", "false"], False),
+])
+def test_trial_nested_supports_argument(arguments, expected):
+    args = trial.parse_args(["--num-samples", "100", "--seed", "124",
+                             "--check-only", *arguments])
+    assert args.nested_supports is expected
+
+
 @pytest.mark.parametrize("arguments", [
     ["--n", "2"], ["--num-samples", "5"], ["--seed", "-1"],
     ["--n-jobs", "0"], ["--omega-star", "0"], ["--offdiag-abs-min", "0.7"],
     ["--support-scope", "invalid"],
+    ["--nested-supports", "invalid"],
 ])
 def test_invalid_trial_settings_fail_before_fitting(arguments):
     with pytest.raises(SystemExit):
@@ -119,10 +133,12 @@ def test_invalid_trial_settings_fail_before_fitting(arguments):
 @pytest.mark.parametrize("settings", [
     {"TOTAL_CPUS": "4", "CPUS_PER_TRIAL": "5"}, {"TOTAL_CPUS": "0"},
     {"CPUS_PER_TRIAL": "bad"}, {"N": "2"}, {"SUPPORT_SCOPE": "invalid"},
+    {"NESTED_SUPPORTS": "invalid"},
 ])
 def test_launcher_rejects_invalid_settings_before_starting_workers(settings, tmp_path):
     env = dict(os.environ, TOTAL_CPUS="100", CPUS_PER_TRIAL="5", N="10",
-               SUPPORT_SCOPE="upper", OUTPUT_ROOT=str(tmp_path / "output"), PYTHON="/nonexistent")
+               SUPPORT_SCOPE="upper", NESTED_SUPPORTS="true",
+               OUTPUT_ROOT=str(tmp_path / "output"), PYTHON="/nonexistent")
     env.update(settings)
     completed = subprocess.run(["bash", str(SCRIPT)], env=env, capture_output=True, text=True, timeout=10)
     assert completed.returncode == 2
@@ -132,7 +148,10 @@ def test_launcher_rejects_invalid_settings_before_starting_workers(settings, tmp
 
 @pytest.mark.parametrize("fail_seed", [None, "124"])
 @pytest.mark.parametrize("support_scope", [None, "all", "upper"])
-def test_launcher_schedules_all_trials_and_skips_summary_after_failure(tmp_path, fail_seed, support_scope):
+@pytest.mark.parametrize("nested_supports", [None, "true", "false"])
+def test_launcher_schedules_all_trials_and_skips_summary_after_failure(
+    tmp_path, fail_seed, support_scope, nested_supports,
+):
     # Exercise the real Bash orchestration; record Python calls without running
     # numerical fitting or plotting in the scheduling test.
     stub = tmp_path / "python-stub"
@@ -162,6 +181,10 @@ if "--seed" in args and "--check-only" not in args:
         env.pop("SUPPORT_SCOPE", None)
     else:
         env["SUPPORT_SCOPE"] = support_scope
+    if nested_supports is None:
+        env.pop("NESTED_SUPPORTS", None)
+    else:
+        env["NESTED_SUPPORTS"] = nested_supports
     if fail_seed:
         env["FAIL_SEED"] = fail_seed
     else:
@@ -171,6 +194,8 @@ if "--seed" in args and "--check-only" not in args:
     assert all(args[args.index("--support-scope") + 1] == (support_scope or "all")
                for args in calls)
     fits = [args for args in calls if "--seed" in args and "--check-only" not in args]
+    assert all(args[args.index("--nested-supports") + 1] == (nested_supports or "true")
+               for args in calls if "--seed" in args)
     summaries = [args for args in calls if any("summarize_fixed_support" in value for value in args)]
     if fail_seed:
         assert completed.returncode != 0

@@ -10,7 +10,7 @@ from experiments.plot_edge_recovery_heatmap import collect_frequencies, plot_hea
 from experiments.summarize_fixed_support_scaling import _load_trial, collect_trials
 
 
-def save_trial(root, scope, samples=100, seed=1):
+def save_trial(root, scope, samples=100, seed=1, nested_supports=True):
     directory = root / f"num_samples_{samples}" / f"seed_{seed}"
     directory.mkdir(parents=True, exist_ok=True)
     truth = [(0, 2), (1, 2)]
@@ -20,9 +20,13 @@ def save_trial(root, scope, samples=100, seed=1):
     masks = np.repeat(np.eye(3, dtype=bool)[None], len(edges) + 1, axis=0)
     for index, (i, j) in enumerate(edges, 1):
         masks[index:, i, j] = True
+    if not nested_supports:
+        # The one-edge support loses its edge at the next dimension.
+        masks[1] = np.eye(3, dtype=bool)
+        masks[1, 0, 1] = True
     curve = directory / "objective_curve_sigma_hat.npz"
     np.savez(curve, n=3, num_samples=samples, random_seed=seed,
-             support_scope=scope, nested_supports=True,
+             support_scope=scope, nested_supports=nested_supports,
              lambda_star_support_edges=np.array(truth),
              d_m_values=np.arange(1, len(edges) + 2), selected_support_masks=masks,
              selected_support_valid=np.ones(len(edges) + 1, dtype=bool))
@@ -67,6 +71,25 @@ def test_scope_controls_summary_roc_and_heatmap(tmp_path, scope):
     assert collect_frequencies(tmp_path)[0] == edges
 
 
+@pytest.mark.parametrize("scope", ["all", "upper"])
+def test_analysis_accepts_unrestricted_supports(tmp_path, scope):
+    curve, selection = save_trial(tmp_path, scope, nested_supports=False)
+    summary = _load_trial(curve, selection, 100, 1, support_scope=scope)
+    assert summary.best_on_path_selection
+    dimensions, fpr, tpr, _, path_edges = roc._load_seed_path(curve, 100, scope)
+    assert not path_edges[1] <= path_edges[2]
+    assert fpr[1] == pytest.approx(1 / (4 if scope == "all" else 1))
+    assert tpr[1] == 0
+    assert roc._load_selected_index(selection, dimensions, path_edges) == summary.selected_dimension - 1
+    # A path declared nested must still satisfy that constraint.
+    with np.load(curve, allow_pickle=False) as data:
+        saved = dict(data)
+    saved["nested_supports"] = True
+    np.savez(curve, **saved)
+    with pytest.raises(ValueError, match="not nested"):
+        roc._load_seed_path(curve, 100, scope)
+
+
 @pytest.mark.parametrize("saved_scope, requested_scope", [("all", "upper"), ("upper", "all")])
 def test_analysis_rejects_scope_mismatch(tmp_path, saved_scope, requested_scope):
     curve, selection = save_trial(tmp_path, saved_scope)
@@ -91,10 +114,11 @@ def test_analysis_rejects_mixed_saved_scopes(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("scope", ["all", "upper"])
-def test_both_scopes_render_all_plots(tmp_path, monkeypatch, scope):
+@pytest.mark.parametrize("nested_supports", [True, False])
+def test_both_scopes_render_all_plots(tmp_path, monkeypatch, scope, nested_supports):
     monkeypatch.setattr(roc, "EXPECTED_SEED_COUNT", 1)
     for samples in roc.SAMPLE_SIZES:
-        save_trial(tmp_path, scope, samples=samples)
+        save_trial(tmp_path, scope, samples=samples, nested_supports=nested_supports)
     outputs = [tmp_path / name for name in ("heatmap.png", "roc.png", "final.png")]
     plot_heatmap(tmp_path, outputs[0], scope)
     roc.plot_mean_roc(tmp_path, outputs[1], scope)

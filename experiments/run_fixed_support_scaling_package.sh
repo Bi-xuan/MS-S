@@ -16,6 +16,7 @@ export MPLBACKEND=Agg
 PYTHON="${PYTHON:-python}"
 N="${N:-10}"
 SUPPORT_SCOPE="${SUPPORT_SCOPE:-all}"
+NESTED_SUPPORTS="${NESTED_SUPPORTS:-true}"
 TOTAL_CPUS="${TOTAL_CPUS:-${SLURM_CPUS_PER_TASK:-${NSLOTS:-100}}}"
 CPUS_PER_TRIAL="${CPUS_PER_TRIAL:-5}"
 LAMBDA_STAR_OFFDIAG_ABS_MIN="${LAMBDA_STAR_OFFDIAG_ABS_MIN:-0.20}"
@@ -34,14 +35,15 @@ Usage: $(basename "$0") [run-all | summarize [OUTPUT_FOLDER]]
 
 Defaults: N=10, SUPPORT_SCOPE=all, TOTAL_CPUS=100, CPUS_PER_TRIAL=5.
 SUPPORT_SCOPE accepts all (every directed off-diagonal edge) or upper.
+NESTED_SUPPORTS accepts true (default) or false.
 Sample sizes: 100, 1000, 10000, 1000000; ten seeds per sample size.
 Set PYTHON to a Python 3.10+ executable with requirements.txt installed.
 OUTPUT_ROOT defaults to experiments/output/fixed_support_scaling_n\${N}_package_fit_omega_ref_true.
 Data-generation options: OMEGA_STAR (1), LAMBDA_STAR_OFFDIAG_ABS_MIN (0.20),
 LAMBDA_STAR_OFFDIAG_ABS_MAX (0.60). These do not override estimator defaults.
 
-Only support_scope, n_jobs, return_result, and progress are configured in
-select_support(). All statistical settings, including estimated fixed omega,
+Only support_scope, nested_supports, n_jobs, return_result, and progress are
+configured in select_support(). All statistical settings, including estimated fixed omega,
 10 restarts, 800 iterations, 199 bootstrap replicates, and RNG seeds, retain
 the installed package's defaults. Trial seeds control observation sampling.
 Existing trial files in OUTPUT_ROOT are recomputed by run-all.
@@ -63,6 +65,11 @@ if [[ "${SUPPORT_SCOPE}" != "all" && "${SUPPORT_SCOPE}" != "upper" ]]; then
     exit 2
 fi
 
+if [[ "${NESTED_SUPPORTS}" != "true" && "${NESTED_SUPPORTS}" != "false" ]]; then
+    echo "Error: NESTED_SUPPORTS must be true or false." >&2
+    exit 2
+fi
+
 if [[ "${COMMAND}" == "run-all" ]]; then
     if [[ ! "${N}" =~ ^[1-9][0-9]*$ ]] || ((N < 3)); then
         echo "Error: N must be at least 3 so the study has true and false edges." >&2
@@ -77,6 +84,7 @@ if [[ "${COMMAND}" == "run-all" ]]; then
     "${PYTHON}" experiments/run_fixed_support_scaling_package_trial.py \
         --n "${N}" --num-samples 100 --seed 124 --n-jobs "${CPUS_PER_TRIAL}" \
         --support-scope "${SUPPORT_SCOPE}" \
+        --nested-supports "${NESTED_SUPPORTS}" \
         --offdiag-abs-min "${LAMBDA_STAR_OFFDIAG_ABS_MIN}" \
         --offdiag-abs-max "${LAMBDA_STAR_OFFDIAG_ABS_MAX}" \
         --omega-star "${OMEGA_STAR}" --check-only
@@ -107,6 +115,7 @@ run_trial() {
         --n "${N}" --num-samples "${num_samples}" --seed "${random_seed}" \
         --n-jobs "${CPUS_PER_TRIAL}" --output-dir "${trial_dir}" \
         --support-scope "${SUPPORT_SCOPE}" \
+        --nested-supports "${NESTED_SUPPORTS}" \
         --offdiag-abs-min "${LAMBDA_STAR_OFFDIAG_ABS_MIN}" \
         --offdiag-abs-max "${LAMBDA_STAR_OFFDIAG_ABS_MAX}" \
         --omega-star "${OMEGA_STAR}" \

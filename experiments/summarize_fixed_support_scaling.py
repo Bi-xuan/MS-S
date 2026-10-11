@@ -85,7 +85,6 @@ def _load_trial(
         num_samples = int(np.asarray(data["num_samples"]))
         random_seed = int(np.asarray(data["random_seed"]))
         saved_scope = str(np.asarray(data["support_scope"]))
-        nested_supports = bool(np.asarray(data["nested_supports"]))
         dimensions = np.asarray(data["d_m_values"], dtype=int)
         masks = np.asarray(data["selected_support_masks"], dtype=bool)
         valid = np.asarray(data["selected_support_valid"], dtype=bool)
@@ -108,8 +107,6 @@ def _load_trial(
         raise ValueError(f"{curve_path} has unsupported support_scope={saved_scope!r}.")
     if support_scope is not None and saved_scope != support_scope:
         raise ValueError(f"{curve_path} records support_scope={saved_scope!r}, expected {support_scope!r}.")
-    if not nested_supports:
-        raise ValueError(f"{curve_path} must contain nested supports.")
     if masks.shape != (len(dimensions), n, n):
         raise ValueError(
             f"{curve_path} has support-mask shape {masks.shape}, expected "
