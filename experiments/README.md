@@ -110,6 +110,55 @@ dimension prefix with valid nested masks for every finite objective. Original
 experiment files are not automatically converted or overwritten when modes
 differ.
 
+## Forward/backward reconstruction of a nested path
+
+`run_fixed_support_scaling.sh` uses `SEARCH_OPTION=forward` by default, preserving
+its previous `NESTED_SUPPORTS=true` search. To let later additions correct earlier
+choices, use:
+
+```sh
+SEARCH_OPTION=forward-backward-nested SUPPORT_SCOPE=all \
+FIT_OMEGA_REF=true OMEGA_REF=none \
+bash experiments/run_fixed_support_scaling.sh
+```
+
+Both choices produce nested supports. The fixed-support runner no longer offers
+an unrestricted mode through `NESTED_SUPPORTS=false`; the other launchers and
+the direct Python CLI retain their existing independent-search option. The
+package runner is separate and does not expose `SEARCH_OPTION`.
+
+The equivalent Python option is `--search-option forward-backward-nested`, which
+requires `--nested-supports true`. After each forward addition from a support
+with `k` off-diagonal edges, the search refits every one-edge deletion from the
+expanded model. If the best resulting `k`-edge support improves on both the
+current endpoint and the historical best at that size by more than `obj_tol`
+(default `1e-8`), it replaces that endpoint. Backward elimination restricted to
+the corrected support then reconstructs the entire prefix down to the
+diagonal-only model. The temporary expanded model is discarded and forward
+search resumes from the corrected endpoint. A deleted edge may reenter later.
+
+Earlier objectives may increase after reconstruction: the saved curve describes
+one nested chain, rather than independently best supports. Historical best
+objectives are kept separately to prevent cycling. Support fits are cached,
+random starts use a seed determined by the mask, and exact ties use
+lexicographic edge order, making the result independent of worker completion
+order. This procedure is a heuristic, not a globally optimal chain search.
+
+The backward mode's default output root is
+`experiments/output/fixed_support_scaling_n${N}_forward_backward_nested`;
+`OUTPUT_ROOT` overrides it. Forward mode keeps its previous default root.
+NPZ files record `search_option` and, for backward search, `search_state_json`
+with the correction history. Each checkpoint atomically replaces the complete
+current prefix. Interrupted searches resume with that history; a backward
+prefix supplied without history is recomputed from `D_m=1`. Saved files from a
+different search mode cannot be resumed. Legacy files without `search_option`
+retain their original behavior and are treated as `forward`.
+
+Dimension selection runs only after the final reconstructed curve has been
+saved. The existing plateau/bootstrap method continues to compare its nested
+candidate masks. `reselect` uses the saved curve and does not apply
+`SEARCH_OPTION` or reconstruct supports.
+
 # Plateau plus bootstrap dimension selection
 
 Run the method on a saved objective curve:

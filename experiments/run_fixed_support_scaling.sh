@@ -23,8 +23,8 @@ OMEGA_STAR="${OMEGA_STAR:-1}"
 OMEGA_REF="${OMEGA_REF:-1}"
 FIT_OMEGA_REF="${FIT_OMEGA_REF:-false}"
 KAPPA="${KAPPA:-0.93}"
-SUPPORT_SCOPE="${SUPPORT_SCOPE:-upper}"
-NESTED_SUPPORTS="${NESTED_SUPPORTS:-true}"
+SUPPORT_SCOPE="${SUPPORT_SCOPE:-all}"
+SEARCH_OPTION="${SEARCH_OPTION:-forward}"
 OBJECTIVE_FLOOR="${OBJECTIVE_FLOOR:-1e-8}"
 LM_WEIGHT="${LM_WEIGHT:-0.1}"
 TOP_PLATEAUS="${TOP_PLATEAUS:-3}"
@@ -35,7 +35,11 @@ COMMAND="${1:-run-all}"
 if [[ "${COMMAND}" == "reselect" ]]; then
     OUTPUT_ROOT="${2:-${OUTPUT_ROOT:-experiments/output/fixed_support_scaling_n4_omega_ref_eq_star}}"
 else
-    OUTPUT_ROOT="${OUTPUT_ROOT:-experiments/output/fixed_support_scaling_n${N}}"
+    default_output_root="experiments/output/fixed_support_scaling_n${N}"
+    if [[ "${SEARCH_OPTION}" == "forward-backward-nested" ]]; then
+        default_output_root+="_forward_backward_nested"
+    fi
+    OUTPUT_ROOT="${OUTPUT_ROOT:-${default_output_root}}"
 fi
 N_JOBS="${N_JOBS:-${SLURM_CPUS_PER_TASK:-${NSLOTS:-8}}}"
 RESELECT_ROOT="${OUTPUT_ROOT}/reselect_lm_support_count_plateau"
@@ -47,6 +51,20 @@ else
     TABLE_PATH="${OUTPUT_ROOT}/selection_summary.md"
 fi
 NUM_SAMPLE_VALUES=(100 1000 10000 1000000)
+
+if [[ "${COMMAND}" == "run-all" ]]; then
+    case "${SEARCH_OPTION}" in
+        forward|forward-backward-nested) ;;
+        *)
+            echo "Error: SEARCH_OPTION must be forward or forward-backward-nested." >&2
+            exit 2
+            ;;
+    esac
+    if [[ "${NESTED_SUPPORTS:-true}" != "true" ]]; then
+        echo "Error: this runner requires nested supports; use SEARCH_OPTION to choose the search." >&2
+        exit 2
+    fi
+fi
 
 if [[ ! "${N}" =~ ^[0-9]+$ ]] || ((N < 2)); then
     echo "Error: N must be an integer of at least 2." >&2
@@ -69,6 +87,11 @@ Usage: $(basename "$0") [run-all | reselect [OUTPUT_FOLDER]]
     LAMBDA_STAR_OFFDIAG_ABS_MIN=0.30 LAMBDA_STAR_OFFDIAG_ABS_MAX=0.50 OUTPUT_ROOT=experiments/output/custom_bounds bash experiments/run_fixed_support_scaling.sh
 
   run-all   Compute curves, select dimensions, and summarize (default).
+            SEARCH_OPTION=forward (default) uses the existing nested forward path.
+            SEARCH_OPTION=forward-backward-nested adds backward corrections and
+            reconstructs earlier nested supports. Both modes require nesting.
+            The backward mode defaults to an output folder ending in
+            _forward_backward_nested; OUTPUT_ROOT overrides the folder.
   reselect  Discover saved num_samples_*/seed_* curves under OUTPUT_ROOT,
             select with Lm equal to LM_WEIGHT times the number of available
             supports at each dimension, and summarize. LM_WEIGHT defaults to
@@ -135,7 +158,8 @@ run_trial() {
             --lambda-star-dims "${N}" \
             --lambda-star-offdiag-abs-min "${LAMBDA_STAR_OFFDIAG_ABS_MIN}" \
             --lambda-star-offdiag-abs-max "${LAMBDA_STAR_OFFDIAG_ABS_MAX}" \
-            --nested-supports "${NESTED_SUPPORTS}" \
+            --search-option "${SEARCH_OPTION}" \
+            --nested-supports true \
             --support-scope "${SUPPORT_SCOPE}" \
             --num-samples "${num_samples}" \
             --n-jobs "${CPUS_PER_TRIAL}" \
@@ -282,7 +306,7 @@ worker_count="$((TOTAL_CPUS / CPUS_PER_TRIAL))"
 if ((worker_count > ${#task_seeds[@]})); then
     worker_count="${#task_seeds[@]}"
 fi
-echo "Running ${#task_seeds[@]} trials with ${worker_count} concurrent trials x ${CPUS_PER_TRIAL} CPUs."
+echo "Running ${#task_seeds[@]} trials with ${worker_count} concurrent trials x ${CPUS_PER_TRIAL} CPUs; search=${SEARCH_OPTION}."
 worker_pids=()
 for ((worker = 0; worker < worker_count; worker++)); do
     (
