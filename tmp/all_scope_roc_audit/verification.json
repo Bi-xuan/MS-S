@@ -1,0 +1,6 @@
+{
+  "jacobian_max_absolute_error": 6.965015231230609e-10,
+  "gram_family_objective": 1.0089814384351324e-29,
+  "gram_family_spectral_radius": 0.5431349489403359,
+  "projected_block_excess_loss": 0.009676027899471668
+}

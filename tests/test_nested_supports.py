@@ -1,11 +1,12 @@
 """Forward-nested enumeration, opt-out, failures, and checkpoint safety."""
 import json
+from itertools import combinations
 import numpy as np
 import pytest
 
 from experiments import compute_objective_curve as curve
 from optimizers import support_search as search
-from supports.common import off_diagonal_edges, support_mask_from_edges
+from supports.common import off_diagonal_edges, support_mask_from_edges, upper_triangular_edges
 
 
 A, B, C = (0, 1), (0, 2), (1, 2)
@@ -43,6 +44,36 @@ def test_default_nested_path_differs_from_unrestricted_minima(scored_supports):
     assert len(scored_supports) == 1 + 3 + 3 + 1
     assert search.support_edges_from_mask(independent[4][2]) == [B, C]
     assert independent[1][2] == .1
+
+
+def test_greedy_selects_independent_minima(scored_supports):
+    result = curve.compute_objective_curve(
+        np.eye(3), support_scope="upper", search_option="greedy",
+    )
+    assert len(scored_supports) == 8
+    assert search.support_edges_from_mask(result[4][1]) == [A]
+    assert search.support_edges_from_mask(result[4][2]) == [B, C]
+    assert result[1][2] == .1
+
+
+@pytest.mark.parametrize("scope", ["all", "upper"])
+def test_greedy_visits_every_support_in_scope(monkeypatch, scope):
+    visited = []
+
+    def worker(task):
+        index, sigma, mask = task[:3]
+        edges = frozenset(search.support_edges_from_mask(mask))
+        visited.append(edges)
+        return index, mask, (np.zeros_like(sigma), .1, float(index))
+
+    monkeypatch.setattr(search, "solve_support_worker", worker)
+    result = curve.compute_objective_curve(np.eye(3), support_scope=scope, search_option="greedy")
+    allowed = upper_triangular_edges(3) if scope == "upper" else off_diagonal_edges(3)
+    expected = {frozenset(edges) for count in range(len(allowed) + 1)
+                for edges in combinations(allowed, count)}
+    assert len(visited) == len(expected)
+    assert set(visited) == expected
+    np.testing.assert_array_equal(result[0], np.arange(1, len(allowed) + 2))
 
 
 @pytest.mark.parametrize("scope,preselected", [
@@ -168,6 +199,28 @@ def test_cli_wires_both_outputs_and_rejects_mode_changes(tmp_path, nested):
     args.nested_supports = nested
     args.max_restarts = 2
     with pytest.raises(ValueError, match="fit_settings_json"):
+        curve.run_experiment(args, 2, False)
+
+
+@pytest.mark.parametrize("scope", ["all", "upper"])
+def test_greedy_cli_saves_unrestricted_mode_and_resumes(tmp_path, scope):
+    args = curve.parse_args([
+        "--given-output", str(tmp_path / "given.npz"),
+        "--sigma-hat-output", str(tmp_path / "sample.npz"),
+        "--search-option", "greedy", "--support-scope", scope,
+        "--omega-star", "1", "--omega-ref", "0.1",
+        "--max-restarts", "1", "--refine-after-fixed-omega", "false",
+    ])
+    curve.run_experiment(args, 2, False)
+    for path in (args.given_output, args.sigma_hat_output):
+        with np.load(path) as data:
+            assert data["search_option"].item() == "greedy"
+            assert not data["nested_supports"].item()
+            assert data["support_scope"].item() == scope
+            assert np.all(data["selected_support_valid"])
+    curve.run_experiment(args, 2, False)
+    args.search_option = "forward"
+    with pytest.raises(ValueError, match="search_option"):
         curve.run_experiment(args, 2, False)
 
 

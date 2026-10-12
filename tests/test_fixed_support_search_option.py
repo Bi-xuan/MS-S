@@ -41,14 +41,16 @@ if "select_scaling_parameter.py" in args[0]:
     harness.write_text(source)
     env = dict(os.environ, PATH=str(bin_dir) + os.pathsep + os.environ["PATH"],
                CALLS=str(tmp_path / "calls.jsonl"), TOTAL_CPUS="1", CPUS_PER_TRIAL="1", N_JOBS="1")
-    for key in ("SEARCH_OPTION", "OUTPUT_ROOT", "NESTED_SUPPORTS", "N"):
+    for key in ("SEARCH_OPTION", "OUTPUT_ROOT", "NESTED_SUPPORTS", "N", "SUPPORT_SCOPE"):
         env.pop(key, None)
     return harness, env, tmp_path
 
 
-@pytest.mark.parametrize("mode", [None, "forward", "forward-backward-nested"])
-def test_mode_reaches_curve_and_keeps_nested_selection(runner, mode):
+@pytest.mark.parametrize("mode", [None, "forward", "forward-backward-nested", "greedy"])
+@pytest.mark.parametrize("scope", ["all", "upper"])
+def test_mode_reaches_curve_and_selection(runner, mode, scope):
     harness, env, root = runner
+    env["SUPPORT_SCOPE"] = scope
     if mode:
         env["SEARCH_OPTION"] = mode
     result = subprocess.run(["bash", str(harness)], env=env, capture_output=True, text=True, timeout=20)
@@ -56,8 +58,9 @@ def test_mode_reaches_curve_and_keeps_nested_selection(runner, mode):
     calls = [json.loads(line) for line in Path(env["CALLS"]).read_text().splitlines()]
     compute = next(call for call in calls if "compute_objective_curve.py" in call[0])
     assert compute[compute.index("--search-option") + 1] == (mode or "forward")
-    assert compute[compute.index("--nested-supports") + 1] == "true"
-    suffix = "_forward_backward_nested" if mode == "forward-backward-nested" else ""
+    assert compute[compute.index("--nested-supports") + 1] == ("false" if mode == "greedy" else "true")
+    assert compute[compute.index("--support-scope") + 1] == scope
+    suffix = {"forward-backward-nested": "_forward_backward_nested", "greedy": "_greedy"}.get(mode, "")
     output = root / f"experiments/output/fixed_support_scaling_n4{suffix}"
     assert compute[compute.index("--sigma-hat-output") + 1] == str(output.relative_to(root) / "num_samples_100/seed_124/objective_curve_sigma_hat.npz")
     assert (output / "num_samples_100/seed_124/result.csv").read_text().strip() == "100,124,4,1.0,true"
@@ -65,12 +68,24 @@ def test_mode_reaches_curve_and_keeps_nested_selection(runner, mode):
     assert selection[selection.index("--method") + 1] == "plateau-bootstrap"
 
 
-def test_explicit_output_root_is_preserved(runner):
+@pytest.mark.parametrize("mode", ["forward-backward-nested", "greedy"])
+def test_explicit_output_root_is_preserved(runner, mode):
     harness, env, root = runner
-    env.update(SEARCH_OPTION="forward-backward-nested", OUTPUT_ROOT=str(root / "custom"))
+    env.update(SEARCH_OPTION=mode, OUTPUT_ROOT=str(root / "custom"))
     result = subprocess.run(["bash", str(harness)], env=env, capture_output=True, text=True, timeout=20)
     assert result.returncode == 0, result.stderr
     assert (root / "custom/num_samples_100/seed_124/result.csv").exists()
+
+
+@pytest.mark.parametrize("nested", ["true", "false"])
+def test_greedy_disables_nesting_regardless_of_environment(runner, nested):
+    harness, env, root = runner
+    env.update(SEARCH_OPTION="greedy", NESTED_SUPPORTS=nested)
+    result = subprocess.run(["bash", str(harness)], env=env, capture_output=True, text=True, timeout=20)
+    assert result.returncode == 0, result.stderr
+    calls = [json.loads(line) for line in Path(env["CALLS"]).read_text().splitlines()]
+    compute = next(call for call in calls if "compute_objective_curve.py" in call[0])
+    assert compute[compute.index("--nested-supports") + 1] == "false"
 
 
 @pytest.mark.parametrize("settings", [{"SEARCH_OPTION": "invalid"}, {"NESTED_SUPPORTS": "false"}])

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Evaluate one fixed Lambda_star across sample sizes with nested support recovery.
+# Evaluate one fixed Lambda_star across sample sizes with support recovery.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -38,6 +38,8 @@ else
     default_output_root="experiments/output/fixed_support_scaling_n${N}"
     if [[ "${SEARCH_OPTION}" == "forward-backward-nested" ]]; then
         default_output_root+="_forward_backward_nested"
+    elif [[ "${SEARCH_OPTION}" == "greedy" ]]; then
+        default_output_root+="_greedy"
     fi
     OUTPUT_ROOT="${OUTPUT_ROOT:-${default_output_root}}"
 fi
@@ -54,14 +56,15 @@ NUM_SAMPLE_VALUES=(100 1000 10000 1000000)
 
 if [[ "${COMMAND}" == "run-all" ]]; then
     case "${SEARCH_OPTION}" in
-        forward|forward-backward-nested) ;;
+        forward|forward-backward-nested) NESTED_SUPPORTS="${NESTED_SUPPORTS:-true}" ;;
+        greedy) NESTED_SUPPORTS=false ;;
         *)
-            echo "Error: SEARCH_OPTION must be forward or forward-backward-nested." >&2
+            echo "Error: SEARCH_OPTION must be forward, forward-backward-nested, or greedy." >&2
             exit 2
             ;;
     esac
-    if [[ "${NESTED_SUPPORTS:-true}" != "true" ]]; then
-        echo "Error: this runner requires nested supports; use SEARCH_OPTION to choose the search." >&2
+    if [[ "${SEARCH_OPTION}" != "greedy" && "${NESTED_SUPPORTS}" != "true" ]]; then
+        echo "Error: ${SEARCH_OPTION} requires nested supports; use SEARCH_OPTION=greedy for exhaustive search." >&2
         exit 2
     fi
 fi
@@ -90,8 +93,10 @@ Usage: $(basename "$0") [run-all | reselect [OUTPUT_FOLDER]]
             SEARCH_OPTION=forward (default) uses the existing nested forward path.
             SEARCH_OPTION=forward-backward-nested adds backward corrections and
             reconstructs earlier nested supports. Both modes require nesting.
-            The backward mode defaults to an output folder ending in
-            _forward_backward_nested; OUTPUT_ROOT overrides the folder.
+            SEARCH_OPTION=greedy searches all supports independently at each
+            dimension, using SUPPORT_SCOPE=all (default) or upper, without nesting.
+            The backward and greedy modes default to output folders ending in
+            _forward_backward_nested and _greedy; OUTPUT_ROOT overrides the folder.
   reselect  Discover saved num_samples_*/seed_* curves under OUTPUT_ROOT,
             select with Lm equal to LM_WEIGHT times the number of available
             supports at each dimension, and summarize. LM_WEIGHT defaults to
@@ -159,7 +164,7 @@ run_trial() {
             --lambda-star-offdiag-abs-min "${LAMBDA_STAR_OFFDIAG_ABS_MIN}" \
             --lambda-star-offdiag-abs-max "${LAMBDA_STAR_OFFDIAG_ABS_MAX}" \
             --search-option "${SEARCH_OPTION}" \
-            --nested-supports true \
+            --nested-supports "${NESTED_SUPPORTS}" \
             --support-scope "${SUPPORT_SCOPE}" \
             --num-samples "${num_samples}" \
             --n-jobs "${CPUS_PER_TRIAL}" \

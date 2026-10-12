@@ -9,7 +9,7 @@ from optimizers import support_search as search
 from supports.common import validate_support_mask
 
 
-SEARCH_OPTIONS = ("forward", "forward-backward-nested")
+SEARCH_OPTIONS = ("forward", "forward-backward-nested", "greedy")
 
 
 class NestedCurveResult(tuple):

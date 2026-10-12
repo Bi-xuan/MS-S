@@ -116,6 +116,8 @@ def compute_objective_curve(
     """Fit each dimension, by default along a greedy forward-nested path."""
     if search_option not in SEARCH_OPTIONS:
         raise ValueError(f"search_option must be one of {SEARCH_OPTIONS}.")
+    if search_option == "greedy":
+        nested_supports = False
     if search_option == "forward-backward-nested" and not nested_supports:
         raise ValueError("forward-backward-nested requires nested_supports=True.")
     omega_ref = resolve_omega_ref(Sigma, omega_ref, fit_omega_ref, kappa)
@@ -778,7 +780,9 @@ def parse_args(argv=None):
     parser.add_argument(
         "--search-option", choices=SEARCH_OPTIONS, default="forward",
         help=("Support search algorithm. forward-backward-nested revisits earlier "
-              "choices and rebuilds a nested prefix after every accepted correction."),
+              "choices and rebuilds a nested prefix after every accepted correction. "
+              "greedy searches all supports within the selected scope independently "
+              "at each dimension, overriding --nested-supports to false."),
     )
     parser.add_argument(
         "--preselect-k",
@@ -860,6 +864,8 @@ def preselect_edges_for_sigma(
 
 
 def run_experiment(args, n, add_output_suffix):
+    if args.search_option == "greedy":
+        args.nested_supports = False
     if args.search_option == "forward-backward-nested" and not args.nested_supports:
         raise ValueError("--search-option forward-backward-nested requires --nested-supports true.")
     if args.support_scope == "upper" and args.preselect_k is not None:
