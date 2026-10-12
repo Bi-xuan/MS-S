@@ -230,14 +230,15 @@ with the same ten seeds per sample size (800 trials total). Each
 `OUTPUT_ROOT/support_XX/num_samples_N/seed_S/` directory contains the curve,
 compute log, `selection_plateau_bootstrap.log` and `.json`, and `result.csv`.
 Each support has its own `selection_trials.csv` and `selection_summary.md`
-with average precision, exact support recovery, MC recovery, average score,
-best-on-path selection, and true-support-on-path metrics. MC recovery means
-the selected and true supports have the same full maximal-class family.
+with average precision, exact support recovery, EC recovery, average EC score,
+best-on-path selection, and true-support-on-path metrics. EC recovery means
+the selected support belongs to the true equivalent class (EC), represented
+by its full maximal-class family. Per-seed CSVs record this as `ec_recovery`.
 Jaccard distances exclude diagonal edges. The score is
-`a + (1-a) exp(-d(selected, truth))` for MC recovery, and
-`a exp(-min d(selected, member))` otherwise, minimizing over all directed
-members of the true MC (including members with lower-triangular edges).
-Set `SCORE_A` to configure `a` (default `0.5`, strictly between 0 and 1).
+`1 - min d_J(selected, member)`, minimizing over all directed members of the
+true EC (including members with lower-triangular edges). Thus the distance
+from a support to an EC is its Jaccard distance to the nearest member, and
+the score is 1 for EC recovery. No score weight is needed.
 Best-on-path selection continues to mean minimum `FP + FN`, including ties.
 The study also writes `OUTPUT_ROOT/selection_summary.md` with only sample
 size and average score, pooling individual trials across all supports.

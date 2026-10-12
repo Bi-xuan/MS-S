@@ -74,7 +74,6 @@ def test_reselect_uses_support_count_plateau_and_separate_outputs(study_env, lm_
     assert summary[summary.index("--sample-sizes") + 1] == "100"
     assert summary[summary.index("--expected-seeds") + 1] == "1"
     assert summary[summary.index("--selection-file") + 1] == "selection_plateau.json"
-    assert summary[summary.index("--score-a") + 1] == "0.5"
     overall = next(call for call in calls if "--overall-trials" in call)
     assert overall[overall.index("--overall-trials") + 1] == str(
         output / "support_18/reselect_lm_support_count_plateau/selection_trials.csv")

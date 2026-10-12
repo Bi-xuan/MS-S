@@ -1,23 +1,16 @@
-"""Score directed supports using Jaccard distance and maximal-class recovery.
+"""Score directed supports using Jaccard distance to the true equivalent class.
 
 Supports contain zero-based directed edges; self-loops are excluded from all
-distances. Maximal-class families include isolated vertices and their members
-range over all directed supports, including edges below the diagonal.
+distances. Equivalent classes (ECs) are represented by maximal-class families,
+including isolated vertices. Their members range over all directed supports,
+including edges below the diagonal.
 """
 
 from __future__ import annotations
 
 from functools import lru_cache
-from math import exp, isfinite
 
 from maximal_class_graph import graph_to_maximal_class, list_graphs_in_maximal_class
-
-
-def validate_score_a(a: float) -> float:
-    a = float(a)
-    if not isfinite(a) or not 0 < a < 1:
-        raise ValueError("score a must be finite and satisfy 0 < a < 1.")
-    return a
 
 
 def _edges(support) -> frozenset[tuple[int, int]]:
@@ -49,13 +42,13 @@ def _class_members(family: frozenset) -> tuple[frozenset, ...]:
 
 
 def same_maximal_class(left, right, n: int) -> bool:
-    """Test membership in the same full maximal-class family."""
+    """Test membership in the same EC, represented by its maximal-class family."""
 
     return _maximal_class(_edges(left), n) == _maximal_class(_edges(right), n)
 
 
 def distance_to_maximal_class(support, family) -> float:
-    """Distance to the nearest directed support in a maximal-class family."""
+    """Jaccard distance to the nearest directed support in the EC family."""
 
     support = _edges(support)
     family = frozenset(frozenset(group) for group in family)
@@ -76,12 +69,14 @@ def maximal_class_distance(left_family, right_family) -> float:
     )
 
 
-def score_support(selected, truth, n: int, a: float = 0.5) -> float:
-    """Return Q(selected, truth) with configurable 0 < a < 1."""
+def score_support(selected, truth, n: int) -> float:
+    """Return 1 - min Jaccard distance to a member of truth's EC.
 
-    a = validate_score_a(a)
+    The score lies in [0, 1] and equals 1 for every support in the true EC.
+    """
+
     selected, truth = _edges(selected), _edges(truth)
     true_class = _maximal_class(truth, n)
     if _maximal_class(selected, n) == true_class:
-        return a + (1 - a) * exp(-jaccard_distance(selected, truth))
-    return a * exp(-distance_to_maximal_class(selected, true_class))
+        return 1.0
+    return 1.0 - distance_to_maximal_class(selected, true_class)

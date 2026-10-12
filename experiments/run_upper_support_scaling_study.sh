@@ -31,7 +31,6 @@ SUPPORT_SCOPE="${SUPPORT_SCOPE:-all}"
 NESTED_SUPPORTS="${NESTED_SUPPORTS:-true}"
 OBJECTIVE_FLOOR="${OBJECTIVE_FLOOR:-1e-8}"
 LM_WEIGHT="${LM_WEIGHT:-0.1}"
-SCORE_A="${SCORE_A:-0.5}"
 TOP_PLATEAUS="${TOP_PLATEAUS:-3}"
 BOOTSTRAP_REPLICATES="${BOOTSTRAP_REPLICATES:-199}"
 BOOTSTRAP_ALPHA="${BOOTSTRAP_ALPHA:-0.05}"
@@ -60,7 +59,7 @@ Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect [OUTPU
 
   NUM_SUPPORTS defaults to all 20 supports for N=4, TRUE_DIMENSION=4.
   LAMBDA_STAR_OFFDIAG_ABS_MIN/MAX bound nonzero coefficients (defaults 0.20/0.60).
-  SCORE_A configures the maximal-class score weight (default 0.5; 0 < SCORE_A < 1).
+  Scores are 1 minus the Jaccard distance to the nearest member of the true EC.
   All fitting, support-search, objective-floor, and bootstrap settings from
   run_fixed_support_scaling.sh are configurable through the same environment variables.
 
@@ -260,7 +259,6 @@ aggregate_results() {
         python experiments/summarize_fixed_support_scaling.py \
             "${support_dir}" --sample-sizes "${sample_sizes[@]}" \
             --expected-seeds "${expected_seeds}" \
-            --score-a "${SCORE_A}" \
             "${selection_options[@]}" \
             --trials-output "${summary_dir}/selection_trials.csv" \
             --summary-output "${summary_dir}/selection_summary.md"
@@ -410,12 +408,6 @@ case "${command}" in
         exit 2
         ;;
 esac
-
-if ! python -c 'import math, sys; a = float(sys.argv[1]); sys.exit(0 if math.isfinite(a) and 0 < a < 1 else 1)' \
-    "${SCORE_A}" 2>/dev/null; then
-    echo "Error: SCORE_A must be finite and satisfy 0 < SCORE_A < 1." >&2
-    exit 2
-fi
 
 if [[ "${command}" == "reselect" ]]; then
     OUTPUT_ROOT="${2:-${OUTPUT_ROOT}}"
