@@ -28,6 +28,7 @@ OMEGA_REF="${OMEGA_REF:-1}"
 FIT_OMEGA_REF="${FIT_OMEGA_REF:-false}"
 KAPPA="${KAPPA:-0.93}"
 SUPPORT_SCOPE="${SUPPORT_SCOPE:-all}"
+SEARCH_OPTION="${SEARCH_OPTION:-forward}"
 NESTED_SUPPORTS="${NESTED_SUPPORTS:-true}"
 OBJECTIVE_FLOOR="${OBJECTIVE_FLOOR:-1e-8}"
 LM_WEIGHT="${LM_WEIGHT:-0.1}"
@@ -59,6 +60,13 @@ Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect [OUTPU
 
   NUM_SUPPORTS defaults to all 20 supports for N=4, TRUE_DIMENSION=4.
   LAMBDA_STAR_OFFDIAG_ABS_MIN/MAX bound nonzero coefficients (defaults 0.20/0.60).
+  SEARCH_OPTION=forward (default) uses the nested forward path.
+  SEARCH_OPTION=forward-backward-nested adds backward corrections to the nested path.
+  Both forward modes require NESTED_SUPPORTS=true.
+  SEARCH_OPTION=greedy searches supports independently and sets NESTED_SUPPORTS=false.
+  The backward and greedy modes default to output folders ending in
+  _forward_backward_nested and _greedy; OUTPUT_ROOT overrides the folder.
+  Reselect uses saved curves without applying SEARCH_OPTION.
   Scores are 1 minus the Jaccard distance to the nearest member of the true EC.
   All fitting, support-search, objective-floor, and bootstrap settings from
   run_fixed_support_scaling.sh are configurable through the same environment variables.
@@ -150,7 +158,7 @@ run_trial() {
     else
         mkdir -p "${trial_dir}"
         echo
-        echo "=== Support ${support_index}; n=${N}; num_samples=${num_samples}; seed=${random_seed}; CPUs=${CPUS_PER_TRIAL} ==="
+        echo "=== Support ${support_index}; n=${N}; num_samples=${num_samples}; seed=${random_seed}; CPUs=${CPUS_PER_TRIAL}; search=${SEARCH_OPTION} ==="
         python experiments/compute_objective_curve.py \
             --curve sigma_hat \
             --sigma-hat-output "${curve_path}" \
@@ -160,6 +168,7 @@ run_trial() {
             --lambda-star-support-index "${support_index}" \
             --lambda-star-offdiag-abs-min "${LAMBDA_STAR_OFFDIAG_ABS_MIN}" \
             --lambda-star-offdiag-abs-max "${LAMBDA_STAR_OFFDIAG_ABS_MAX}" \
+            --search-option "${SEARCH_OPTION}" \
             --nested-supports "${NESTED_SUPPORTS}" \
             --support-scope "${SUPPORT_SCOPE}" \
             --num-samples "${num_samples}" \
@@ -366,7 +375,7 @@ run_all() {
     if ((worker_count > TOTAL_TRIALS)); then
         worker_count="${TOTAL_TRIALS}"
     fi
-    echo "Running ${TOTAL_TRIALS} trials with ${worker_count} concurrent trials x ${CPUS_PER_TRIAL} CPUs."
+    echo "Running ${TOTAL_TRIALS} trials with ${worker_count} concurrent trials x ${CPUS_PER_TRIAL} CPUs; search=${SEARCH_OPTION}."
     for ((worker = 0; worker < worker_count; worker++)); do
         (
             for ((task = worker; task < TOTAL_TRIALS; task += worker_count)); do
@@ -409,12 +418,35 @@ case "${command}" in
         ;;
 esac
 
+default_output_root="experiments/output/upper_support_scaling_n${N}_dm${TRUE_DIMENSION}"
 if [[ "${command}" == "reselect" ]]; then
-    OUTPUT_ROOT="${2:-${OUTPUT_ROOT}}"
+    OUTPUT_ROOT="${2:-${OUTPUT_ROOT:-${default_output_root}}}"
+else
+    if [[ "${SEARCH_OPTION}" == "forward-backward-nested" ]]; then
+        default_output_root+="_forward_backward_nested"
+    elif [[ "${SEARCH_OPTION}" == "greedy" ]]; then
+        default_output_root+="_greedy"
+    fi
+    OUTPUT_ROOT="${OUTPUT_ROOT:-${default_output_root}}"
+fi
+
+if [[ "${command}" == "reselect" ]]; then
     reselect_all
 elif [[ "${command}" == "aggregate" ]]; then
     aggregate_results
 else
+    case "${SEARCH_OPTION}" in
+        forward|forward-backward-nested) ;;
+        greedy) NESTED_SUPPORTS=false ;;
+        *)
+            echo "Error: SEARCH_OPTION must be forward, forward-backward-nested, or greedy." >&2
+            exit 2
+            ;;
+    esac
+    if [[ "${SEARCH_OPTION}" != "greedy" && "${NESTED_SUPPORTS}" != "true" ]]; then
+        echo "Error: ${SEARCH_OPTION} requires nested supports; use SEARCH_OPTION=greedy for exhaustive search." >&2
+        exit 2
+    fi
     if [[ ! "${TOTAL_CPUS}" =~ ^[1-9][0-9]*$ || ! "${CPUS_PER_TRIAL}" =~ ^[1-9][0-9]*$ ]] ||
         ((TOTAL_CPUS < CPUS_PER_TRIAL)); then
         echo "Error: TOTAL_CPUS and CPUS_PER_TRIAL must be positive integers, with TOTAL_CPUS >= CPUS_PER_TRIAL." >&2

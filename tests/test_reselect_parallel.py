@@ -3,6 +3,7 @@
 import os
 import json
 from pathlib import Path
+import shlex
 import subprocess
 
 import pytest
@@ -24,7 +25,7 @@ from pathlib import Path
 args = sys.argv[1:]
 if args[0] == "-c":
     os.execv(sys.executable, [sys.executable, *args])
-with (Path(os.environ["OUTPUT_ROOT"]) / "calls.jsonl").open("a") as f:
+with Path(os.environ["CALLS"]).open("a") as f:
     f.write(json.dumps(args) + "\\n")
 if "compute_objective_curve.py" in args[0]:
     Path(args[args.index("--sigma-hat-output") + 1]).touch()
@@ -41,8 +42,9 @@ if "--method" in args:
 ''')
     python_stub.chmod(0o755)
     env = dict(os.environ, OUTPUT_ROOT=str(output), N_JOBS="1",
+               CALLS=str(output / "calls.jsonl"),
                PATH=str(bin_dir) + os.pathsep + os.environ["PATH"])
-    for key in ("SLURM_ARRAY_TASK_ID", "SLURM_CPUS_PER_TASK", "NSLOTS"):
+    for key in ("SLURM_ARRAY_TASK_ID", "SLURM_CPUS_PER_TASK", "NSLOTS", "SEARCH_OPTION"):
         env.pop(key, None)
     return output, env
 
@@ -54,6 +56,7 @@ def test_reselect_uses_support_count_plateau_and_separate_outputs(study_env, lm_
     trial.mkdir(parents=True)
     (trial / "objective_curve_sigma_hat.npz").touch()
     env.pop("LM_WEIGHT", None)
+    env["SEARCH_OPTION"] = "ignored-for-reselect"
     if lm_weight is not None:
         env["LM_WEIGHT"] = lm_weight
     result = subprocess.run(["bash", str(SCRIPT), "reselect"], env=env,
@@ -65,6 +68,7 @@ def test_reselect_uses_support_count_plateau_and_separate_outputs(study_env, lm_
     assert not (trial / "result.csv").exists()
     calls = [json.loads(line) for line in (output / "calls.jsonl").read_text().splitlines()]
     selection = next(call for call in calls if "--method" in call)
+    assert not any("compute_objective_curve.py" in call[0] for call in calls)
     assert selection[selection.index("--method") + 1] == "plateau"
     assert selection[selection.index("--lm-mode") + 1] == "support-count"
     assert selection[selection.index("--Lm") + 1] == (lm_weight or "0.1")
@@ -210,6 +214,7 @@ def test_trial_maps_support_sample_and_seed_and_forwards_configuration(
         "--omega-star": 2, "--omega-ref": "1.5", "--kappa": "0.8",
         "--fit-omega-ref": "true", "--refine-after-fixed-omega": "true",
         "--support-scope": "upper", "--nested-supports": "true",
+        "--search-option": "forward",
     }.items():
         assert compute[compute.index(flag) + 1] == str(value)
     assert compute[compute.index("--given-output") + 1] == str(trial / "sigma_hat.npz")
@@ -219,6 +224,73 @@ def test_trial_maps_support_sample_and_seed_and_forwards_configuration(
         "--bootstrap-seed": 456, "--objective-floor": "1e-7",
     }.items():
         assert selection[selection.index(flag) + 1] == str(value)
+
+
+@pytest.mark.parametrize("mode", [None, "forward", "forward-backward-nested", "greedy"])
+@pytest.mark.parametrize("scope", ["all", "upper"])
+def test_upper_search_option_reaches_curve_with_default_output_folder(
+    study_env, tmp_path, mode, scope,
+):
+    output, env = study_env
+    env.pop("OUTPUT_ROOT")
+    env.update(SUPPORT_SCOPE=scope, NESTED_SUPPORTS="true")
+    if mode is not None:
+        env["SEARCH_OPTION"] = mode
+    script = tmp_path / "study.sh"
+    script.write_text(SCRIPT.read_text().replace(
+        'PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"',
+        "PROJECT_ROOT=" + shlex.quote(str(tmp_path)),
+    ))
+    result = subprocess.run(["bash", str(script), "trial", "0"], env=env,
+                            capture_output=True, text=True, timeout=20)
+    assert result.returncode == 0, result.stderr
+    calls = [json.loads(line) for line in (output / "calls.jsonl").read_text().splitlines()]
+    compute, selection = calls
+    assert compute[compute.index("--search-option") + 1] == (mode or "forward")
+    assert compute[compute.index("--nested-supports") + 1] == (
+        "false" if mode == "greedy" else "true")
+    assert compute[compute.index("--support-scope") + 1] == scope
+    suffix = {"forward-backward-nested": "_forward_backward_nested",
+              "greedy": "_greedy"}.get(mode, "")
+    directory = Path(f"experiments/output/upper_support_scaling_n4_dm4{suffix}")
+    trial = directory / "support_00/num_samples_100/seed_124"
+    assert compute[compute.index("--sigma-hat-output") + 1] == str(
+        trial / "objective_curve_sigma_hat.npz")
+    assert (tmp_path / trial / "result.csv").exists()
+    assert selection[selection.index("--method") + 1] == "plateau-bootstrap"
+
+
+@pytest.mark.parametrize("mode,nested", [
+    ("forward-backward-nested", "true"), ("greedy", "true"), ("greedy", "false"),
+])
+def test_upper_search_option_preserves_explicit_output_root(study_env, mode, nested):
+    output, env = study_env
+    env.update(SEARCH_OPTION=mode, NESTED_SUPPORTS=nested)
+    result = subprocess.run(["bash", str(SCRIPT), "trial", "0"], env=env,
+                            capture_output=True, text=True, timeout=20)
+    assert result.returncode == 0, result.stderr
+    calls = [json.loads(line) for line in (output / "calls.jsonl").read_text().splitlines()]
+    compute = calls[0]
+    assert compute[compute.index("--search-option") + 1] == mode
+    assert compute[compute.index("--nested-supports") + 1] == (
+        "false" if mode == "greedy" else "true")
+    assert (output / "support_00/num_samples_100/seed_124/result.csv").exists()
+
+
+@pytest.mark.parametrize("command", [["trial", "0"], ["run-all"]])
+@pytest.mark.parametrize("settings", [
+    {"SEARCH_OPTION": "invalid"},
+    {"SEARCH_OPTION": "forward", "NESTED_SUPPORTS": "false"},
+    {"SEARCH_OPTION": "forward-backward-nested", "NESTED_SUPPORTS": "false"},
+])
+def test_upper_rejects_invalid_search_before_writing_outputs(study_env, command, settings):
+    output, env = study_env
+    result = subprocess.run(["bash", str(SCRIPT), *command], env=dict(env, **settings),
+                            capture_output=True, text=True, timeout=20)
+    assert result.returncode == 2
+    assert "Error:" in result.stderr
+    assert not (output / "calls.jsonl").exists()
+    assert not list(output.glob("support_*"))
 
 
 def test_aggregate_writes_fixed_support_outputs_for_each_support(study_env):

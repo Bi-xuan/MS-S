@@ -251,10 +251,17 @@ TOP_PLATEAUS=2 BOOTSTRAP_REPLICATES=399 BOOTSTRAP_ALPHA=0.05 \
 
 `BOOTSTRAP_SEED` is also configurable. All environment settings from
 `run_fixed_support_scaling.sh` are available, including coefficient bounds,
-fitting settings, `SUPPORT_SCOPE`, `NESTED_SUPPORTS`, and `OBJECTIVE_FLOOR`.
+fitting settings, `SUPPORT_SCOPE`, `SEARCH_OPTION`, `NESTED_SUPPORTS`, and
+`OBJECTIVE_FLOOR`. `SEARCH_OPTION=forward` is the default;
+`forward-backward-nested` adds backward corrections, and `greedy` searches
+supports independently at each dimension. Both forward modes require
+`NESTED_SUPPORTS=true`; `greedy` sets it to false.
 `TOTAL_CPUS=100 CPUS_PER_TRIAL=5` defaults to 20 concurrent trials with five
 CPUs each. Set `NUM_SUPPORTS` to run fewer supports (default 20). The default
 output root is `experiments/output/upper_support_scaling_n4_dm4`.
+Backward and greedy modes append `_forward_backward_nested` and `_greedy`
+to the default output root. An explicit `OUTPUT_ROOT` overrides this choice;
+use the same `SEARCH_OPTION` for `trial` and `aggregate` when using default paths.
 
 Use `trial TASK_ID` (0 through 799 by default) for Slurm arrays, then
 `aggregate` after all trials finish. Task order is support, sample size, then
@@ -262,6 +269,7 @@ seed. With no command, a set `SLURM_ARRAY_TASK_ID` selects one trial;
 otherwise all trials run.
 
 `reselect [OUTPUT_FOLDER]` discovers saved support/sample-size/seed curves,
+using their saved search results without applying `SEARCH_OPTION`, and
 runs curve-only `plateau` selections with `--lm-mode support-count` and
 `--Lm "${LM_WEIGHT}"` (default 0.1), and uses up to `N_JOBS` concurrent trials
 with one CPU each. New selections and summaries go under each support's
