@@ -28,10 +28,15 @@ COMMAND="${1:-run-all}"
 
 usage() {
     cat <<EOF
-Usage: $(basename "$0") [run-all | summarize [OUTPUT_FOLDER] | oracle [OUTPUT_FOLDER] | lasso [OUTPUT_FOLDER]]
+Usage: $(basename "$0") [run-all | summarize [OUTPUT_FOLDER] | oracle [OUTPUT_FOLDER] | lasso [OUTPUT_FOLDER] | BIC [OUTPUT_FOLDER]]
 
   run-all    Run 40 package-based trials, then write the summary and plots.
   summarize  Regenerate the summary and plots from completed package trials.
+  BIC        Fit Gaussian maximum likelihood on all upper supports (2 <= N <= 4).
+             Jointly fit omega, save BIC fields in NPZs, and refresh summaries.
+             Requires saved SUPPORT_SCOPE=upper; accepts lowercase bic too.
+             Parallel support fits: BIC_SUPPORT_WORKERS (default CPUS_PER_TRIAL),
+             from 1 to CPUS_PER_TRIAL; TOTAL_CPUS / CPUS_PER_TRIAL concurrent trials.
   lasso      Fit five-fold-CV upper-triangular lasso on saved observations.
              Save lasso fields in NPZs and add exact/EC recovery and EC score
              to summaries. Configure the grid with LASSO_GAMMA_MIN/MAX/COUNT
@@ -60,6 +65,16 @@ EOF
 }
 
 case "${COMMAND}" in
+    BIC|bic)
+        (($# <= 2)) || { usage >&2; exit 2; }
+        "${PYTHON}" experiments/run_bic_support_scaling.py "${2:-${OUTPUT_ROOT}}" \
+            --total-cpus "${TOTAL_CPUS}" --cpus-per-trial "${CPUS_PER_TRIAL}" \
+            --support-workers "${BIC_SUPPORT_WORKERS:-${CPUS_PER_TRIAL}}" \
+            --diagonal-bound "${BIC_DIAGONAL_BOUND:-0.999999}" \
+            --max-restarts "${BIC_MAX_RESTARTS:-10}" \
+            --max-iter "${BIC_MAX_ITER:-1500}" --tol "${BIC_TOL:-1e-6}"
+        exit $?
+        ;;
     lasso)
         (($# <= 2)) || { usage >&2; exit 2; }
         "${PYTHON}" experiments/run_lasso_support_scaling.py "${2:-${OUTPUT_ROOT}}" \

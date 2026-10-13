@@ -314,6 +314,94 @@ Regular summary regeneration also retains these columns when oracle results
 are available for all trials. Summary generation is skipped if any oracle fit
 fails; successfully fitted trials retain their saved oracle fields.
 
+## Gaussian BIC comparison
+
+All three scaling launchers accept `BIC [OUTPUT_FOLDER]` (or lowercase `bic`)
+to fit and compare BIC on completed trials:
+
+```sh
+bash experiments/run_fixed_support_scaling.sh BIC experiments/output/fixed_support_scaling_n4_upper_scope_fit_omega_ref_true_greedy
+bash experiments/run_fixed_support_scaling_package.sh BIC experiments/output/fixed_support_scaling_n4_upper_scope_fit_omega_ref_true_greedy
+bash experiments/run_upper_support_scaling_study.sh BIC experiments/output/upp_scal_n4_dm4_upper_scope_fit_omega_true_greedy
+```
+
+The runner reads the saved empirical covariance `Sigma = X.T @ X / num_samples`
+and sample count. It does not reconstruct observations or use generating
+parameters to fit or select models. Saved trials must have `support_scope=upper`.
+The exhaustive implementation accepts `2 <= N <= 4`; for the intended `N=4`
+comparison it fits all 64 strict-upper supports, including the diagonal-only
+model. `run-all` continues to run the original method; invoke `BIC` afterward.
+The package launcher's default N=10 output is outside this implementation's
+supported range; supply the folder containing your saved N=4 trials.
+
+For each support m, Gaussian maximum likelihood minimizes
+
+```text
+q(Lambda, omega) = logdet(C) + trace(solve(C, Sigma))
+C = Lambda.T @ C @ Lambda + omega I
+```
+
+Diagonals are free signed parameters, may reach zero, and satisfy
+`abs(Lambda_ii) <= 1 - epsilon` with `epsilon=1e-6` by default. Strict-upper
+coefficients in the candidate support are free signed parameters; all other
+entries are zero. Omega is positive and jointly fitted, independent of the
+original method's fixed omega or empirical-eigenvalue reference. For each
+Lambda, solve the unit-noise Lyapunov equation for V and profile omega exactly
+as `trace(solve(V, Sigma)) / N`, giving `C = omega * V`.
+
+Select the support minimizing `num_samples * q + k_m * log(num_samples)`.
+Here `k_m` counts candidate off-diagonal positions, regardless of numerically
+zero coefficients; diagonals and omega are unpenalized. The omitted common
+`num_samples * N * log(2*pi)` term is included in the saved full BIC scores
+and log likelihoods. Repository dimensions are `D_m = k_m + 1`. Exact ties
+choose fewer edges, then lexicographic edge order. No coefficient threshold
+changes the selected model mask or triggers another refit.
+
+| Environment variable | Default | Meaning |
+| --- | --- | --- |
+| `BIC_SUPPORT_WORKERS` | `CPUS_PER_TRIAL` | Parallel candidate-support fits per trial; integer from 1 to `CPUS_PER_TRIAL` |
+| `BIC_DIAGONAL_BOUND` | `0.999999` | Maximum absolute fitted diagonal, strictly below one |
+| `BIC_MAX_RESTARTS` | `10` | Deterministic covariance-factor starts per support |
+| `BIC_MAX_ITER` | `1500` | Maximum L-BFGS-B iterations per start |
+| `BIC_TOL` | `1e-6` | Maximum projected gradient in optimizer coordinates |
+
+The optimizer uses analytic Lyapunov gradients and an invertible coordinate
+change: `Lambda_ii=tanh(y_i)` and
+`Lambda_ij=(1-Lambda_ii*Lambda_jj)*y_ij`. This improves conditioning near the
+stability boundary without restricting free edge values. Default restarts
+cover all eight diagonal-sign patterns modulo global sign reversal at N=4,
+then add starts with a different noise scale. The nonconvex fits are numerical
+maximum-likelihood approximations, without a global-optimality guarantee.
+At least one converged restart is required for every candidate support;
+unresolved candidates fail the trial. Failed trials leave their NPZ unchanged,
+successful trials remain saved, and summary refresh is skipped on any failure.
+Rerunning BIC recomputes the comparison. `TOTAL_CPUS / CPUS_PER_TRIAL` caps
+concurrent trials. Each trial fits candidate supports in separate processes,
+using up to `BIC_SUPPORT_WORKERS` workers (default `CPUS_PER_TRIAL`), capped
+at its candidate count. Restarts within each support remain sequential, and
+BLAS threads are restricted to one per support worker. Results retain candidate
+enumeration order, so parallel execution preserves the exact tie rule.
+The Python runner accepts the equivalent `--support-workers` option; use 1
+for sequential support fitting. With `TOTAL_CPUS=100` and `CPUS_PER_TRIAL=5`,
+the default is up to 20 concurrent trials with 5 support workers each.
+
+Each trial NPZ gains `bic_support_mask`, `bic_support_edges`, `bic_dimension`,
+`bic_edge_count`, `bic_selected_index`, `bic_fitted_lambda`, `bic_fitted_omega`,
+`bic_fitted_covariance`, `bic_objective_value`, `bic_log_likelihood`,
+`bic_penalty_value`, full and reduced criterion values, and
+`bic_fit_options_json`. The `bic_candidate_*` arrays record all support masks,
+dimensions, edge counts, likelihoods, criteria, fitted parameters and
+covariances, projected gradients, valid restart counts, optimizer status,
+iteration counts, and validity indicators. Existing archive fields are retained.
+
+Per-trial CSVs and per-support summaries gain BIC exact support recovery,
+EC recovery, and average EC score using the existing recovery definitions.
+The pooled upper-study summary gains average BIC EC score. Original and existing
+reselect summaries are refreshed, preserving oracle and lasso comparisons;
+regular summary regeneration also retains BIC columns. Partial comparisons
+raise an error. CLI options are listed by
+`python experiments/run_bic_support_scaling.py --help`.
+
 ## Cross-validated lasso comparison
 
 All three scaling launchers accept `lasso [OUTPUT_FOLDER]` to compare the whole

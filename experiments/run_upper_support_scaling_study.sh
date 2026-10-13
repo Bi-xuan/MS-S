@@ -41,7 +41,7 @@ NUM_SAMPLE_VALUES=(100 1000 10000 1000000)
 
 usage() {
     cat <<EOF_USAGE
-Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect [OUTPUT_FOLDER] | oracle [OUTPUT_FOLDER] | lasso [OUTPUT_FOLDER]]
+Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect [OUTPUT_FOLDER] | oracle [OUTPUT_FOLDER] | lasso [OUTPUT_FOLDER] | BIC [OUTPUT_FOLDER]]
 
   no command  Run one trial when SLURM_ARRAY_TASK_ID is set; otherwise run-all.
   run-all     Run all supports, four sample sizes, and ten seeds per sample size,
@@ -62,6 +62,12 @@ Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect [OUTPU
               Save oracle fields in each trial NPZ. Add three oracle metrics to
               per-support summaries and only average oracle EC score to the
               pooled summary. Uses TOTAL_CPUS / CPUS_PER_TRIAL concurrent trials.
+  BIC         Fit Gaussian maximum likelihood on all upper supports (2 <= N <= 4).
+              Parallel support fits: BIC_SUPPORT_WORKERS (default CPUS_PER_TRIAL),
+              from 1 to CPUS_PER_TRIAL; TOTAL_CPUS / CPUS_PER_TRIAL concurrent trials.
+              Jointly fit omega and save BIC fields in NPZs. Refresh per-support
+              and pooled summaries. Requires saved SUPPORT_SCOPE=upper.
+              Accepts lowercase bic too.
   lasso       Fit five-fold-CV upper-triangular lasso for all saved supports.
               Save lasso fields in NPZs and add exact/EC recovery and EC score
               to per-support summaries and average EC score to pooled tables.
@@ -414,7 +420,7 @@ case "${command}" in
     run-all|aggregate)
         (($# == 1)) || { usage >&2; exit 2; }
         ;;
-    trial|reselect|oracle|lasso)
+    trial|reselect|oracle|lasso|BIC|bic)
         (($# <= 2)) || { usage >&2; exit 2; }
         ;;
     -h|--help|help)
@@ -438,12 +444,19 @@ else
         default_output_root+="_greedy"
     fi
     OUTPUT_ROOT="${OUTPUT_ROOT:-${default_output_root}}"
-    if [[ "${command}" == "oracle" || "${command}" == "lasso" ]]; then
+    if [[ "${command}" == "oracle" || "${command}" == "lasso" || "${command}" == "BIC" || "${command}" == "bic" ]]; then
         OUTPUT_ROOT="${2:-${OUTPUT_ROOT}}"
     fi
 fi
 
-if [[ "${command}" == "lasso" ]]; then
+if [[ "${command}" == "BIC" || "${command}" == "bic" ]]; then
+    "${PYTHON:-python}" experiments/run_bic_support_scaling.py "${OUTPUT_ROOT}" \
+        --upper-study --total-cpus "${TOTAL_CPUS}" --cpus-per-trial "${CPUS_PER_TRIAL}" \
+        --support-workers "${BIC_SUPPORT_WORKERS:-${CPUS_PER_TRIAL}}" \
+        --diagonal-bound "${BIC_DIAGONAL_BOUND:-0.999999}" \
+        --max-restarts "${BIC_MAX_RESTARTS:-10}" \
+        --max-iter "${BIC_MAX_ITER:-1500}" --tol "${BIC_TOL:-1e-6}"
+elif [[ "${command}" == "lasso" ]]; then
     "${PYTHON:-python}" experiments/run_lasso_support_scaling.py "${OUTPUT_ROOT}" \
         --upper-study --total-cpus "${TOTAL_CPUS}" --cpus-per-trial "${CPUS_PER_TRIAL}" \
         --gamma-min "${LASSO_GAMMA_MIN:-1e-7}" \

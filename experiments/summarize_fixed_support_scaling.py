@@ -44,6 +44,9 @@ class TrialSummary:
     lasso_exact_support_recovery: bool | None = None
     lasso_ec_recovery: bool | None = None
     lasso_score: float | None = None
+    bic_exact_support_recovery: bool | None = None
+    bic_ec_recovery: bool | None = None
+    bic_score: float | None = None
 
 
 def _mask_edges(mask: np.ndarray, support_scope: str = "all") -> frozenset[tuple[int, int]]:
@@ -115,6 +118,12 @@ def _load_trial(
                     or np.any(np.tril(lasso_mask, -1))):
                 raise ValueError(f"{curve_path} has an invalid upper-triangular lasso support.")
             lasso_edges = _mask_edges(lasso_mask)
+        bic_edges = None
+        if "bic_support_mask" in data:
+            allowed = _mask_edges(np.ones((n, n), dtype=bool), "upper")
+            bic_mask = validate_support_mask(data["bic_support_mask"], n,
+                                             int(data["bic_edge_count"]), allowed)
+            bic_edges = _mask_edges(bic_mask)
 
     if num_samples != expected_num_samples:
         raise ValueError(
@@ -219,6 +228,9 @@ def _load_trial(
         lasso_exact_support_recovery=(lasso_edges == true_edges if lasso_edges is not None else None),
         lasso_ec_recovery=(same_maximal_class(lasso_edges, true_edges, n) if lasso_edges is not None else None),
         lasso_score=(score_support(lasso_edges, true_edges, n) if lasso_edges is not None else None),
+        bic_exact_support_recovery=(bic_edges == true_edges if bic_edges is not None else None),
+        bic_ec_recovery=(same_maximal_class(bic_edges, true_edges, n) if bic_edges is not None else None),
+        bic_score=(score_support(bic_edges, true_edges, n) if bic_edges is not None else None),
     )
 
 
@@ -283,11 +295,19 @@ def _has_lasso(trials: list[TrialSummary]) -> bool:
     return bool(present) and all(present)
 
 
+def _has_bic(trials: list[TrialSummary]) -> bool:
+    present = [trial.bic_score is not None for trial in trials]
+    if any(present) and not all(present):
+        raise ValueError("BIC results are missing for some trials; run BIC on the complete study.")
+    return bool(present) and all(present)
+
+
 def write_trials_csv(trials: list[TrialSummary], output_path: Path) -> None:
     """Write auditable per-seed metrics."""
 
     has_oracle = _has_oracle(trials)
     has_lasso = _has_lasso(trials)
+    has_bic = _has_bic(trials)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", newline="", encoding="utf-8") as output_file:
         writer = csv.writer(output_file, lineterminator="\n")
@@ -306,6 +326,8 @@ def write_trials_csv(trials: list[TrialSummary], output_path: Path) -> None:
                  if has_oracle else ())
             + (("lasso_exact_support_recovery", "lasso_ec_recovery", "lasso_score")
                if has_lasso else ())
+            + (("bic_exact_support_recovery", "bic_ec_recovery", "bic_score")
+               if has_bic else ())
         )
         for trial in trials:
             writer.writerow(
@@ -325,6 +347,9 @@ def write_trials_csv(trials: list[TrialSummary], output_path: Path) -> None:
                 + ((str(trial.lasso_exact_support_recovery).lower(),
                     str(trial.lasso_ec_recovery).lower(), f"{trial.lasso_score:.17g}")
                    if has_lasso else ())
+                + ((str(trial.bic_exact_support_recovery).lower(),
+                    str(trial.bic_ec_recovery).lower(), f"{trial.bic_score:.17g}")
+                   if has_bic else ())
             )
 
 
@@ -347,6 +372,7 @@ def write_markdown_summary(
     ]
     has_oracle = _has_oracle(trials)
     has_lasso = _has_lasso(trials)
+    has_bic = _has_bic(trials)
     if has_oracle:
         lines[0] += (f" Oracle exact support recovery (x/{expected_seeds}) |"
                      f" Oracle EC recovery (x/{expected_seeds}) |"
@@ -356,6 +382,11 @@ def write_markdown_summary(
         lines[0] += (f" Lasso exact support recovery (x/{expected_seeds}) |"
                      f" Lasso EC recovery (x/{expected_seeds}) |"
                      f" Average lasso EC score over {expected_seeds} seeds |")
+        lines[1] += "---:|---:|---:|"
+    if has_bic:
+        lines[0] += (f" BIC exact support recovery (x/{expected_seeds}) |"
+                     f" BIC EC recovery (x/{expected_seeds}) |"
+                     f" Average BIC EC score over {expected_seeds} seeds |")
         lines[1] += "---:|---:|---:|"
     for num_samples in sample_sizes:
         sample_trials = [
@@ -388,6 +419,11 @@ def write_markdown_summary(
             lasso_ec = sum(trial.lasso_ec_recovery for trial in sample_trials)
             lasso_mean = fsum(trial.lasso_score for trial in sample_trials) / len(sample_trials)
             lines[-1] += f" {lasso_exact}/{expected_seeds} | {lasso_ec}/{expected_seeds} | {lasso_mean:.6f} |"
+        if has_bic:
+            bic_exact = sum(trial.bic_exact_support_recovery for trial in sample_trials)
+            bic_ec = sum(trial.bic_ec_recovery for trial in sample_trials)
+            bic_mean = fsum(trial.bic_score for trial in sample_trials) / len(sample_trials)
+            lines[-1] += f" {bic_exact}/{expected_seeds} | {bic_ec}/{expected_seeds} | {bic_mean:.6f} |"
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -401,6 +437,8 @@ def write_overall_score_summary(trial_paths: list[Path], output_path: Path) -> N
     oracle_presence = []
     lasso_scores = defaultdict(list)
     lasso_presence = []
+    bic_scores = defaultdict(list)
+    bic_presence = []
     for trial_path in trial_paths:
         with trial_path.open(newline="", encoding="utf-8") as handle:
             reader = csv.DictReader(handle)
@@ -410,6 +448,8 @@ def write_overall_score_summary(trial_paths: list[Path], output_path: Path) -> N
             oracle_presence.append(has_oracle)
             has_lasso = "lasso_score" in (reader.fieldnames or ())
             lasso_presence.append(has_lasso)
+            has_bic = "bic_score" in (reader.fieldnames or ())
+            bic_presence.append(has_bic)
             row_count = 0
             for row in reader:
                 num_samples, score = int(row["num_samples"]), float(row["score"])
@@ -426,6 +466,11 @@ def write_overall_score_summary(trial_paths: list[Path], output_path: Path) -> N
                     if not isfinite(lasso_score) or not 0 <= lasso_score <= 1:
                         raise ValueError(f"{trial_path} contains an invalid lasso score.")
                     lasso_scores[num_samples].append(lasso_score)
+                if has_bic:
+                    bic_score = float(row["bic_score"])
+                    if not isfinite(bic_score) or not 0 <= bic_score <= 1:
+                        raise ValueError(f"{trial_path} contains an invalid BIC score.")
+                    bic_scores[num_samples].append(bic_score)
                 row_count += 1
             if not row_count:
                 raise ValueError(f"{trial_path} contains no trials.")
@@ -435,12 +480,17 @@ def write_overall_score_summary(trial_paths: list[Path], output_path: Path) -> N
         raise ValueError("Oracle scores are missing from some per-support trial CSVs.")
     if any(lasso_presence) and not all(lasso_presence):
         raise ValueError("Lasso scores are missing from some per-support trial CSVs.")
+    if any(bic_presence) and not all(bic_presence):
+        raise ValueError("BIC scores are missing from some per-support trial CSVs.")
     lines = ["| Number of samples | Average EC score |", "|---:|---:|"]
     if oracle_scores:
         lines[0] += " Average oracle EC score |"
         lines[1] += "---:|"
     if lasso_scores:
         lines[0] += " Average lasso EC score |"
+        lines[1] += "---:|"
+    if bic_scores:
+        lines[0] += " Average BIC EC score |"
         lines[1] += "---:|"
     for num_samples, values in sorted(scores.items()):
         lines.append(f"| {num_samples} | {fsum(values) / len(values):.6f} |")
@@ -449,6 +499,9 @@ def write_overall_score_summary(trial_paths: list[Path], output_path: Path) -> N
             lines[-1] += f" {fsum(values) / len(values):.6f} |"
         if lasso_scores:
             values = lasso_scores[num_samples]
+            lines[-1] += f" {fsum(values) / len(values):.6f} |"
+        if bic_scores:
+            values = bic_scores[num_samples]
             lines[-1] += f" {fsum(values) / len(values):.6f} |"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
