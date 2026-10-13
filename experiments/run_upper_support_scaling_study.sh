@@ -41,7 +41,7 @@ NUM_SAMPLE_VALUES=(100 1000 10000 1000000)
 
 usage() {
     cat <<EOF_USAGE
-Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect [OUTPUT_FOLDER]]
+Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect [OUTPUT_FOLDER] | oracle [OUTPUT_FOLDER]]
 
   no command  Run one trial when SLURM_ARRAY_TASK_ID is set; otherwise run-all.
   run-all     Run all supports, four sample sizes, and ten seeds per sample size,
@@ -57,6 +57,11 @@ Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect [OUTPU
               Write selections and per-support summaries under each support's
               ${RESELECT_SUBDIR}/ directory. Do not recompute curves.
               OUTPUT_FOLDER overrides OUTPUT_ROOT for this command.
+  oracle      Fit all supports independently at each saved lambda_star_dimension,
+              using the saved fitting settings, covariance, scope, and solver seed.
+              Save oracle fields in each trial NPZ. Add three oracle metrics to
+              per-support summaries and only average oracle EC score to the
+              pooled summary. Uses TOTAL_CPUS / CPUS_PER_TRIAL concurrent trials.
 
   NUM_SUPPORTS defaults to all 20 supports for N=4, TRUE_DIMENSION=4.
   LAMBDA_STAR_OFFDIAG_ABS_MIN/MAX bound nonzero coefficients (defaults 0.20/0.60).
@@ -404,7 +409,7 @@ case "${command}" in
     run-all|aggregate)
         (($# == 1)) || { usage >&2; exit 2; }
         ;;
-    trial|reselect)
+    trial|reselect|oracle)
         (($# <= 2)) || { usage >&2; exit 2; }
         ;;
     -h|--help|help)
@@ -428,9 +433,15 @@ else
         default_output_root+="_greedy"
     fi
     OUTPUT_ROOT="${OUTPUT_ROOT:-${default_output_root}}"
+    if [[ "${command}" == "oracle" ]]; then
+        OUTPUT_ROOT="${2:-${OUTPUT_ROOT}}"
+    fi
 fi
 
-if [[ "${command}" == "reselect" ]]; then
+if [[ "${command}" == "oracle" ]]; then
+    "${PYTHON:-python}" experiments/run_oracle_support_scaling.py "${OUTPUT_ROOT}" \
+        --upper-study --total-cpus "${TOTAL_CPUS}" --cpus-per-trial "${CPUS_PER_TRIAL}"
+elif [[ "${command}" == "reselect" ]]; then
     reselect_all
 elif [[ "${command}" == "aggregate" ]]; then
     aggregate_results

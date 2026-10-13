@@ -20,6 +20,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from score_support import same_maximal_class, score_support
+from supports.common import validate_support_mask
 
 DEFAULT_INPUT = PROJECT_ROOT / "experiments" / "output" / "fixed_support_scaling_n4"
 DEFAULT_SAMPLE_SIZES = (100, 1_000, 10_000, 1_000_000)
@@ -37,6 +38,9 @@ class TrialSummary:
     score: float
     best_on_path_selection: bool
     true_support_on_path: bool
+    oracle_exact_support_recovery: bool | None = None
+    oracle_ec_recovery: bool | None = None
+    oracle_score: float | None = None
 
 
 def _mask_edges(mask: np.ndarray, support_scope: str = "all") -> frozenset[tuple[int, int]]:
@@ -91,6 +95,16 @@ def _load_trial(
             tuple(map(int, edge))
             for edge in np.asarray(data["lambda_star_support_edges"])
         )
+        oracle_edges = None
+        if "oracle_support_mask" in data:
+            oracle_dimension = int(np.asarray(data["oracle_dimension"]))
+            if oracle_dimension != int(np.asarray(data["lambda_star_dimension"])):
+                raise ValueError(f"{curve_path} has an incorrect oracle dimension.")
+            allowed_edges = _mask_edges(np.ones((n, n), dtype=bool), saved_scope)
+            oracle_mask = validate_support_mask(
+                data["oracle_support_mask"], n, oracle_dimension - 1, allowed_edges,
+            )
+            oracle_edges = _mask_edges(oracle_mask)
 
     if num_samples != expected_num_samples:
         raise ValueError(
@@ -189,6 +203,9 @@ def _load_trial(
         score=score_support(selected_edges, true_edges, n),
         best_on_path_selection=selected_error == best_error,
         true_support_on_path=best_error == 0,
+        oracle_exact_support_recovery=(oracle_edges == true_edges if oracle_edges is not None else None),
+        oracle_ec_recovery=(same_maximal_class(oracle_edges, true_edges, n) if oracle_edges is not None else None),
+        oracle_score=(score_support(oracle_edges, true_edges, n) if oracle_edges is not None else None),
     )
 
 
@@ -239,9 +256,17 @@ def collect_trials(
     return trials
 
 
+def _has_oracle(trials: list[TrialSummary]) -> bool:
+    present = [trial.oracle_score is not None for trial in trials]
+    if any(present) and not all(present):
+        raise ValueError("Oracle results are missing for some trials; run oracle on the complete study.")
+    return bool(present) and all(present)
+
+
 def write_trials_csv(trials: list[TrialSummary], output_path: Path) -> None:
     """Write auditable per-seed metrics."""
 
+    has_oracle = _has_oracle(trials)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", newline="", encoding="utf-8") as output_file:
         writer = csv.writer(output_file, lineterminator="\n")
@@ -256,7 +281,8 @@ def write_trials_csv(trials: list[TrialSummary], output_path: Path) -> None:
                 "score",
                 "best_on_path_selection",
                 "true_support_on_path",
-            )
+            ) + (("oracle_exact_support_recovery", "oracle_ec_recovery", "oracle_score")
+                 if has_oracle else ())
         )
         for trial in trials:
             writer.writerow(
@@ -270,7 +296,9 @@ def write_trials_csv(trials: list[TrialSummary], output_path: Path) -> None:
                     f"{trial.score:.17g}",
                     str(trial.best_on_path_selection).lower(),
                     str(trial.true_support_on_path).lower(),
-                )
+                ) + ((str(trial.oracle_exact_support_recovery).lower(),
+                      str(trial.oracle_ec_recovery).lower(), f"{trial.oracle_score:.17g}")
+                     if has_oracle else ())
             )
 
 
@@ -291,6 +319,12 @@ def write_markdown_summary(
         f"True support on path (x/{expected_seeds}) |",
         "|---:|---:|---:|---:|---:|---:|---:|",
     ]
+    has_oracle = _has_oracle(trials)
+    if has_oracle:
+        lines[0] += (f" Oracle exact support recovery (x/{expected_seeds}) |"
+                     f" Oracle EC recovery (x/{expected_seeds}) |"
+                     f" Average oracle EC score over {expected_seeds} seeds |")
+        lines[1] += "---:|---:|---:|"
     for num_samples in sample_sizes:
         sample_trials = [
             trial for trial in trials if trial.num_samples == num_samples
@@ -312,6 +346,11 @@ def write_markdown_summary(
             f"{mean_score:.6f} | {best_count}/{expected_seeds} | "
             f"{truth_count}/{expected_seeds} |"
         )
+        if has_oracle:
+            oracle_exact = sum(trial.oracle_exact_support_recovery for trial in sample_trials)
+            oracle_ec = sum(trial.oracle_ec_recovery for trial in sample_trials)
+            oracle_mean = fsum(trial.oracle_score for trial in sample_trials) / len(sample_trials)
+            lines[-1] += f" {oracle_exact}/{expected_seeds} | {oracle_ec}/{expected_seeds} | {oracle_mean:.6f} |"
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -321,25 +360,42 @@ def write_overall_score_summary(trial_paths: list[Path], output_path: Path) -> N
     """Average individual trial scores by sample size across all supports."""
 
     scores = defaultdict(list)
+    oracle_scores = defaultdict(list)
+    oracle_presence = []
     for trial_path in trial_paths:
         with trial_path.open(newline="", encoding="utf-8") as handle:
             reader = csv.DictReader(handle)
             if not {"num_samples", "score"} <= set(reader.fieldnames or ()):
                 raise ValueError(f"{trial_path} must contain num_samples and score columns.")
+            has_oracle = "oracle_score" in (reader.fieldnames or ())
+            oracle_presence.append(has_oracle)
             row_count = 0
             for row in reader:
                 num_samples, score = int(row["num_samples"]), float(row["score"])
                 if num_samples < 1 or not isfinite(score) or not 0 <= score <= 1:
                     raise ValueError(f"{trial_path} contains an invalid sample size or score.")
                 scores[num_samples].append(score)
+                if has_oracle:
+                    oracle_score = float(row["oracle_score"])
+                    if not isfinite(oracle_score) or not 0 <= oracle_score <= 1:
+                        raise ValueError(f"{trial_path} contains an invalid oracle score.")
+                    oracle_scores[num_samples].append(oracle_score)
                 row_count += 1
             if not row_count:
                 raise ValueError(f"{trial_path} contains no trials.")
     if not scores:
         raise ValueError("No trial scores to summarize.")
+    if any(oracle_presence) and not all(oracle_presence):
+        raise ValueError("Oracle scores are missing from some per-support trial CSVs.")
     lines = ["| Number of samples | Average EC score |", "|---:|---:|"]
+    if oracle_scores:
+        lines[0] += " Average oracle EC score |"
+        lines[1] += "---:|"
     for num_samples, values in sorted(scores.items()):
         lines.append(f"| {num_samples} | {fsum(values) / len(values):.6f} |")
+        if oracle_scores:
+            values = oracle_scores[num_samples]
+            lines[-1] += f" {fsum(values) / len(values):.6f} |"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

@@ -42,6 +42,9 @@ else
         default_output_root+="_greedy"
     fi
     OUTPUT_ROOT="${OUTPUT_ROOT:-${default_output_root}}"
+    if [[ "${COMMAND}" == "oracle" ]]; then
+        OUTPUT_ROOT="${2:-${OUTPUT_ROOT}}"
+    fi
 fi
 N_JOBS="${N_JOBS:-${SLURM_CPUS_PER_TASK:-${NSLOTS:-8}}}"
 RESELECT_ROOT="${OUTPUT_ROOT}/reselect_lm_support_count_plateau"
@@ -82,7 +85,7 @@ fi
 
 usage() {
     cat <<EOF
-Usage: $(basename "$0") [run-all | reselect [OUTPUT_FOLDER]]
+Usage: $(basename "$0") [run-all | reselect [OUTPUT_FOLDER] | oracle [OUTPUT_FOLDER]]
 
   Set LAMBDA_STAR_OFFDIAG_ABS_MIN and LAMBDA_STAR_OFFDIAG_ABS_MAX
   to bound the absolute values of nonzero Lambda_star off-diagonal entries.
@@ -104,6 +107,11 @@ Usage: $(basename "$0") [run-all | reselect [OUTPUT_FOLDER]]
             with one curve-only selection per trial. Does not recompute curves.
             Writes selections and summaries under OUTPUT_ROOT/reselect_lm_support_count_plateau.
             Default folder: experiments/output/fixed_support_scaling_n4_omega_ref_eq_star
+  oracle    Fit all supports independently at each saved lambda_star_dimension,
+            using the saved covariance, scope, fitting settings, and solver seed.
+            Save oracle fields in each trial NPZ and refresh summaries with
+            oracle exact recovery, EC recovery, and average EC score.
+            Uses TOTAL_CPUS / CPUS_PER_TRIAL concurrent trials.
 EOF
 }
 
@@ -283,6 +291,12 @@ reselect_all() {
 }
 
 case "${COMMAND}" in
+    oracle)
+        (($# <= 2)) || { usage >&2; exit 2; }
+        "${PYTHON:-python}" experiments/run_oracle_support_scaling.py "${OUTPUT_ROOT}" \
+            --total-cpus "${TOTAL_CPUS}" --cpus-per-trial "${CPUS_PER_TRIAL}"
+        exit $?
+        ;;
     reselect)
         (($# <= 2)) || { usage >&2; exit 2; }
         reselect_all

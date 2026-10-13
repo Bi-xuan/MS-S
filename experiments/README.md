@@ -279,6 +279,41 @@ The earlier
 `support_XX/seed_S/` layout and window-versus-plateau coverage plots are
 replaced by the per-support sample-size summaries.
 
+# Oracle support recovery at the known dimension
+
+All three scaling launchers accept `oracle [OUTPUT_FOLDER]`. For example:
+
+```sh
+bash experiments/run_upper_support_scaling_study.sh oracle experiments/output/upp_scal_n4_dm4_upper_scope_fit_omega_true_greedy
+bash experiments/run_fixed_support_scaling.sh oracle experiments/output/fixed_support_scaling_n4_upper_scope_fit_omega_ref_true_greedy
+bash experiments/run_fixed_support_scaling_package.sh oracle experiments/output/fixed_support_scaling_n4_upper_scope_fit_omega_ref_true_greedy
+```
+
+The package launcher accepts the same saved format as the original launcher.
+Each command freshly searches all supports at the trial's saved
+`lambda_star_dimension`, independently of the original nested or greedy path.
+It uses the saved empirical covariance, support scope, resolved `omega_ref`,
+`fit_settings_json`, and `solve_seed`; current data-generation and search
+environment settings do not replace these saved values. Saved fitting settings
+are required. `TOTAL_CPUS` and `CPUS_PER_TRIAL` control concurrency as in `run-all`.
+Set `PYTHON` to select the executable for the oracle command.
+
+The command adds `oracle_dimension`, `oracle_support_mask`,
+`oracle_support_edges`, `oracle_fitted_lambda`, `oracle_fitted_omega`,
+`oracle_objective_value`, and `oracle_fit_options_json` to each existing
+`objective_curve_sigma_hat.npz`. The model mask retains the selected edges even
+when a fitted coefficient is zero. Existing curve arrays and final selection
+reports are preserved. Rerunning `oracle` recomputes its fields.
+
+Original summaries and existing `reselect_lm_support_count_plateau` summaries
+gain oracle exact support recovery, EC recovery, and average EC score, with
+per-seed metrics also saved in `selection_trials.csv`. The upper-study pooled
+summary gains only average oracle EC score, pooling individual trials across
+supports. Recovery definitions are the same as for the original estimator.
+Regular summary regeneration also retains these columns when oracle results
+are available for all trials. Summary generation is skipped if any oracle fit
+fails; successfully fitted trials retain their saved oracle fields.
+
 # Reselect fixed-support curves without fitting
 
 ```sh

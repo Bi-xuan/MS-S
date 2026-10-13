@@ -28,10 +28,15 @@ COMMAND="${1:-run-all}"
 
 usage() {
     cat <<EOF
-Usage: $(basename "$0") [run-all | summarize [OUTPUT_FOLDER]]
+Usage: $(basename "$0") [run-all | summarize [OUTPUT_FOLDER] | oracle [OUTPUT_FOLDER]]
 
   run-all    Run 40 package-based trials, then write the summary and plots.
   summarize  Regenerate the summary and plots from completed package trials.
+  oracle     Fit all supports independently at each saved lambda_star_dimension.
+             Accepts both original and package-generated trial NPZs. Uses saved
+             fitting settings, scope, covariance, and solver seed. Save oracle
+             fields in the NPZs and add oracle recovery metrics to summaries.
+             Uses TOTAL_CPUS / CPUS_PER_TRIAL concurrent trials.
 
 Defaults: N=10, SUPPORT_SCOPE=all, TOTAL_CPUS=100, CPUS_PER_TRIAL=5.
 SUPPORT_SCOPE accepts all (every directed off-diagonal edge) or upper.
@@ -51,6 +56,12 @@ EOF
 }
 
 case "${COMMAND}" in
+    oracle)
+        (($# <= 2)) || { usage >&2; exit 2; }
+        "${PYTHON}" experiments/run_oracle_support_scaling.py "${2:-${OUTPUT_ROOT}}" \
+            --total-cpus "${TOTAL_CPUS}" --cpus-per-trial "${CPUS_PER_TRIAL}"
+        exit $?
+        ;;
     run-all) (($# <= 1)) || { usage >&2; exit 2; } ;;
     summarize)
         (($# <= 2)) || { usage >&2; exit 2; }
