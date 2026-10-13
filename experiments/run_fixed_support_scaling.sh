@@ -117,7 +117,7 @@ Usage: $(basename "$0") [run-all | reselect [OUTPUT_FOLDER] | oracle [OUTPUT_FOL
             to summaries. Configure LASSO_GAMMA_MIN/MAX/COUNT and
             LASSO_GAMMA_SPACING (log or linear); zero is always included.
   BIC       Fit Gaussian maximum likelihood on all upper supports (2 <= N <= 4).
-            Jointly fit omega, save BIC fields in NPZs, and refresh summaries.
+            Use fixed saved omega_ref, save BIC fields in NPZs, and refresh summaries.
             Parallel support fits: BIC_SUPPORT_WORKERS (default CPUS_PER_TRIAL),
             from 1 to CPUS_PER_TRIAL; TOTAL_CPUS / CPUS_PER_TRIAL concurrent trials.
             Requires saved SUPPORT_SCOPE=upper; accepts lowercase bic too.

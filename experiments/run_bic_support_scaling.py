@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add exhaustive upper-support Gaussian BIC fits to saved scaling trials."""
+"""Add exhaustive Gaussian BIC fits at each trial's fixed saved omega_ref."""
 
 from __future__ import annotations
 
@@ -22,13 +22,13 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from experiments.compute_objective_curve import atomic_savez_compressed
 from experiments.run_oracle_support_scaling import study_layout, summary_targets, refresh_study_summaries
 from experiments.summarize_fixed_support_scaling import collect_trials
-from optimizers.bic import select_bic, validate_covariance, validate_settings
+from optimizers.bic import select_bic, validate_covariance, validate_omega_ref, validate_settings
 
 
 def load_bic_inputs(curve_path):
     with np.load(curve_path, allow_pickle=False) as data:
         saved = dict(data)
-    required = {"Sigma", "n", "num_samples", "support_scope"}
+    required = {"Sigma", "n", "num_samples", "support_scope", "omega_ref"}
     missing = required - saved.keys()
     if missing:
         raise ValueError(f"{curve_path} is missing BIC inputs: {', '.join(sorted(missing))}")
@@ -38,18 +38,23 @@ def load_bic_inputs(curve_path):
     count = float(saved["num_samples"])
     if not np.isfinite(count) or int(count) != count or count < len(sigma):
         raise ValueError(f"{curve_path}: BIC requires integer num_samples >= N.")
+    try:
+        validate_omega_ref(saved["omega_ref"])
+    except ValueError as error:
+        raise ValueError(f"{curve_path}: {error}") from error
     return saved
 
 
 def fit_bic_trial(curve_path, options, *, support_workers=1):
     saved = load_bic_inputs(curve_path)
+    omega_ref = validate_omega_ref(saved["omega_ref"])
     result = select_bic(saved["Sigma"], int(saved["num_samples"]),
-                        n_jobs=support_workers, **options)
+                        omega_ref=omega_ref, n_jobs=support_workers, **options)
     saved.update({f"bic_{name}": value for name, value in result.items()})
     saved["bic_fit_options_json"] = json.dumps(dict(
         options, support_workers=support_workers,
         covariance="X.T @ X / num_samples", mean="known zero",
-        omega="joint MLE via analytic profiling", support_scope="upper",
+        omega="fixed saved omega_ref", omega_ref=omega_ref, support_scope="upper",
         search="all upper supports including diagonal-only",
         penalty="candidate off-diagonal edge count * log(num_samples)",
         diagonals="free signed, unpenalized, may equal zero",
@@ -85,7 +90,8 @@ def run_bic(root, *, upper_study=False, total_cpus=100, cpus_per_trial=5,
         for selection_root, selection_file in summary_targets(support):
             collect_trials(support, sizes, seeds, selection_file, selection_root)
     workers = min(total_cpus // cpus_per_trial, len(curves))
-    print(f"Fitting {len(curves)} exhaustive BIC trials with {workers} concurrent trials "
+    print(f"Fitting {len(curves)} exhaustive BIC trials at fixed saved omega_ref "
+          f"with {workers} concurrent trials "
           f"and up to {support_workers} single-CPU support workers per trial.", flush=True)
     if workers == 1:
         for curve in curves:

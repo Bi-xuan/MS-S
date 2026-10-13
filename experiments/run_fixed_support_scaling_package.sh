@@ -33,7 +33,7 @@ Usage: $(basename "$0") [run-all | summarize [OUTPUT_FOLDER] | oracle [OUTPUT_FO
   run-all    Run 40 package-based trials, then write the summary and plots.
   summarize  Regenerate the summary and plots from completed package trials.
   BIC        Fit Gaussian maximum likelihood on all upper supports (2 <= N <= 4).
-             Jointly fit omega, save BIC fields in NPZs, and refresh summaries.
+             Use fixed saved omega_ref, save BIC fields in NPZs, and refresh summaries.
              Requires saved SUPPORT_SCOPE=upper; accepts lowercase bic too.
              Parallel support fits: BIC_SUPPORT_WORKERS (default CPUS_PER_TRIAL),
              from 1 to CPUS_PER_TRIAL; TOTAL_CPUS / CPUS_PER_TRIAL concurrent trials.

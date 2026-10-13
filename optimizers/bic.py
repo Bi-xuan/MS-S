@@ -1,6 +1,6 @@
 """Exhaustive upper-support Gaussian likelihood selection for small matrices.
 
-Omega is profiled exactly for each Lambda, so both parameters are fitted.
+Omega is fixed to the trial's saved omega_ref for every candidate support.
 Support masks, rather than thresholded coefficients, determine the penalty.
 """
 
@@ -39,6 +39,14 @@ def validate_covariance(sigma):
     return sigma
 
 
+def validate_omega_ref(omega_ref):
+    omega_ref = np.asarray(omega_ref)
+    if (omega_ref.ndim != 0 or omega_ref.dtype.kind not in "fiu"
+            or not np.isfinite(omega_ref) or omega_ref <= 0):
+        raise ValueError("BIC omega_ref must be a finite positive scalar.")
+    return float(omega_ref)
+
+
 def upper_support_masks(n):
     """Enumerate by edge count, then lexicographic edge order, including k=0."""
     edges = list(zip(*np.triu_indices(n, 1)))
@@ -56,29 +64,26 @@ def _decode(x, n, rows, cols):
     return matrix
 
 
-def _profile(matrix, sigma):
-    """Return logdet(C)+tr(C^-1 S), fitted omega, and unit-noise covariance."""
+def _likelihood(matrix, sigma, omega_ref):
+    """Return logdet(C)+tr(C^-1 S) and unit covariance at fixed omega_ref."""
     unit = solve_discrete_lyapunov(matrix.T, np.eye(len(matrix)), method="direct")
     unit = (unit + unit.T) / 2
     factor = cho_factor(unit, lower=True, check_finite=True)
     inverse = cho_solve(factor, np.eye(len(matrix)))
-    omega = float(np.sum(inverse * sigma) / len(matrix))
-    if not np.isfinite(omega) or omega <= 0:
-        raise np.linalg.LinAlgError("No positive profiled omega.")
     logdet = 2 * np.log(np.diag(factor[0])).sum()
-    value = float(logdet + len(matrix) * (np.log(omega) + 1))
-    return value, omega, unit, inverse
+    value = float(logdet + len(matrix) * np.log(omega_ref)
+                  + np.sum(inverse * sigma) / omega_ref)
+    return value, unit, inverse
 
 
-def _objective_gradient(x, sigma, rows, cols):
+def _objective_gradient(x, sigma, omega_ref, rows, cols):
     matrix = _decode(x, len(sigma), rows, cols)
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("error", LinAlgWarning)
-            value, omega, unit, inverse = _profile(matrix, sigma)
-            # Adjoint Lyapunov differentiation; the envelope theorem eliminates
-            # the derivative of omega at its analytic likelihood optimum.
-            covariance_gradient = inverse - inverse @ sigma @ inverse / omega
+            value, unit, inverse = _likelihood(matrix, sigma, omega_ref)
+            # Adjoint Lyapunov differentiation of the unit-noise covariance.
+            covariance_gradient = inverse - inverse @ sigma @ inverse / omega_ref
             adjoint = solve_discrete_lyapunov(matrix, covariance_gradient, method="direct")
         adjoint = (adjoint + adjoint.T) / 2
         gradient = 2 * unit @ matrix @ adjoint
@@ -95,7 +100,7 @@ def _optimization_decode(y, n, rows, cols):
     return np.r_[diagonal, (1 - diagonal[rows] * diagonal[cols]) * y[n:]]
 
 
-def _optimization_gradient(y, sigma, rows, cols):
+def _optimization_gradient(y, sigma, omega_ref, rows, cols):
     """An invertible coordinate change improves conditioning near +/-1.
 
     Lambda_ii=tanh(y_i), Lambda_ij=(1-Lambda_ii*Lambda_jj)*y_ij.
@@ -104,7 +109,7 @@ def _optimization_gradient(y, sigma, rows, cols):
     """
     n = len(sigma)
     x = _optimization_decode(y, n, rows, cols)
-    value, gradient = _objective_gradient(x, sigma, rows, cols)
+    value, gradient = _objective_gradient(x, sigma, omega_ref, rows, cols)
     diagonal_gradient = gradient[:n].copy()
     np.add.at(diagonal_gradient, rows, -x[cols] * y[n:] * gradient[n:])
     np.add.at(diagonal_gradient, cols, -x[rows] * y[n:] * gradient[n:])
@@ -120,19 +125,21 @@ def _initial_states(sigma, mask, bound, max_restarts):
     minimum = np.linalg.eigvalsh(sigma)[0]
     for restart in range(max_restarts):
         # Dense covariance-factor starts cover all diagonal signs modulo the
-        # exact global sign symmetry. Additional starts change the noise scale.
+        # exact global sign symmetry. Additional starts change only the
+        # initialization noise scale; the likelihood always uses fixed omega_ref.
         fraction = (.5, .9, .1)[(restart // len(signs)) % 3]
         c = np.linalg.cholesky(sigma - fraction * minimum * np.eye(n)).T
         matrix = np.linalg.solve(r, np.diag(signs[restart % len(signs)]) @ c)
         yield np.r_[np.clip(np.diag(matrix), -bound, bound), matrix[rows, cols]]
 
 
-def fit_support(sigma, mask, *, diagonal_bound=.999999, max_restarts=10,
+def fit_support(sigma, mask, *, omega_ref, diagonal_bound=.999999, max_restarts=10,
                 max_iter=1500, tol=1e-6):
-    """Fit one support with deterministic restarts and gradient validation."""
+    """Fit Lambda at fixed omega_ref with restarts and gradient validation."""
     validate_settings(diagonal_bound=diagonal_bound, max_restarts=max_restarts,
                       max_iter=max_iter, tol=tol)
     sigma = validate_covariance(sigma)
+    omega_ref = validate_omega_ref(omega_ref)
     mask = np.asarray(mask, dtype=bool)
     if (mask.shape != sigma.shape or not np.all(np.diag(mask))
             or np.any(np.tril(mask, -1))):
@@ -147,11 +154,11 @@ def fit_support(sigma, mask, *, diagonal_bound=.999999, max_restarts=10,
         start = np.r_[np.arctanh(start[:n]),
                       start[n:] / (1 - start[rows] * start[cols])]
         result = minimize(
-            _optimization_gradient, start, args=(sigma, rows, cols), jac=True,
+            _optimization_gradient, start, args=(sigma, omega_ref, rows, cols), jac=True,
             method="L-BFGS-B", bounds=bounds,
             options=dict(maxiter=max_iter, ftol=1e-14, gtol=tol * .1, maxls=50),
         )
-        value, gradient = _optimization_gradient(result.x, sigma, rows, cols)
+        value, gradient = _optimization_gradient(result.x, sigma, omega_ref, rows, cols)
         projected = gradient.copy()
         projected[:n] = result.x[:n] - np.clip(
             result.x[:n] - gradient[:n], -coordinate_bound, coordinate_bound)
@@ -160,8 +167,8 @@ def fit_support(sigma, mask, *, diagonal_bound=.999999, max_restarts=10,
             continue
         matrix = _decode(_optimization_decode(result.x, n, rows, cols), n, rows, cols)
         try:
-            value, omega, unit, _ = _profile(matrix, sigma)
-            covariance = omega * unit
+            value, unit, _ = _likelihood(matrix, sigma, omega_ref)
+            covariance = omega_ref * unit
             np.linalg.cholesky(covariance)
         except (np.linalg.LinAlgError, ValueError):
             continue
@@ -169,7 +176,7 @@ def fit_support(sigma, mask, *, diagonal_bound=.999999, max_restarts=10,
             continue
         valid_restarts += 1
         if best is None or value < best["objective_value"]:
-            best = dict(fitted_lambda=matrix, fitted_omega=omega,
+            best = dict(fitted_lambda=matrix, fitted_omega=omega_ref,
                         fitted_covariance=covariance, objective_value=value,
                         projected_gradient=pg, optimizer_success=bool(result.success),
                         iterations=int(result.nit))
@@ -180,24 +187,26 @@ def fit_support(sigma, mask, *, diagonal_bound=.999999, max_restarts=10,
     return best
 
 
-def select_bic(sigma, num_samples, *, n_jobs=1, **fit_options):
-    """Fit upper supports in parallel; an unresolved support fails the trial."""
+def select_bic(sigma, num_samples, *, omega_ref, n_jobs=1, **fit_options):
+    """Fit all upper supports at fixed omega_ref; unresolved fits fail the trial."""
     validate_settings(**fit_options)
     if (isinstance(n_jobs, bool) or not isinstance(n_jobs, (int, np.integer))
             or n_jobs < 1):
         raise ValueError("BIC n_jobs must be a positive integer.")
     sigma = validate_covariance(sigma)
+    omega_ref = validate_omega_ref(omega_ref)
     if (isinstance(num_samples, bool) or not np.isfinite(num_samples)
             or int(num_samples) != num_samples or num_samples < len(sigma)):
         raise ValueError("BIC num_samples must be an integer >= N.")
     masks = np.array(list(upper_support_masks(len(sigma))))
     if n_jobs == 1:
-        fits = [fit_support(sigma, mask, **fit_options) for mask in masks]
+        fits = [fit_support(sigma, mask, omega_ref=omega_ref, **fit_options) for mask in masks]
     else:
         with ProcessPoolExecutor(max_workers=min(int(n_jobs), len(masks))) as executor:
             # map preserves mask order regardless of completion order, keeping
             # candidate arrays and the exact BIC tie rule deterministic.
-            fits = list(executor.map(partial(fit_support, sigma, **fit_options), masks))
+            fits = list(executor.map(partial(fit_support, sigma, omega_ref=omega_ref,
+                                             **fit_options), masks))
     counts = np.count_nonzero(masks, axis=(1, 2)) - len(sigma)
     losses = np.array([fit["objective_value"] for fit in fits])
     penalties = counts * np.log(num_samples)

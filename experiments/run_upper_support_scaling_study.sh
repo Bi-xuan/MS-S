@@ -65,7 +65,7 @@ Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect [OUTPU
   BIC         Fit Gaussian maximum likelihood on all upper supports (2 <= N <= 4).
               Parallel support fits: BIC_SUPPORT_WORKERS (default CPUS_PER_TRIAL),
               from 1 to CPUS_PER_TRIAL; TOTAL_CPUS / CPUS_PER_TRIAL concurrent trials.
-              Jointly fit omega and save BIC fields in NPZs. Refresh per-support
+              Use fixed saved omega_ref and save BIC fields in NPZs. Refresh per-support
               and pooled summaries. Requires saved SUPPORT_SCOPE=upper.
               Accepts lowercase bic too.
   lasso       Fit five-fold-CV upper-triangular lasso for all saved supports.

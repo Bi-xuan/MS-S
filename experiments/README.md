@@ -326,32 +326,37 @@ bash experiments/run_upper_support_scaling_study.sh BIC experiments/output/upp_s
 ```
 
 The runner reads the saved empirical covariance `Sigma = X.T @ X / num_samples`
-and sample count. It does not reconstruct observations or use generating
-parameters to fit or select models. Saved trials must have `support_scope=upper`.
+and sample count, plus each trial's saved `omega_ref`. It does not reconstruct
+observations or use generating parameters to fit or select models. Saved trials
+must have `support_scope=upper`.
 The exhaustive implementation accepts `2 <= N <= 4`; for the intended `N=4`
 comparison it fits all 64 strict-upper supports, including the diagonal-only
 model. `run-all` continues to run the original method; invoke `BIC` afterward.
 The package launcher's default N=10 output is outside this implementation's
 supported range; supply the folder containing your saved N=4 trials.
 
-For each support m, Gaussian maximum likelihood minimizes
+For each support m, Gaussian likelihood fitting optimizes Lambda with omega fixed:
 
 ```text
-q(Lambda, omega) = logdet(C) + trace(solve(C, Sigma))
-C = Lambda.T @ C @ Lambda + omega I
+q(Lambda; omega_ref) = logdet(C) + trace(solve(C, Sigma))
+C = Lambda.T @ C @ Lambda + omega_ref I
 ```
 
 Diagonals are free signed parameters, may reach zero, and satisfy
 `abs(Lambda_ii) <= 1 - epsilon` with `epsilon=1e-6` by default. Strict-upper
 coefficients in the candidate support are free signed parameters; all other
-entries are zero. Omega is positive and jointly fitted, independent of the
-original method's fixed omega or empirical-eigenvalue reference. For each
-Lambda, solve the unit-noise Lyapunov equation for V and profile omega exactly
-as `trace(solve(V, Sigma)) / N`, giving `C = omega * V`.
+entries are zero. Omega is fixed to the saved positive finite scalar `omega_ref`
+for every candidate support. For each Lambda, solve the unit-noise Lyapunov
+equation for V, giving `C = omega_ref * V` and
+`q = logdet(V) + N * log(omega_ref) + trace(solve(V, Sigma)) / omega_ref`.
+Missing or invalid saved references fail preflight before any trial is updated.
+The BIC command uses the saved reference directly; `OMEGA_REF`, `FIT_OMEGA_REF`,
+and `KAPPA` do not override it or recompute it. When the saved reference is
+estimated from the empirical covariance, this is a plug-in BIC comparison.
 
 Select the support minimizing `num_samples * q + k_m * log(num_samples)`.
 Here `k_m` counts candidate off-diagonal positions, regardless of numerically
-zero coefficients; diagonals and omega are unpenalized. The omitted common
+zero coefficients; diagonals are unpenalized and omega is fixed. The omitted common
 `num_samples * N * log(2*pi)` term is included in the saved full BIC scores
 and log likelihoods. Repository dimensions are `D_m = k_m + 1`. Exact ties
 choose fewer edges, then lexicographic edge order. No coefficient threshold
@@ -370,12 +375,14 @@ change: `Lambda_ii=tanh(y_i)` and
 `Lambda_ij=(1-Lambda_ii*Lambda_jj)*y_ij`. This improves conditioning near the
 stability boundary without restricting free edge values. Default restarts
 cover all eight diagonal-sign patterns modulo global sign reversal at N=4,
-then add starts with a different noise scale. The nonconvex fits are numerical
-maximum-likelihood approximations, without a global-optimality guarantee.
+then add starts with a different initialization noise scale. These starts do
+not change the fixed likelihood omega. The nonconvex fits are numerical
+likelihood optima at fixed omega_ref, without a global-optimality guarantee.
 At least one converged restart is required for every candidate support;
 unresolved candidates fail the trial. Failed trials leave their NPZ unchanged,
 successful trials remain saved, and summary refresh is skipped on any failure.
-Rerunning BIC recomputes the comparison. `TOTAL_CPUS / CPUS_PER_TRIAL` caps
+Rerunning BIC recomputes the comparison at fixed saved omega_ref, replacing any
+older BIC fields computed with profiled omega. `TOTAL_CPUS / CPUS_PER_TRIAL` caps
 concurrent trials. Each trial fits candidate supports in separate processes,
 using up to `BIC_SUPPORT_WORKERS` workers (default `CPUS_PER_TRIAL`), capped
 at its candidate count. Restarts within each support remain sequential, and
@@ -392,7 +399,9 @@ Each trial NPZ gains `bic_support_mask`, `bic_support_edges`, `bic_dimension`,
 `bic_fit_options_json`. The `bic_candidate_*` arrays record all support masks,
 dimensions, edge counts, likelihoods, criteria, fitted parameters and
 covariances, projected gradients, valid restart counts, optimizer status,
-iteration counts, and validity indicators. Existing archive fields are retained.
+iteration counts, and validity indicators. `bic_fitted_omega` and all
+`bic_candidate_fitted_omegas` equal the saved `omega_ref`; the metadata records
+that reference and the fixed-omega fitting mode. Existing archive fields are retained.
 
 Per-trial CSVs and per-support summaries gain BIC exact support recovery,
 EC recovery, and average EC score using the existing recovery definitions.
