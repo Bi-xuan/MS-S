@@ -28,10 +28,14 @@ COMMAND="${1:-run-all}"
 
 usage() {
     cat <<EOF
-Usage: $(basename "$0") [run-all | summarize [OUTPUT_FOLDER] | oracle [OUTPUT_FOLDER]]
+Usage: $(basename "$0") [run-all | summarize [OUTPUT_FOLDER] | oracle [OUTPUT_FOLDER] | lasso [OUTPUT_FOLDER]]
 
   run-all    Run 40 package-based trials, then write the summary and plots.
   summarize  Regenerate the summary and plots from completed package trials.
+  lasso      Fit five-fold-CV upper-triangular lasso on saved observations.
+             Save lasso fields in NPZs and add exact/EC recovery and EC score
+             to summaries. Configure the grid with LASSO_GAMMA_MIN/MAX/COUNT
+             and LASSO_GAMMA_SPACING (log or linear); zero is always included.
   oracle     Fit all supports independently at each saved lambda_star_dimension.
              Accepts both original and package-generated trial NPZs. Uses saved
              fitting settings, scope, covariance, and solver seed. Save oracle
@@ -56,6 +60,23 @@ EOF
 }
 
 case "${COMMAND}" in
+    lasso)
+        (($# <= 2)) || { usage >&2; exit 2; }
+        "${PYTHON}" experiments/run_lasso_support_scaling.py "${2:-${OUTPUT_ROOT}}" \
+            --total-cpus "${TOTAL_CPUS}" --cpus-per-trial "${CPUS_PER_TRIAL}" \
+            --gamma-min "${LASSO_GAMMA_MIN:-1e-7}" \
+            --gamma-max "${LASSO_GAMMA_MAX:-1}" \
+            --gamma-count "${LASSO_GAMMA_COUNT:-29}" \
+            --gamma-spacing "${LASSO_GAMMA_SPACING:-log}" \
+            --fold-seed "${LASSO_CV_SEED:-20261013}" \
+            --kappa "${LASSO_KAPPA:-0.93}" \
+            --diagonal-bound "${LASSO_DIAGONAL_BOUND:-0.999999}" \
+            --zero-tol "${LASSO_ZERO_TOL:-1e-5}" \
+            --max-restarts "${LASSO_MAX_RESTARTS:-10}" \
+            --max-iter "${LASSO_MAX_ITER:-1500}" \
+            --tol "${LASSO_TOL:-1e-6}"
+        exit $?
+        ;;
     oracle)
         (($# <= 2)) || { usage >&2; exit 2; }
         "${PYTHON}" experiments/run_oracle_support_scaling.py "${2:-${OUTPUT_ROOT}}" \

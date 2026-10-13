@@ -41,6 +41,9 @@ class TrialSummary:
     oracle_exact_support_recovery: bool | None = None
     oracle_ec_recovery: bool | None = None
     oracle_score: float | None = None
+    lasso_exact_support_recovery: bool | None = None
+    lasso_ec_recovery: bool | None = None
+    lasso_score: float | None = None
 
 
 def _mask_edges(mask: np.ndarray, support_scope: str = "all") -> frozenset[tuple[int, int]]:
@@ -105,6 +108,13 @@ def _load_trial(
                 data["oracle_support_mask"], n, oracle_dimension - 1, allowed_edges,
             )
             oracle_edges = _mask_edges(oracle_mask)
+        lasso_edges = None
+        if "lasso_support_mask" in data:
+            lasso_mask = np.asarray(data["lasso_support_mask"], dtype=bool)
+            if (lasso_mask.shape != (n, n) or not np.all(np.diag(lasso_mask))
+                    or np.any(np.tril(lasso_mask, -1))):
+                raise ValueError(f"{curve_path} has an invalid upper-triangular lasso support.")
+            lasso_edges = _mask_edges(lasso_mask)
 
     if num_samples != expected_num_samples:
         raise ValueError(
@@ -206,6 +216,9 @@ def _load_trial(
         oracle_exact_support_recovery=(oracle_edges == true_edges if oracle_edges is not None else None),
         oracle_ec_recovery=(same_maximal_class(oracle_edges, true_edges, n) if oracle_edges is not None else None),
         oracle_score=(score_support(oracle_edges, true_edges, n) if oracle_edges is not None else None),
+        lasso_exact_support_recovery=(lasso_edges == true_edges if lasso_edges is not None else None),
+        lasso_ec_recovery=(same_maximal_class(lasso_edges, true_edges, n) if lasso_edges is not None else None),
+        lasso_score=(score_support(lasso_edges, true_edges, n) if lasso_edges is not None else None),
     )
 
 
@@ -263,10 +276,18 @@ def _has_oracle(trials: list[TrialSummary]) -> bool:
     return bool(present) and all(present)
 
 
+def _has_lasso(trials: list[TrialSummary]) -> bool:
+    present = [trial.lasso_score is not None for trial in trials]
+    if any(present) and not all(present):
+        raise ValueError("Lasso results are missing for some trials; run lasso on the complete study.")
+    return bool(present) and all(present)
+
+
 def write_trials_csv(trials: list[TrialSummary], output_path: Path) -> None:
     """Write auditable per-seed metrics."""
 
     has_oracle = _has_oracle(trials)
+    has_lasso = _has_lasso(trials)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", newline="", encoding="utf-8") as output_file:
         writer = csv.writer(output_file, lineterminator="\n")
@@ -283,6 +304,8 @@ def write_trials_csv(trials: list[TrialSummary], output_path: Path) -> None:
                 "true_support_on_path",
             ) + (("oracle_exact_support_recovery", "oracle_ec_recovery", "oracle_score")
                  if has_oracle else ())
+            + (("lasso_exact_support_recovery", "lasso_ec_recovery", "lasso_score")
+               if has_lasso else ())
         )
         for trial in trials:
             writer.writerow(
@@ -299,6 +322,9 @@ def write_trials_csv(trials: list[TrialSummary], output_path: Path) -> None:
                 ) + ((str(trial.oracle_exact_support_recovery).lower(),
                       str(trial.oracle_ec_recovery).lower(), f"{trial.oracle_score:.17g}")
                      if has_oracle else ())
+                + ((str(trial.lasso_exact_support_recovery).lower(),
+                    str(trial.lasso_ec_recovery).lower(), f"{trial.lasso_score:.17g}")
+                   if has_lasso else ())
             )
 
 
@@ -320,10 +346,16 @@ def write_markdown_summary(
         "|---:|---:|---:|---:|---:|---:|---:|",
     ]
     has_oracle = _has_oracle(trials)
+    has_lasso = _has_lasso(trials)
     if has_oracle:
         lines[0] += (f" Oracle exact support recovery (x/{expected_seeds}) |"
                      f" Oracle EC recovery (x/{expected_seeds}) |"
                      f" Average oracle EC score over {expected_seeds} seeds |")
+        lines[1] += "---:|---:|---:|"
+    if has_lasso:
+        lines[0] += (f" Lasso exact support recovery (x/{expected_seeds}) |"
+                     f" Lasso EC recovery (x/{expected_seeds}) |"
+                     f" Average lasso EC score over {expected_seeds} seeds |")
         lines[1] += "---:|---:|---:|"
     for num_samples in sample_sizes:
         sample_trials = [
@@ -351,6 +383,11 @@ def write_markdown_summary(
             oracle_ec = sum(trial.oracle_ec_recovery for trial in sample_trials)
             oracle_mean = fsum(trial.oracle_score for trial in sample_trials) / len(sample_trials)
             lines[-1] += f" {oracle_exact}/{expected_seeds} | {oracle_ec}/{expected_seeds} | {oracle_mean:.6f} |"
+        if has_lasso:
+            lasso_exact = sum(trial.lasso_exact_support_recovery for trial in sample_trials)
+            lasso_ec = sum(trial.lasso_ec_recovery for trial in sample_trials)
+            lasso_mean = fsum(trial.lasso_score for trial in sample_trials) / len(sample_trials)
+            lines[-1] += f" {lasso_exact}/{expected_seeds} | {lasso_ec}/{expected_seeds} | {lasso_mean:.6f} |"
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -362,6 +399,8 @@ def write_overall_score_summary(trial_paths: list[Path], output_path: Path) -> N
     scores = defaultdict(list)
     oracle_scores = defaultdict(list)
     oracle_presence = []
+    lasso_scores = defaultdict(list)
+    lasso_presence = []
     for trial_path in trial_paths:
         with trial_path.open(newline="", encoding="utf-8") as handle:
             reader = csv.DictReader(handle)
@@ -369,6 +408,8 @@ def write_overall_score_summary(trial_paths: list[Path], output_path: Path) -> N
                 raise ValueError(f"{trial_path} must contain num_samples and score columns.")
             has_oracle = "oracle_score" in (reader.fieldnames or ())
             oracle_presence.append(has_oracle)
+            has_lasso = "lasso_score" in (reader.fieldnames or ())
+            lasso_presence.append(has_lasso)
             row_count = 0
             for row in reader:
                 num_samples, score = int(row["num_samples"]), float(row["score"])
@@ -380,6 +421,11 @@ def write_overall_score_summary(trial_paths: list[Path], output_path: Path) -> N
                     if not isfinite(oracle_score) or not 0 <= oracle_score <= 1:
                         raise ValueError(f"{trial_path} contains an invalid oracle score.")
                     oracle_scores[num_samples].append(oracle_score)
+                if has_lasso:
+                    lasso_score = float(row["lasso_score"])
+                    if not isfinite(lasso_score) or not 0 <= lasso_score <= 1:
+                        raise ValueError(f"{trial_path} contains an invalid lasso score.")
+                    lasso_scores[num_samples].append(lasso_score)
                 row_count += 1
             if not row_count:
                 raise ValueError(f"{trial_path} contains no trials.")
@@ -387,14 +433,22 @@ def write_overall_score_summary(trial_paths: list[Path], output_path: Path) -> N
         raise ValueError("No trial scores to summarize.")
     if any(oracle_presence) and not all(oracle_presence):
         raise ValueError("Oracle scores are missing from some per-support trial CSVs.")
+    if any(lasso_presence) and not all(lasso_presence):
+        raise ValueError("Lasso scores are missing from some per-support trial CSVs.")
     lines = ["| Number of samples | Average EC score |", "|---:|---:|"]
     if oracle_scores:
         lines[0] += " Average oracle EC score |"
+        lines[1] += "---:|"
+    if lasso_scores:
+        lines[0] += " Average lasso EC score |"
         lines[1] += "---:|"
     for num_samples, values in sorted(scores.items()):
         lines.append(f"| {num_samples} | {fsum(values) / len(values):.6f} |")
         if oracle_scores:
             values = oracle_scores[num_samples]
+            lines[-1] += f" {fsum(values) / len(values):.6f} |"
+        if lasso_scores:
+            values = lasso_scores[num_samples]
             lines[-1] += f" {fsum(values) / len(values):.6f} |"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")

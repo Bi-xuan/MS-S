@@ -42,7 +42,7 @@ else
         default_output_root+="_greedy"
     fi
     OUTPUT_ROOT="${OUTPUT_ROOT:-${default_output_root}}"
-    if [[ "${COMMAND}" == "oracle" ]]; then
+    if [[ "${COMMAND}" == "oracle" || "${COMMAND}" == "lasso" ]]; then
         OUTPUT_ROOT="${2:-${OUTPUT_ROOT}}"
     fi
 fi
@@ -85,7 +85,7 @@ fi
 
 usage() {
     cat <<EOF
-Usage: $(basename "$0") [run-all | reselect [OUTPUT_FOLDER] | oracle [OUTPUT_FOLDER]]
+Usage: $(basename "$0") [run-all | reselect [OUTPUT_FOLDER] | oracle [OUTPUT_FOLDER] | lasso [OUTPUT_FOLDER]]
 
   Set LAMBDA_STAR_OFFDIAG_ABS_MIN and LAMBDA_STAR_OFFDIAG_ABS_MAX
   to bound the absolute values of nonzero Lambda_star off-diagonal entries.
@@ -112,6 +112,10 @@ Usage: $(basename "$0") [run-all | reselect [OUTPUT_FOLDER] | oracle [OUTPUT_FOL
             Save oracle fields in each trial NPZ and refresh summaries with
             oracle exact recovery, EC recovery, and average EC score.
             Uses TOTAL_CPUS / CPUS_PER_TRIAL concurrent trials.
+  lasso     Fit five-fold-CV upper-triangular lasso on saved observations.
+            Save lasso fields in NPZs and add exact/EC recovery and EC score
+            to summaries. Configure LASSO_GAMMA_MIN/MAX/COUNT and
+            LASSO_GAMMA_SPACING (log or linear); zero is always included.
 EOF
 }
 
@@ -291,6 +295,23 @@ reselect_all() {
 }
 
 case "${COMMAND}" in
+    lasso)
+        (($# <= 2)) || { usage >&2; exit 2; }
+        "${PYTHON:-python}" experiments/run_lasso_support_scaling.py "${OUTPUT_ROOT}" \
+            --total-cpus "${TOTAL_CPUS}" --cpus-per-trial "${CPUS_PER_TRIAL}" \
+            --gamma-min "${LASSO_GAMMA_MIN:-1e-7}" \
+            --gamma-max "${LASSO_GAMMA_MAX:-1}" \
+            --gamma-count "${LASSO_GAMMA_COUNT:-29}" \
+            --gamma-spacing "${LASSO_GAMMA_SPACING:-log}" \
+            --fold-seed "${LASSO_CV_SEED:-20261013}" \
+            --kappa "${LASSO_KAPPA:-0.93}" \
+            --diagonal-bound "${LASSO_DIAGONAL_BOUND:-0.999999}" \
+            --zero-tol "${LASSO_ZERO_TOL:-1e-5}" \
+            --max-restarts "${LASSO_MAX_RESTARTS:-10}" \
+            --max-iter "${LASSO_MAX_ITER:-1500}" \
+            --tol "${LASSO_TOL:-1e-6}"
+        exit $?
+        ;;
     oracle)
         (($# <= 2)) || { usage >&2; exit 2; }
         "${PYTHON:-python}" experiments/run_oracle_support_scaling.py "${OUTPUT_ROOT}" \

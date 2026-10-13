@@ -129,6 +129,11 @@ def run_oracle(root: Path, *, upper_study=False, total_cpus=100, cpus_per_trial=
             futures = [executor.submit(fit_oracle_trial, curve, cpus_per_trial) for curve in curves]
             for future in futures:
                 print(f"Saved oracle: {future.result()}", flush=True)
+    refresh_study_summaries(root, layouts, upper_study=upper_study)
+
+
+def refresh_study_summaries(root, layouts, *, upper_study=False):
+    """Refresh original/reselect tables, preserving all saved comparisons."""
     pooled = {}
     for support, (sizes, seeds) in layouts.items():
         for selection_root, selection_file in summary_targets(support):

@@ -314,6 +314,106 @@ Regular summary regeneration also retains these columns when oracle results
 are available for all trials. Summary generation is skipped if any oracle fit
 fails; successfully fitted trials retain their saved oracle fields.
 
+## Cross-validated lasso comparison
+
+All three scaling launchers accept `lasso [OUTPUT_FOLDER]` to compare the whole
+saved support-selection procedure against an upper-triangular L1 estimator:
+
+```sh
+bash experiments/run_fixed_support_scaling.sh lasso experiments/output/fixed_support_scaling_n4_upper_scope_fit_omega_ref_true_greedy
+bash experiments/run_fixed_support_scaling_package.sh lasso experiments/output/fixed_support_scaling_n10_package_fit_omega_ref_true
+bash experiments/run_upper_support_scaling_study.sh lasso experiments/output/upp_scal_n4_dm4_upper_scope_fit_omega_true_greedy
+```
+
+The command discovers completed trials under the folder, fits lasso, and
+refreshes original and existing reselect summaries. It preserves the original
+fits, selections, and oracle fields. `run-all` still runs the original method;
+run `lasso` afterward to add the comparison. Set `PYTHON` to an environment
+with `requirements.txt` installed. `TOTAL_CPUS / CPUS_PER_TRIAL` caps concurrent
+trials, with BLAS restricted to one thread per trial.
+
+For each training covariance S, the lasso objective is
+
+```text
+||S - Lambda.T @ S @ Lambda - omega I||_F^2
+    + gamma * sum_{i<j} |Lambda_ij|
+```
+
+Lower-triangular entries are zero. Diagonals are unpenalized, have either sign,
+and may equal zero; their absolute values are bounded by 0.999999 by default.
+This guarantees stability for the upper-triangular fitted matrix. Omega is
+fixed at `0.93 * lambda_min(S)` by default, recomputed using training rows only
+within every fold. The original method's saved omega is not reused by lasso.
+Lasso always uses the given variable order and upper-triangular constraint,
+including when the original method searched `support_scope=all`.
+
+Five balanced random folds use the known-zero-mean covariance `X.T @ X / N`.
+For each **absolute** gamma, each training fit implies a stationary covariance
+`C = Lambda.T @ C @ Lambda + omega I`. Gamma minimizes the sum across folds
+of `||S_validation - C||_F`, without squaring or weighting those errors. The
+same gamma values are used in every fold and in the full-data refit. Exact
+ties choose the larger gamma. Refit on all observations with the full-data
+omega rule; extract strict-upper edges when `abs(Lambda_ij) > 1e-5`. The fitted
+coefficients are retained without an additional unpenalized refit.
+
+The configurable defaults are:
+
+| Environment variable | Default | Meaning |
+| --- | --- | --- |
+| `LASSO_GAMMA_MIN` | `1e-7` | Smallest positive absolute gamma |
+| `LASSO_GAMMA_MAX` | `1` | Largest positive absolute gamma |
+| `LASSO_GAMMA_COUNT` | `29` | Number of positive grid values; zero is always added |
+| `LASSO_GAMMA_SPACING` | `log` | `log` or `linear` spacing |
+| `LASSO_CV_SEED` | `20261013` | RNG seed for the single five-fold partition per trial |
+| `LASSO_KAPPA` | `0.93` | Multiplier of the training/full covariance minimum eigenvalue |
+| `LASSO_DIAGONAL_BOUND` | `0.999999` | Maximum absolute fitted diagonal, strictly below one |
+| `LASSO_ZERO_TOL` | `1e-5` | Support extraction threshold |
+| `LASSO_MAX_RESTARTS` | `10` | Maximum number of deterministic dense initializations |
+| `LASSO_MAX_ITER` | `1500` | Maximum L-BFGS-B iterations per start |
+| `LASSO_TOL` | `1e-6` | Maximum projected gradient for an accepted normalized fit |
+
+For example, use `LASSO_GAMMA_MIN=1e-6 LASSO_GAMMA_MAX=10
+LASSO_GAMMA_COUNT=49 bash experiments/run_upper_support_scaling_study.sh lasso
+OUTPUT_FOLDER` to widen/refine the grid. The standalone Python runner exposes
+the same settings through CLI flags; see
+`python experiments/run_lasso_support_scaling.py --help`.
+
+The objective is nonconvex. L-BFGS-B uses positive/negative splitting of
+strict-upper coefficients, free signed diagonals, dense covariance-factor
+starts, and warm starts along the grid. For four variables, the default covers
+all eight initial diagonal-sign patterns modulo a global sign reversal; for
+larger matrices it samples patterns deterministically up to the restart limit.
+Diagonal signs may change during optimization. These are numerical fits, with
+no global-optimality claim. A gamma with a failed training fit receives an
+infinite CV error; if no gamma is valid in all folds, or the chosen full-data
+refit fails, that trial NPZ is not replaced and summary generation is skipped.
+Successfully completed trials remain saved, and rerunning `lasso` recomputes
+the comparison for all trials.
+
+Existing simulations store covariance matrices rather than observation rows.
+The runner reconstructs the original zero-mean Gaussian observations using
+the recorded generating parameters and observation seed (`sample_seed`, or
+`random_seed + 2` for original trials). It checks that the reconstructed full
+covariance matches the saved matrix before fitting. Generating parameters are
+used only for this reconstruction and final recovery evaluation, never for
+initialization, optimization, or gamma selection.
+
+Each `objective_curve_sigma_hat.npz` gains `lasso_gamma_grid`, `lasso_gamma`,
+`lasso_selected_index`, `lasso_fold_ids`, `lasso_cv_errors` (5 by grid size),
+`lasso_cv_error_sums`, `lasso_cv_fitted_lambdas`, `lasso_cv_fitted_omegas`,
+`lasso_cv_training_covariances`, `lasso_cv_validation_covariances`,
+`lasso_fitted_lambda`, `lasso_fitted_omega`, `lasso_fitted_covariance`,
+`lasso_support_mask`, `lasso_support_edges`, raw and penalized objective values,
+fit-validity/projected-gradient diagnostics, and `lasso_fit_options_json`.
+
+Per-support `selection_summary.md` tables gain **Lasso exact support recovery
+(x/10)**, **Lasso EC recovery (x/10)**, and **Average lasso EC score over 10
+seeds**. Per-trial CSVs gain the corresponding metrics. EC membership and score
+use the existing maximal-class/Jaccard definitions, excluding diagonals. The
+pooled upper-study table gains average lasso EC score across individual trials.
+Regular summary regeneration preserves these columns when lasso results are
+present for every trial; partial comparisons raise an error.
+
 # Reselect fixed-support curves without fitting
 
 ```sh

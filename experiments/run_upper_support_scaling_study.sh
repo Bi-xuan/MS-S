@@ -41,7 +41,7 @@ NUM_SAMPLE_VALUES=(100 1000 10000 1000000)
 
 usage() {
     cat <<EOF_USAGE
-Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect [OUTPUT_FOLDER] | oracle [OUTPUT_FOLDER]]
+Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect [OUTPUT_FOLDER] | oracle [OUTPUT_FOLDER] | lasso [OUTPUT_FOLDER]]
 
   no command  Run one trial when SLURM_ARRAY_TASK_ID is set; otherwise run-all.
   run-all     Run all supports, four sample sizes, and ten seeds per sample size,
@@ -62,6 +62,11 @@ Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect [OUTPU
               Save oracle fields in each trial NPZ. Add three oracle metrics to
               per-support summaries and only average oracle EC score to the
               pooled summary. Uses TOTAL_CPUS / CPUS_PER_TRIAL concurrent trials.
+  lasso       Fit five-fold-CV upper-triangular lasso for all saved supports.
+              Save lasso fields in NPZs and add exact/EC recovery and EC score
+              to per-support summaries and average EC score to pooled tables.
+              Configure LASSO_GAMMA_MIN/MAX/COUNT and LASSO_GAMMA_SPACING
+              (log or linear); zero is always included.
 
   NUM_SUPPORTS defaults to all 20 supports for N=4, TRUE_DIMENSION=4.
   LAMBDA_STAR_OFFDIAG_ABS_MIN/MAX bound nonzero coefficients (defaults 0.20/0.60).
@@ -409,7 +414,7 @@ case "${command}" in
     run-all|aggregate)
         (($# == 1)) || { usage >&2; exit 2; }
         ;;
-    trial|reselect|oracle)
+    trial|reselect|oracle|lasso)
         (($# <= 2)) || { usage >&2; exit 2; }
         ;;
     -h|--help|help)
@@ -433,12 +438,26 @@ else
         default_output_root+="_greedy"
     fi
     OUTPUT_ROOT="${OUTPUT_ROOT:-${default_output_root}}"
-    if [[ "${command}" == "oracle" ]]; then
+    if [[ "${command}" == "oracle" || "${command}" == "lasso" ]]; then
         OUTPUT_ROOT="${2:-${OUTPUT_ROOT}}"
     fi
 fi
 
-if [[ "${command}" == "oracle" ]]; then
+if [[ "${command}" == "lasso" ]]; then
+    "${PYTHON:-python}" experiments/run_lasso_support_scaling.py "${OUTPUT_ROOT}" \
+        --upper-study --total-cpus "${TOTAL_CPUS}" --cpus-per-trial "${CPUS_PER_TRIAL}" \
+        --gamma-min "${LASSO_GAMMA_MIN:-1e-7}" \
+        --gamma-max "${LASSO_GAMMA_MAX:-1}" \
+        --gamma-count "${LASSO_GAMMA_COUNT:-29}" \
+        --gamma-spacing "${LASSO_GAMMA_SPACING:-log}" \
+        --fold-seed "${LASSO_CV_SEED:-20261013}" \
+        --kappa "${LASSO_KAPPA:-0.93}" \
+        --diagonal-bound "${LASSO_DIAGONAL_BOUND:-0.999999}" \
+        --zero-tol "${LASSO_ZERO_TOL:-1e-5}" \
+        --max-restarts "${LASSO_MAX_RESTARTS:-10}" \
+        --max-iter "${LASSO_MAX_ITER:-1500}" \
+        --tol "${LASSO_TOL:-1e-6}"
+elif [[ "${command}" == "oracle" ]]; then
     "${PYTHON:-python}" experiments/run_oracle_support_scaling.py "${OUTPUT_ROOT}" \
         --upper-study --total-cpus "${TOTAL_CPUS}" --cpus-per-trial "${CPUS_PER_TRIAL}"
 elif [[ "${command}" == "reselect" ]]; then
