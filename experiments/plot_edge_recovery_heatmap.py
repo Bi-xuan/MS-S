@@ -1,7 +1,7 @@
 """Plot per-edge selection frequencies for the fixed-support scaling experiment.
 
 Each cell is the fraction of seed runs in which an edge was selected. True
-edges are shown in red and false edges in blue; the saturation is the fraction.
+edges are shown in blue and false edges in red; the saturation is the fraction.
 """
 
 import argparse
@@ -119,7 +119,7 @@ def plot_heatmap(input_dir, output_path, support_scope=None):
     row_count, column_count = frequencies.shape
     colors = np.ones((row_count, column_count, 4), dtype=float)
     for row, edge in enumerate(edges):
-        cmap = plt.get_cmap("Reds" if edge in true_edges else "Blues")
+        cmap = plt.get_cmap("Blues" if edge in true_edges else "Reds")
         colors[row] = cmap(frequencies[row])
 
     fig, ax = plt.subplots(figsize=(9.2, max(5.8, 0.28 * row_count + 2)))
@@ -145,8 +145,8 @@ def plot_heatmap(input_dir, output_path, support_scope=None):
                     ha="center", va="center", fontsize=9, color="black")
 
     norm = Normalize(vmin=0, vmax=1)
-    true_bar = ScalarMappable(norm=norm, cmap="Reds")
-    false_bar = ScalarMappable(norm=norm, cmap="Blues")
+    true_bar = ScalarMappable(norm=norm, cmap="Blues")
+    false_bar = ScalarMappable(norm=norm, cmap="Reds")
     true_bar.set_array([])
     false_bar.set_array([])
     # Keep the bars clearly separated and label each one directly above its
@@ -155,7 +155,7 @@ def plot_heatmap(input_dir, output_path, support_scope=None):
     cbar_false = fig.colorbar(false_bar, ax=ax, fraction=0.035, pad=0.18)
     cbar_true.ax.set_title("TRUE", fontsize=9, pad=8)
     cbar_false.ax.set_title("FALSE", fontsize=9, pad=8)
-    ax.legend(handles=[Patch(facecolor="tab:red", label="True edge"), Patch(facecolor="tab:blue", label="False edge")],
+    ax.legend(handles=[Patch(facecolor="tab:blue", label="True edge"), Patch(facecolor="tab:red", label="False edge")],
               loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=2, frameon=False)
     fig.text(0.01, 0.01, "Cell text: selected seeds / available seeds; saturation is fixed to 0–1.", fontsize=9)
     fig.tight_layout(rect=(0, 0.06, 0.92, 1))
