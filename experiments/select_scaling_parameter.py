@@ -14,7 +14,11 @@ import numpy as np
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from analyze_penalty import build_penalty_constants, scalar_value
+from analyze_penalty import (
+    add_penalty_truncation_arguments,
+    build_penalty_constants,
+    scalar_value,
+)
 from penalty import pen_n
 from scaling_selection import (
     DEFAULT_RECOMMENDATION_FACTOR,
@@ -456,12 +460,7 @@ def parse_args(argv=None):
         default=1.0,
         help="Theorem constant L. Default: 1.",
     )
-    parser.add_argument(
-        "--xi",
-        type=float,
-        default=10.0,
-        help="Theorem tail constant xi. Default: 10.",
-    )
+    add_penalty_truncation_arguments(parser)
     return parser.parse_args(argv)
 
 

@@ -36,7 +36,7 @@ def main():
                     input=str(folder / "objective_curve_sigma_hat.npz"),
                     method=method, eta=None, recommendation_factor=2.0,
                     objective_floor=1e-8, num_samples=None, r=1.0,
-                    Lm=1.0, L=1.0, xi=10.0, validate_only=False,
+                    Lm=1.0, L=1.0, validate_only=False,
                 )
                 row = dict(seed=int(folder.name[5:]), mode=mode, method=method,
                            true_dimension=int(saved["true_dimension"]), status="ok",

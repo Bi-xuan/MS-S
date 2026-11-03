@@ -18,7 +18,7 @@ from scaling_selection import select_minimal_scale, build_dimension_path
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "dimension_selection"
 RULES = {"1": 0, "D_m": 1, "D_m^8": 8}
-ARGS = SimpleNamespace(num_samples=None, r=1., Lm=1., L=1., xi=10., objective_floor=1e-8)
+ARGS = SimpleNamespace(num_samples=None, r=1., Lm=1., L=1., objective_floor=1e-8)
 
 
 def cell(row):
@@ -111,7 +111,7 @@ def main():
     report = ["# Dimension selection on the forward-nested support paths", "",
               "Source paths and objectives: `../results.json`, reconstructed from the support_18 N=10000 experiment.", "",
               "Each table entry is selected dimension / support precision. Precision is TP divided by selected off-diagonal edges; diagonal entries and the dimension offset are excluded. Failed selections have undefined precision. The true dimension is 4 with three true edges.", "",
-              "Settings: objective floor 1e-8, recommendation factor 2, automatic window width, r=L=1, xi=10, and covariance-derived constants from each original NPZ. The penalty is sqrt(D_m) * (K + sqrt(2*v*L_m)), evaluated with L_m=1, D_m, or D_m^8. The existing selectors are called without modification.", ""]
+              "Settings: objective floor 1e-8, recommendation factor 2, automatic window width, r=L=1, R_n=log(num_samples), delta_n=log(2*n*num_samples), and covariance trace from each original NPZ (n is the matrix dimension). The penalty is sqrt(D_m) * (K + sqrt(2*v*L_m)), evaluated with L_m=1, D_m, or D_m^8. The existing selectors are called without modification.", ""]
     for method in ("plateau", "window"):
         report += [f"## {method.capitalize()}", "", "| Seed | L_m=1 | L_m=D_m | L_m=D_m^8 |", "|---|---|---|---|"]
         for seed in sorted({r["seed"] for r in rows}):

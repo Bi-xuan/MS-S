@@ -14,8 +14,9 @@ from experiments.select_scaling_parameter import (
     _report_plateau_selection,
     floor_objective_values,
     load_selection_inputs,
+    parse_args,
 )
-from penalty import pen_n
+from penalty import PenaltyConstants, pen_n
 from scaling_selection import (
     DimensionPath,
     adaptive_window,
@@ -68,7 +69,8 @@ def test_loading_floors_raw_objectives_but_not_penalties(tmp_path):
         r=1.0,
         Lm=1.0,
         L=1.0,
-        xi=10.0,
+        R_n=None,
+        delta_n=None,
     )
 
     selection_data = load_selection_inputs(input_path, args)
@@ -86,6 +88,35 @@ def test_loading_floors_raw_objectives_but_not_penalties(tmp_path):
     assert np.all(np.diff(selection_data["penalty_values"]) > 0.0)
 
 
+@pytest.mark.parametrize("options, overrides", [
+    ([], {}),
+    (["--R-n", "7", "--delta-n", "9"], {"R_n": 7.0, "delta_n": 9.0}),
+    (["--radius", "7", "--num-samples", "200"], {"R_n": 7.0, "num_samples": 200}),
+])
+def test_cli_truncation_options_reach_penalty_evaluation(tmp_path, options, overrides):
+    input_path = tmp_path / "curve.npz"
+    np.savez(input_path, d_m_values=[1, 2, 3], objective_values=[3.0, 1.0, 0.0],
+             Sigma=np.eye(4), n=4, num_samples=100)
+    args = parse_args([str(input_path), *options])
+    selection = load_selection_inputs(input_path, args)
+    expected = PenaltyConstants(num_samples=100, n=4, sigma_trace=4).with_overrides(**overrides)
+    assert selection["constants"] == expected
+    np.testing.assert_allclose(selection["penalty_values"],
+                               [pen_n(d, expected) for d in [1, 2, 3]])
+
+
+def test_cli_loading_warns_and_preserves_default_radius(tmp_path):
+    input_path = tmp_path / "curve.npz"
+    np.savez(input_path, d_m_values=[1, 2, 3], objective_values=[3.0, 1.0, 0.0],
+             Sigma=100 * np.eye(4), n=4, num_samples=100)
+    with pytest.warns(RuntimeWarning, match="radius condition is not satisfied"):
+        selection = load_selection_inputs(input_path, parse_args([str(input_path)]))
+    assert selection["constants"].R_n is None
+    expected = PenaltyConstants(num_samples=100, n=4, sigma_trace=4)
+    np.testing.assert_allclose(selection["penalty_values"],
+                               [pen_n(d, expected) for d in [1, 2, 3]])
+
+
 @pytest.mark.parametrize("lm_weight", [1.0, 0.1])
 def test_support_count_lm_uses_available_upper_supports_at_each_dimension(tmp_path, lm_weight):
     input_path = tmp_path / "curve.npz"
@@ -97,7 +128,7 @@ def test_support_count_lm_uses_available_upper_supports_at_each_dimension(tmp_pa
         support_scope="upper", curve_type="test_curve",
     )
     args = Namespace(objective_floor=1e-8, num_samples=None, r=1.0,
-                     Lm=lm_weight, L=1.0, xi=10.0, lm_mode="support-count")
+                     Lm=lm_weight, L=1.0, R_n=None, delta_n=None, lm_mode="support-count")
 
     selection_data = load_selection_inputs(input_path, args)
 

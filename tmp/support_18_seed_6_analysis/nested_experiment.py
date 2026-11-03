@@ -74,7 +74,7 @@ def main():
     arrays['source_curve'] = np.array(str(SOURCE))
     target = OUT / 'objective_curve_sigma_hat.npz'
     np.savez_compressed(target, **arrays)
-    args = SimpleNamespace(num_samples=None, r=1.0, Lm=1.0, L=1.0, xi=10.0,
+    args = SimpleNamespace(num_samples=None, r=1.0, Lm=1.0, L=1.0,
                            objective_floor=1e-8)
     selections = {}
     for label, path in [('original', SOURCE), ('forced_true_nested', target)]:

@@ -28,7 +28,7 @@ def main():
         p = int(row["form"].split("^")[1])
         args = Namespace(input=str(SOURCE / f"seed_{row['seed']}" / "objective_curve_sigma_hat.npz"),
                          method=row["method"], eta=None, recommendation_factor=2.,
-                         objective_floor=1e-8, num_samples=None, r=1., Lm=1., L=1., xi=10.,
+                         objective_floor=1e-8, num_samples=None, r=1., Lm=1., L=1.,
                          validate_only=False)
         output = StringIO()
         def evaluator(d, constants):

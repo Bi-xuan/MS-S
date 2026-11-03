@@ -1,11 +1,12 @@
-"""Regression tests for theorem-based penalty constants."""
+"""Regression tests for the penalty in Theorem 13, bound (7)."""
 
-from math import log, log1p, sqrt
+from dataclasses import asdict
+from math import isfinite, log, sqrt
 from pathlib import Path
 import sys
+import warnings
 
 import pytest
-from scipy.integrate import quad
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -13,9 +14,10 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from penalty import (
     PenaltyConstants,
     compute_K,
-    compute_L_t_xi,
+    compute_L_prime,
     compute_R,
     compute_c,
+    compute_delta,
     compute_t,
     compute_v,
     pen_n,
@@ -23,118 +25,158 @@ from penalty import (
 )
 
 
-def entropy_integrand(u):
-    if u == 0.0:
-        return float("inf")
-    return sqrt(log1p(1.0 / u))
+# Integral_0^{1/4} sqrt(log(1 + 1/u)) du, independently evaluated after
+# substituting u = exp(-s) and integrating from log(4) to infinity.
+ENTROPY_INTEGRAL = 0.3898133333427541
 
 
-def test_updated_theorem_penalty_formulas_and_default_r():
-    constants = PenaltyConstants(
-        num_samples=100,
-        n=5,
-        lambda_sum=4.0,
-        lambda_inf_norm=2.0,
-        lambda_2_norm=3.0,
-        sigma_fro_norm=6.0,
-        sigma_op_norm=4.0,
-        sigma_trace=10.0,
-        Lm=1.5,
-        L=0.75,
-        xi=2.0,
+@pytest.fixture
+def constants():
+    return PenaltyConstants(
+        num_samples=100, n=5, sigma_trace=10.0, Lm=1.5, L=0.75,
     )
 
-    log_term = log(constants.num_samples) + constants.xi
-    expected_R = sqrt(
-        constants.lambda_sum + 2.0 * constants.lambda_inf_norm * log_term
-    ) + 2.0 * constants.lambda_2_norm * sqrt(log_term)
-    expected_c = (
-        16.0
-        / constants.num_samples
-        * (1.0 + 1.0 / constants.num_samples)
-        * constants.L**2
-        * (1.0 + constants.L**2)
-        * expected_R**4
-        + 8.0
-        / constants.num_samples
-        * sqrt(constants.n)
-        * (1.0 + 2.0 * constants.L**2)
-        * constants.r
-        * expected_R**2
-    )
-    expected_v = constants.num_samples * expected_c**2 / 2.0
-    first_t_term = (
-        constants.xi
-        * (constants.sigma_op_norm + expected_R**2)
-        / (3.0 * constants.num_samples)
-    )
-    expected_t = first_t_term + sqrt(
-        first_t_term**2
-        + 2.0
-        * constants.xi
-        * constants.sigma_op_norm
-        * expected_R**2
-        / constants.num_samples
-    )
-    expected_L_t_xi = (
-        4.0
-        * expected_t
-        * constants.L
-        * (
-            (3.0 * constants.sigma_op_norm + expected_R**2)
-            * (1.0 + constants.L**2)
-            + constants.r
-        )
-        + 2.0 * constants.n * expected_t * (1.0 + constants.L**2)
-        + 4.0
-        / constants.num_samples
-        * (
-            2.0 * constants.sigma_op_norm**2 * constants.L**3
-            + constants.sigma_fro_norm**2 * constants.L
-            + constants.sigma_op_norm**2 * constants.L
-        )
-    )
-    integral, _ = quad(
-        entropy_integrand,
-        0.0,
-        1.0 / (8.0 * expected_L_t_xi),
-        points=[0.0],
-    )
-    expected_K = (
-        96.0
-        * expected_L_t_xi**2
-        * (constants.L + constants.r)
-        * integral
-    )
-    expected_penalty = sqrt(3.0) * (
-        expected_K + sqrt(2.0 * expected_v * constants.Lm)
-    )
 
-    assert constants.r == 1.0
-    assert compute_R(constants) == pytest.approx(expected_R)
-    assert compute_c(constants) == pytest.approx(expected_c)
-    assert compute_v(constants) == pytest.approx(expected_v)
-    assert compute_t(constants) == pytest.approx(expected_t)
-    assert compute_L_t_xi(constants) == pytest.approx(expected_L_t_xi)
-    assert compute_K(constants) == pytest.approx(expected_K)
-    assert pen_n(3.0, constants) == pytest.approx(expected_penalty)
+def reference_constants(constants):
+    """Translate the PDF directly, separately from the production helpers."""
+    sample_count = constants.num_samples
+    dimension = constants.n
+    R = log(sample_count) if constants.R_n is None else constants.R_n
+    delta = log(2 * dimension * sample_count) if constants.delta_n is None else constants.delta_n
+    L, r = constants.L, constants.r
+    c = (
+        16 / sample_count * (1 + 1 / sample_count) * L**2 * (1 + L**2) * R**4
+        + 8 / sample_count * sqrt(dimension) * (1 + 2 * L**2) * r * R**2
+    )
+    v = sample_count * c**2 / 4
+    t = R**2 * (
+        2 * delta / (3 * sample_count)
+        + sqrt((2 * delta / (3 * sample_count))**2 + 2 * delta / sample_count)
+    )
+    L_prime = 4 * t * L * (4 * R**2 * (1 + L**2) + r) + 2 * dimension * t * (1 + L**2)
+    K = 48 * L_prime * (L + r) * ENTROPY_INTEGRAL
+    return dict(R=R, delta=delta, c=c, v=v, t=t, L_prime=L_prime, K=K)
 
 
-def test_theorem_constants_report_updated_names():
-    constants = PenaltyConstants(
-        num_samples=20,
-        n=4,
-        lambda_sum=2.0,
-        lambda_inf_norm=1.0,
-        lambda_2_norm=1.5,
-        sigma_fro_norm=3.0,
-        sigma_op_norm=2.0,
-        sigma_trace=4.0,
+@pytest.mark.parametrize("overrides", [
+    {}, {"R_n": 7.0}, {"delta_n": 9.0},
+    {"R_n": 7.0, "delta_n": 9.0, "r": 0.4, "L": 0.5},
+])
+def test_theorem_penalty_formulas(constants, overrides):
+    constants = constants.with_overrides(**overrides)
+    expected = reference_constants(constants)
+    assert constants.r == overrides.get("r", 1.0)
+    assert compute_R(constants) == pytest.approx(expected["R"])
+    assert compute_delta(constants) == pytest.approx(expected["delta"])
+    assert compute_c(constants) == pytest.approx(expected["c"])
+    assert compute_v(constants) == pytest.approx(expected["v"])
+    assert compute_t(constants) == pytest.approx(expected["t"])
+    assert compute_L_prime(constants) == pytest.approx(expected["L_prime"])
+    assert compute_K(constants) == pytest.approx(expected["K"], rel=1e-10)
+    assert theorem_constants(constants) == pytest.approx(expected, rel=1e-10)
+    assert pen_n(3, constants) == pytest.approx(
+        sqrt(3) * (expected["K"] + sqrt(2 * expected["v"] * constants.Lm)),
+        rel=1e-10,
     )
 
-    derived = theorem_constants(constants)
 
-    assert "t" in derived
-    assert "L_t_xi" in derived
-    assert "L_prime" not in derived
-    assert "B" not in derived
+def test_keyword_inputs_and_per_call_overrides(constants):
+    assert pen_n(3, **asdict(constants)) == pytest.approx(pen_n(3, constants))
+    overrides = dict(R_n=8.0, delta_n=12.0, Lm=3.0)
+    assert pen_n(3, constants, **overrides) == pytest.approx(
+        pen_n(3, constants.with_overrides(**overrides))
+    )
+    assert constants.R_n is None
+    assert constants.delta_n is None
+    assert constants.Lm == 1.5
+
+
+def test_default_truncation_parameters_follow_sample_count(constants):
+    changed = constants.with_overrides(num_samples=200)
+    assert compute_R(changed) == pytest.approx(log(200))
+    assert compute_delta(changed) == pytest.approx(log(2 * constants.n * 200))
+    # A covariance-scale change cannot alter the page 2 defaults.
+    assert pen_n(3, constants, sigma_trace=1) == pen_n(3, constants)
+
+
+@pytest.mark.parametrize("overrides", [
+    {"sigma_trace": 100.0},
+    {"R_n": 2.0},
+    {"R_n": 2.0, "sigma_trace": 4.0},
+])
+def test_invalid_radius_condition_warns_once_and_still_computes(constants, overrides):
+    constants = constants.with_overrides(**overrides)
+    expected = reference_constants(constants)
+    with pytest.warns(RuntimeWarning, match=r"R_n\*\*2 > Tr\(Sigma\)") as recorded:
+        result = pen_n(3, constants)
+    assert len(recorded) == 1
+    assert isfinite(result)
+    assert result == pytest.approx(
+        sqrt(3) * (expected["K"] + sqrt(2 * expected["v"] * constants.Lm))
+    )
+
+
+def test_valid_radius_override_does_not_warn(constants):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert isfinite(pen_n(3, constants, R_n=11.0, sigma_trace=100.0))
+
+
+def test_minimum_sample_count_still_computes_with_radius_warning(constants):
+    with pytest.warns(RuntimeWarning):
+        assert isfinite(pen_n(3, constants, num_samples=2))
+
+
+@pytest.mark.parametrize("overrides, message", [
+    ({"num_samples": 1}, "num_samples"),
+    ({"num_samples": 2.5}, "num_samples"),
+    ({"num_samples": float("nan")}, "num_samples"),
+    ({"n": 0}, "n must"),
+    ({"n": 2.5}, "n must"),
+    ({"R_n": 0.0}, "R_n"),
+    ({"R_n": float("inf")}, "R_n"),
+    ({"R_n": float("nan")}, "R_n"),
+    ({"delta_n": log(10)}, "delta_n"),
+    ({"delta_n": 0.0}, "delta_n"),
+    ({"delta_n": float("inf")}, "delta_n"),
+    ({"delta_n": float("nan")}, "delta_n"),
+    ({"sigma_trace": -1.0}, "sigma_trace"),
+    ({"sigma_trace": float("nan")}, "sigma_trace"),
+    ({"Lm": 0.0}, "Lm"),
+    ({"Lm": float("nan")}, "Lm"),
+    ({"r": 0.0}, "r must"),
+    ({"L": 0.0}, "L must"),
+    ({"L": sqrt(5)}, "0 < L < sqrt"),
+])
+def test_invalid_constants_are_rejected(constants, overrides, message):
+    with pytest.raises(ValueError, match=message):
+        pen_n(3, constants, **overrides)
+
+
+@pytest.mark.parametrize("dimension", [-1.0, float("nan"), float("inf")])
+def test_invalid_dimension_is_rejected(constants, dimension):
+    with pytest.raises(ValueError, match="D_m"):
+        pen_n(dimension, constants)
+
+
+def test_dimension_and_weight_dependence(constants):
+    assert pen_n(0, constants) == 0.0
+    assert pen_n(9, constants) == pytest.approx(3 * pen_n(1, constants))
+    base = theorem_constants(constants)
+    assert pen_n(3, constants, Lm=4 * constants.Lm) == pytest.approx(
+        sqrt(3) * (base["K"] + 2 * sqrt(2 * base["v"] * constants.Lm))
+    )
+
+
+def test_penalty_and_variance_decay_at_large_sample_sizes(constants):
+    sample_sizes = [10**8, 10**10, 10**12]
+    derived = [theorem_constants(constants, num_samples=n) for n in sample_sizes]
+    penalties = [pen_n(3, constants, num_samples=n) for n in sample_sizes]
+    assert penalties[0] > penalties[1] > penalties[2] > 0
+    assert derived[0]["v"] > derived[1]["v"] > derived[2]["v"] > 0
+
+
+def test_only_penalty_constants_are_reported(constants):
+    assert set(theorem_constants(constants)) == {
+        "R", "delta", "c", "v", "t", "L_prime", "K",
+    }

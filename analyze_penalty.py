@@ -36,23 +36,6 @@ def true_dimension_from_lambda_star(lambda_star, zero_tol):
     return np.count_nonzero(np.abs(lambda_star[off_diag_mask]) > zero_tol) + 1
 
 
-def eigenvalue_constants_from_sigma(sigma):
-    eigenvalues = np.linalg.eigvalsh(sigma)
-    return {
-        "lambda_sum": float(np.sum(eigenvalues)),
-        "lambda_inf_norm": float(np.max(np.abs(eigenvalues))),
-        "lambda_2_norm": float(np.linalg.norm(eigenvalues)),
-    }
-
-
-def sigma_constants(sigma):
-    return {
-        "sigma_fro_norm": float(np.linalg.norm(sigma, ord="fro")),
-        "sigma_op_norm": float(np.linalg.norm(sigma, ord=2)),
-        "sigma_trace": float(np.trace(sigma)),
-    }
-
-
 def infer_sample_count(data, num_samples_override):
     if num_samples_override is not None:
         return num_samples_override
@@ -67,7 +50,7 @@ def infer_sample_count(data, num_samples_override):
     )
 
 
-def infer_r(data, r_override):
+def infer_r(r_override):
     if r_override is not None:
         return r_override
     return 1.0
@@ -82,12 +65,12 @@ def build_penalty_constants(data, args):
     return PenaltyConstants(
         num_samples=infer_sample_count(data, args.num_samples),
         n=matrix_dimension,
-        r=infer_r(data, args.r),
+        r=infer_r(args.r),
         Lm=args.Lm,
         L=args.L,
-        xi=args.xi,
-        **eigenvalue_constants_from_sigma(sigma),
-        **sigma_constants(sigma),
+        R_n=getattr(args, "R_n", None),
+        delta_n=getattr(args, "delta_n", None),
+        sigma_trace=float(np.trace(sigma)),
     )
 
 
@@ -245,7 +228,9 @@ def analyze(args):
     print(f"Penalty scale: {args.penalty_scale:.12g}")
     derived_constants = theorem_constants(constants)
     print(f"Penalty r: {constants.r:.12g}")
-    print(f"Penalty L_t_xi: {derived_constants['L_t_xi']:.12g}")
+    print(f"Penalty R_n: {derived_constants['R']:.12g}")
+    print(f"Penalty delta_n: {derived_constants['delta']:.12g}")
+    print(f"Penalty L_prime: {derived_constants['L_prime']:.12g}")
     print(f"True dimension: {true_dimension}")
     if best_index is not None:
         print(f"Selected D_m: {d_m_values[best_index]}")
@@ -257,7 +242,26 @@ def analyze(args):
         print("Selected D_m: unavailable because all penalized values are non-finite.")
 
 
-def parse_args():
+def add_penalty_truncation_arguments(parser):
+    """Add the free truncation parameters shared by the penalty CLIs."""
+
+    parser.add_argument(
+        "--R-n", "--radius", dest="R_n", type=float,
+        help=(
+            "Truncation radius R_n. Default: log(num_samples). "
+            "A warning is emitted when R_n squared <= trace(Sigma)."
+        ),
+    )
+    parser.add_argument(
+        "--delta-n", dest="delta_n", type=float,
+        help=(
+            "Concentration parameter delta_n, strictly greater than log(2 * n) "
+            "for matrix dimension n. Default: log(2 * n * num_samples)."
+        ),
+    )
+
+
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description=(
             "Compute optim obj + pen_n(D_m) from an objective-curve NPZ and "
@@ -309,19 +313,14 @@ def parse_args():
         default=1.0,
         help="Theorem constant L used by pen_n. Default: 1.",
     )
-    parser.add_argument(
-        "--xi",
-        type=float,
-        default=10.0,
-        help="Theorem tail constant xi used by pen_n. Default: 10.",
-    )
+    add_penalty_truncation_arguments(parser)
     parser.add_argument(
         "--zero-tol",
         type=float,
         default=1e-12,
         help="Tolerance for counting nonzero off-diagonal Lambda_star entries.",
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ from scaling_selection import select_minimal_scale
 
 OUT = Path(__file__).resolve().parent
 SOURCE = ROOT / "experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18"
-ARGS = Namespace(num_samples=None, r=1., Lm=1., L=1., xi=10., objective_floor=1e-8)
+ARGS = Namespace(num_samples=None, r=1., Lm=1., L=1., objective_floor=1e-8)
 
 
 def candidates():

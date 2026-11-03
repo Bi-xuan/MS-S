@@ -16,7 +16,7 @@ from optimizers.support_search import solve_support_with_restarts, update_best_s
 
 SOURCE = ROOT / 'experiments/output/upp_scal_n4_dm4_nsm10000_omega1_minabs02_10seeds_PlaAbs/support_18'
 OUT = Path(__file__).resolve().parent
-ARGS = SimpleNamespace(num_samples=None, r=1., Lm=1., L=1., xi=10., objective_floor=1e-8)
+ARGS = SimpleNamespace(num_samples=None, r=1., Lm=1., L=1., objective_floor=1e-8)
 
 
 def selections(dims, raw, penalties, floor=1e-8):

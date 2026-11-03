@@ -159,6 +159,32 @@ saved. The existing plateau/bootstrap method continues to compare its nested
 candidate masks. `reselect` uses the saved curve and does not apply
 `SEARCH_OPTION` or reconstruct supports.
 
+# Theorem penalty
+
+The local penalty in `penalty.py` evaluates Theorem 13, bound (7), at equality:
+`pen_n(D_m) = sqrt(D_m) * (K_n1 + sqrt(2 * v_n * Lm))`, with
+`v_n = num_samples * c_n**2 / 4`. The default truncation parameters are
+`R_n = log(num_samples)` and `delta_n = log(2 * n * num_samples)`, where `n`
+is the matrix dimension (the theorem calls it `N`). All logarithms are natural.
+`L`, `r`, and constant `Lm` each default to 1; support-count weights remain
+available. No risk remainder is computed.
+
+The penalty CLIs (`analyze_penalty.py`, `select_scaling_parameter.py`,
+`plot_dimension_path.py`, and `inspect_result.py`) accept `--R-n` (alias
+`--radius`) and `--delta-n` to override these defaults. For example:
+
+```sh
+python experiments/select_scaling_parameter.py path/to/objective_curve_sigma_hat.npz \
+  --method plateau --R-n 10 --delta-n 12
+```
+
+The radius must be positive and delta must be strictly greater than
+`log(2 * n)`. When `R_n**2 <= trace(Sigma)`, computation continues with a
+`RuntimeWarning`; the radius is not adjusted. `Sigma` is the covariance saved
+in the input NPZ. The penalty itself no longer needs its eigenvalues or norms.
+In Python, use `PenaltyConstants(num_samples=100, n=4, sigma_trace=4)`;
+optional `R_n` and `delta_n` fields use the same overrides as the CLIs.
+
 # Plateau plus bootstrap dimension selection
 
 Run the method on a saved objective curve:

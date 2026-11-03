@@ -13,6 +13,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from experiments.select_scaling_parameter import (
     DEFAULT_OBJECTIVE_FLOOR,
+    add_penalty_truncation_arguments,
     load_selection_inputs,
 )
 from scaling_selection import build_dimension_path
@@ -98,7 +99,7 @@ def run(args):
     report_dimension_path(input_path, args)
 
 
-def parse_args():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description=(
             "Inspect candidate solutions and print the exact scale intervals "
@@ -133,8 +134,8 @@ def parse_args():
     parser.add_argument("--r", type=float, default=1.0)
     parser.add_argument("--Lm", "--lm", dest="Lm", type=float, default=1.0)
     parser.add_argument("--L", "--l", dest="L", type=float, default=1.0)
-    parser.add_argument("--xi", type=float, default=10.0)
-    return parser.parse_args()
+    add_penalty_truncation_arguments(parser)
+    return parser.parse_args(argv)
 
 
 if __name__ == "__main__":

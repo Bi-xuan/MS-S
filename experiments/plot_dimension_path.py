@@ -252,7 +252,7 @@ def run(args):
     return result
 
 
-def parse_args():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description=(
             "Select a penalty scale from an objective-curve NPZ and plot "
@@ -326,8 +326,8 @@ def parse_args():
     parser.add_argument("--r", type=float, default=1.0)
     parser.add_argument("--Lm", "--lm", dest="Lm", type=float, default=1.0)
     parser.add_argument("--L", "--l", dest="L", type=float, default=1.0)
-    parser.add_argument("--xi", type=float, default=10.0)
-    return parser.parse_args()
+    scaling_parameter_selection.add_penalty_truncation_arguments(parser)
+    return parser.parse_args(argv)
 
 
 if __name__ == "__main__":
