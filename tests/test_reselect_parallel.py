@@ -55,7 +55,7 @@ if "--method" in args:
         json.dumps(report))
     print("Selected dimension at recommended scale: 4")
     if method == "plateau":
-        print("Recommendation factor: 2")
+        print("Recommendation factor: 1")
 ''')
     python_stub.chmod(0o755)
     env = dict(os.environ, OUTPUT_ROOT=str(output), N_JOBS="1",

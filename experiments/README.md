@@ -314,6 +314,11 @@ the report or log). Bootstrap settings are included only for actual
 are omitted. Concurrent Slurm tasks replace
 the JSON atomically; `aggregate` refreshes the snapshot after all trials finish.
 
+Plain `plateau` selection uses recommendation factor **1** by default, selecting
+at the geometric center of its chosen plateau. Both the selection and
+dimension-path plotting CLIs share this default; `--recommendation-factor`
+can override it explicitly. Existing saved results retain their recorded factor.
+
 `reselect [OUTPUT_FOLDER]` discovers saved support/sample-size/seed curves and
 always runs these four experiments with the current theorem penalty:
 

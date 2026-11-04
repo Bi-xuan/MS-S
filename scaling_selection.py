@@ -1,8 +1,8 @@
 """Data-driven selection of the multiplier in a model-selection penalty.
 
 The window and plateau procedures estimate the minimal-penalty scale from
-the exact, piecewise-constant path of selected model dimensions. The slope
-heuristic then recommends a rescaled value for final model selection.
+the exact, piecewise-constant path of selected model dimensions. The estimated
+scale is used directly by default; an explicit recommendation factor can rescale it.
 Plateau-bootstrap selection directly compares the top plateau models using
 fixed-support bootstrap tests.
 """
@@ -23,7 +23,7 @@ from optimizers.support_search import solve_support_with_restarts
 from supports.common import off_diagonal_edges, validate_support_mask
 
 
-DEFAULT_RECOMMENDATION_FACTOR = 2.0
+DEFAULT_RECOMMENDATION_FACTOR = 1.0
 DEFAULT_WINDOW_PERTURBATION = 0.2
 DEFAULT_WINDOW_AGGREGATION_RATIO = 1.5
 DEFAULT_WINDOW_SEPARATION_RATIO = 2.5
@@ -733,7 +733,8 @@ def select_minimal_scale(
         selected window width. It is ignored by ``plateau``.
     recommendation_factor
         Positive multiplier applied to the estimated minimal scale. The
-        default is 2, as prescribed by the slope heuristic.
+        default is 1, selecting at the estimated scale (the plateau center
+        when method="plateau").
 
     Returns
     -------

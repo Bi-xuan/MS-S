@@ -174,7 +174,7 @@ def test_recommendation_factor_controls_recommended_scale_and_dimension():
     assert result.selected_dimension == 12
 
 
-def test_recommendation_factor_defaults_to_two():
+def test_recommendation_factor_defaults_to_one():
     result = select_minimal_scale(
         [7, 8, 9, 10, 11, 12],
         [15.01, 7.01, 3.01, 1.98, 0.98, 0.0],
@@ -182,11 +182,21 @@ def test_recommendation_factor_defaults_to_two():
         method="window",
     )
 
-    assert result.recommendation_factor == pytest.approx(2.0)
+    assert result.recommendation_factor == pytest.approx(1.0)
     assert result.recommended_scale == pytest.approx(
-        2.0 * np.sqrt(0.98 * 1.03)
+        np.sqrt(0.98 * 1.03)
     )
-    assert result.selected_dimension == 9
+    assert result.selected_dimension == 10
+
+
+@pytest.mark.parametrize("method", ["plateau", "window"])
+def test_selector_and_plot_cli_share_default_factor_and_allow_override(method):
+    from experiments.plot_dimension_path import parse_args as plot_args
+
+    for parser in (parse_args, plot_args):
+        assert parser(["curve.npz", "--method", method]).recommendation_factor == 1.0
+        assert parser(["curve.npz", "--method", method,
+                       "--recommendation-factor", "2"]).recommendation_factor == 2.0
 
 
 @pytest.mark.parametrize(
@@ -335,7 +345,8 @@ def test_plateau_accepts_single_bounded_interval_and_applies_recommendation():
     assert result.plateau_selection.runner_up_score is None
     assert result.plateau_selection.score_margin is None
     assert result.minimal_scale == pytest.approx(4.0)
-    assert result.recommended_scale == pytest.approx(8.0)
+    assert result.recommendation_factor == pytest.approx(1.0)
+    assert result.recommended_scale == pytest.approx(4.0)
     assert result.selected_dimension == 2
     assert result.recommendation_within_plateau
 
@@ -353,13 +364,23 @@ def test_plateau_accepts_widest_log_width_below_one():
     assert result.log_width == pytest.approx(np.log(2.0 / 1.2))
 
 
-def test_plateau_recommendation_can_leave_a_narrow_winning_interval():
+def test_plateau_default_stays_in_narrow_winning_interval():
     result = select_minimal_scale(
         [1, 2, 3], [3.0, 1.0, 0.0], [1, 2, 3], method="plateau",
     )
 
     assert result.plateau_selection.dimension == 2
     assert result.minimal_scale == pytest.approx(np.sqrt(2.0))
+    assert result.recommended_scale == pytest.approx(np.sqrt(2.0))
+    assert result.selected_dimension == 2
+    assert result.recommendation_within_plateau
+
+
+def test_explicit_plateau_factor_can_leave_a_narrow_winning_interval():
+    result = select_minimal_scale(
+        [1, 2, 3], [3.0, 1.0, 0.0], [1, 2, 3], method="plateau",
+        recommendation_factor=2.0,
+    )
     assert result.recommended_scale == pytest.approx(2.0 * np.sqrt(2.0))
     assert result.selected_dimension == 1
     assert not result.recommendation_within_plateau

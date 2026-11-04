@@ -287,7 +287,7 @@ def parse_args(argv=None):
         default=scaling_parameter_selection.DEFAULT_RECOMMENDATION_FACTOR,
         help=(
             "Positive multiplier applied to the minimal scale. "
-            "Default: 2."
+            f"Default: {scaling_parameter_selection.DEFAULT_RECOMMENDATION_FACTOR:g}."
         ),
     )
     parser.add_argument(
