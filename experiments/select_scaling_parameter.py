@@ -330,6 +330,7 @@ def run_bootstrap(input_path, selection_data, args):
             true_support=(np.abs(data["Lambda_star"]) > 1e-10) if "Lambda_star" in data else None,
             progress=lambda message: print(message, flush=True),
             nested=nested,
+            require_monotonic_penalty=selection_data["lm_mode"] != "support-count",
         )
     print(f"Loaded: {input_path}")
     print(f"Method: {result.method}")

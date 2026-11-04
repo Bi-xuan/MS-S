@@ -895,6 +895,7 @@ def select_plateau_bootstrap(
     support_valid, num_samples, *, top_plateaus=3, bootstrap_replicates=199,
     alpha=0.05, seed=20260913, n_jobs=1, fit_settings=None,
     true_support=None, progress=None, nested=True,
+    require_monotonic_penalty=True,
 ):
     """Screen top log-width plateaus, then test adjacent descending dimensions.
 
@@ -904,6 +905,8 @@ def select_plateau_bootstrap(
     draw X explicitly because the Wishart sampler requires N >= n.
     With nested=False, compare each dimension's supplied optimal support
     without requiring containment, and preserve signed objective differences.
+    Set require_monotonic_penalty=False for support-count weights whose
+    penalties may decrease with dimension.
     """
     if not isinstance(nested, (bool, np.bool_)):
         raise ValueError("nested must be a boolean.")
@@ -933,7 +936,8 @@ def select_plateau_bootstrap(
     raw = np.asarray(raw_objectives, dtype=float)
     if masks.shape != (len(dims), n, n) or valid.shape != dims.shape or raw.shape != dims.shape:
         raise ValueError("Support masks, validity flags and raw objectives must match dimensions.")
-    path = build_dimension_path(dims, objectives, penalties)
+    path = build_dimension_path(dims, objectives, penalties,
+                                require_monotonic_penalty=require_monotonic_penalty)
     plateaus = tuple(ranked_plateaus(path)[:top_plateaus])
     if not plateaus:
         raise ValueError("At least one bounded plateau is required for bootstrap selection.")

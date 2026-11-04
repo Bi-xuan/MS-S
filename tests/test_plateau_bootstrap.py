@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 import scaling_selection as bootstrap
-from experiments.select_scaling_parameter import parse_args, run
+from experiments.select_scaling_parameter import load_selection_inputs, parse_args, run
 from scaling_selection import DimensionPath, ranked_plateaus
 
 
@@ -163,16 +163,20 @@ def test_stationary_covariance_orientation_and_unstable_null():
         bootstrap._null_covariance((np.eye(2), 1., 0.))
 
 
-def test_cli_defaults_and_json_original_sample_size(tmp_path, monkeypatch, curve, mock_fits, capsys):
+@pytest.mark.parametrize("lm_mode", ["constant", "support-count"])
+def test_cli_defaults_and_json_original_sample_size(tmp_path, monkeypatch, curve, mock_fits, capsys, lm_mode):
     source = tmp_path / "curve.npz"
     output = tmp_path / "selection.json"
     np.savez(source, d_m_values=curve["dimensions"], objective_values=curve["objectives"],
              Sigma=curve["Sigma"], selected_support_masks=curve["support_masks"],
              selected_support_valid=curve["support_valid"], num_samples=100, n=3,
              fit_settings_json=json.dumps(asdict(bootstrap.FitSettings())),
-             Lambda_star=curve["support_masks"][2].astype(float))
+             Lambda_star=curve["support_masks"][2].astype(float), support_scope="all")
     args = parse_args([str(source), "--method", "plateau-bootstrap", "--top-plateaus", "1",
-                       "--num-samples", "1000", "--output-json", str(output)])
+                       "--num-samples", "1000", "--output-json", str(output),
+                       "--lm-mode", lm_mode, "--Lm", "1e12" if lm_mode == "support-count" else "1"])
+    if lm_mode == "support-count":
+        assert np.any(np.diff(load_selection_inputs(source, args)["penalty_values"]) < 0)
     result = run(args)
     assert result.num_samples == 100  # Penalty N override is not bootstrap N.
     report = json.loads(output.read_text())
@@ -184,6 +188,7 @@ def test_cli_defaults_and_json_original_sample_size(tmp_path, monkeypatch, curve
     assert defaults.bootstrap_alpha == .05
     assert defaults.nested is None
     assert report["nested"] is True
+    assert report["Lm_mode"] == lm_mode
 
 
 @pytest.mark.parametrize("saved_nested, option", [

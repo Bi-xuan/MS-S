@@ -294,13 +294,61 @@ Use `trial TASK_ID` (0 through 799 by default) for Slurm arrays, then
 seed. With no command, a set `SLURM_ARRAY_TASK_ID` selects one trial;
 otherwise all trials run.
 
-`reselect [OUTPUT_FOLDER]` discovers saved support/sample-size/seed curves,
-using their saved search results without applying `SEARCH_OPTION`, and
-runs curve-only `plateau` selections with `--lm-mode support-count` and
-`--Lm "${LM_WEIGHT}"` (default 0.1), and uses up to `N_JOBS` concurrent trials
-with one CPU each. New selections and summaries go under each support's
-`reselect_lm_support_count_plateau/` directory; the pooled score table goes
-under `OUTPUT_ROOT/reselect_lm_support_count_plateau/selection_summary.md`.
+Every successful upper-study command writes `methodological_parameters.json`
+beside its pooled summary (under `OUTPUT_ROOT` for the original study, and in
+each experiment folder for `reselect`). This
+records the timestamp, command and task ID, resolved shell parameters, planned
+sample sizes and trial count, and settings read from the saved curves and
+selection reports: search option and scope, nesting, coefficient bounds,
+omega and fitting settings, selection method, penalty weights, bootstrap
+configuration, sample sizes and random seeds, and oracle/lasso/BIC fit options.
+The `configured_parameters` section describes the current invocation;
+`saved_results` describes the actual stored results, including mixed settings
+when trials differ. This matters for `reselect`, which reuses the saved search
+and fitting settings rather than the current shell defaults. Selection methods
+and their parameters appear only in `saved_results.selection`, read from the
+reports used by the current summaries. For `plateau`, this includes its saved
+penalty weights, objective floor, and recommendation factor (when recorded in
+the report or log). Bootstrap settings are included only for actual
+`plateau-bootstrap` results. Unused selection defaults and alternative methods
+are omitted. Concurrent Slurm tasks replace
+the JSON atomically; `aggregate` refreshes the snapshot after all trials finish.
+
+`reselect [OUTPUT_FOLDER]` discovers saved support/sample-size/seed curves and
+always runs these four experiments with the current theorem penalty:
+
+| Experiment folder | Selection method | Lm |
+|---|---|---|
+| `penalty_plateau_lm_constant` | `plateau` | `LM_CONSTANT` (default 1) |
+| `penalty_plateau_lm_support_count` | `plateau` | `LM_WEIGHT` (default 0.1) × support count |
+| `penalty_plateau_bootstrap_lm_constant` | `plateau-bootstrap` | `LM_CONSTANT` |
+| `penalty_plateau_bootstrap_lm_support_count` | `plateau-bootstrap` | `LM_WEIGHT` × support count |
+
+Each invocation creates a fresh `reselect_<UTC timestamp>_<unique suffix>/`
+folder under `OUTPUT_ROOT` and under each participating `support_XX` directory.
+All four experiment folders appear inside each run folder. The root experiment
+folder contains its pooled `selection_summary.md` and
+`methodological_parameters.json`. Each support experiment folder contains its
+own `selection_trials.csv`, `selection_summary.md`, parameters JSON, and
+`num_samples_N/seed_S/selection.json`, `selection.log`, and `result.csv`.
+Each parameters file describes only the selection settings used by its own
+summary. Existing selections, summaries, parameters, curves, and earlier
+comparison runs are preserved. The comparison folder's `README.md` lists the
+four experiments. `RESELECT_METHOD` no longer restricts reselection to one method.
+
+Saved search results are reused without applying `SEARCH_OPTION`. Bootstrap
+uses each trial's saved fitting settings and nesting mode, and accepts
+`TOP_PLATEAUS` (default 3), `BOOTSTRAP_REPLICATES` (199),
+`BOOTSTRAP_ALPHA` (0.05), and `BOOTSTRAP_SEED` (20260913). Experiments run in
+sequence, each using up to `N_JOBS` concurrent trials with one CPU per trial,
+including bootstrap refits. For example:
+
+```sh
+LM_CONSTANT=1 LM_WEIGHT=0.1 N_JOBS=8 \
+  bash experiments/run_upper_support_scaling_study.sh reselect \
+  experiments/output/upp_scal_n4_dm4_upper_scope_fit_omega_true_greedy_oracle_lasso_bic
+```
+
 The earlier
 `support_XX/seed_S/` layout and window-versus-plateau coverage plots are
 replaced by the per-support sample-size summaries.

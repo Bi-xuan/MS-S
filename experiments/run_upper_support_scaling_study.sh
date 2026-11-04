@@ -32,11 +32,11 @@ SEARCH_OPTION="${SEARCH_OPTION:-forward}"
 NESTED_SUPPORTS="${NESTED_SUPPORTS:-true}"
 OBJECTIVE_FLOOR="${OBJECTIVE_FLOOR:-1e-8}"
 LM_WEIGHT="${LM_WEIGHT:-0.1}"
+LM_CONSTANT="${LM_CONSTANT:-1}"
 TOP_PLATEAUS="${TOP_PLATEAUS:-3}"
 BOOTSTRAP_REPLICATES="${BOOTSTRAP_REPLICATES:-199}"
 BOOTSTRAP_ALPHA="${BOOTSTRAP_ALPHA:-0.05}"
 BOOTSTRAP_SEED="${BOOTSTRAP_SEED:-20260913}"
-RESELECT_SUBDIR="reselect_lm_support_count_plateau"
 NUM_SAMPLE_VALUES=(100 1000 10000 1000000)
 
 usage() {
@@ -51,11 +51,17 @@ Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect [OUTPU
               from 0 to $((TOTAL_TRIALS - 1)) in support/sample-size/seed order.
   aggregate   Summarize all configured supports from their saved curves and selections.
               Also write OUTPUT_ROOT/selection_summary.md with scores over all trials.
-  reselect    Discover support_*/num_samples_*/seed_* saved curves and select with
-              Lm = LM_WEIGHT times the number of available supports (default 0.1).
+  reselect    Run all four combinations of plateau/plateau-bootstrap and
+              constant/support-count Lm using the saved curves and current penalty.
+              Constant Lm = LM_CONSTANT (default 1); support-count Lm = LM_WEIGHT
+              times the number of available supports (LM_WEIGHT defaults to 0.1).
+              Bootstrap uses TOP_PLATEAUS, BOOTSTRAP_REPLICATES, BOOTSTRAP_ALPHA,
+              and BOOTSTRAP_SEED, with the trial's saved fitting and nesting settings.
               Use up to N_JOBS concurrent trials, with one CPU per selection.
-              Write selections and per-support summaries under each support's
-              ${RESELECT_SUBDIR}/ directory. Do not recompute curves.
+              Create a fresh reselect_<run-id>/ folder under OUTPUT_ROOT and each
+              support directory, with four experiment subfolders containing
+              results, summaries, and methodological_parameters.json.
+              Preserve all existing selections and summaries. Do not recompute curves.
               OUTPUT_FOLDER overrides OUTPUT_ROOT for this command.
   oracle      Fit all supports independently at each saved lambda_star_dimension,
               using the saved fitting settings, covariance, scope, and solver seed.
@@ -83,6 +89,9 @@ Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect [OUTPU
   The backward and greedy modes default to output folders ending in
   _forward_backward_nested and _greedy; OUTPUT_ROOT overrides the folder.
   Reselect uses saved curves without applying SEARCH_OPTION.
+  Successful commands write methodological_parameters.json beside their summaries with
+  invocation settings and the search, fitting, selection, and comparison
+  parameters read from the saved results.
   Scores are 1 minus the Jaccard distance to the nearest member of the true EC.
   All fitting, support-search, objective-floor, and bootstrap settings from
   run_fixed_support_scaling.sh are configurable through the same environment variables.
@@ -98,6 +107,7 @@ if [[ ! "${N}" =~ ^[1-9][0-9]*$ ]] || ((N < 2)); then
     echo "Error: N must be an integer of at least 2." >&2
     exit 2
 fi
+
 if [[ ! "${TRUE_DIMENSION}" =~ ^[1-9][0-9]*$ ]] ||
     ((TRUE_DIMENSION < 2 || TRUE_DIMENSION > N * (N - 1) / 2)); then
     echo "Error: TRUE_DIMENSION must leave at least one true and one false upper edge." >&2
@@ -144,6 +154,24 @@ for ((support_index = 0; support_index < NUM_SUPPORTS; support_index++)); do
 done
 TOTAL_TRIALS="${#task_seeds[@]}"
 
+write_methodological_parameters() (
+    local metadata_root="$1"
+    local metadata_options=(--command "${command}")
+    export N TRUE_DIMENSION NUM_SUPPORTS LAMBDA_STAR_OFFDIAG_ABS_MIN
+    export LAMBDA_STAR_OFFDIAG_ABS_MAX TOTAL_CPUS CPUS_PER_TRIAL N_JOBS
+    export MAX_RESTARTS REFINE_AFTER_FIXED_OMEGA OMEGA_STAR OMEGA_REF FIT_OMEGA_REF
+    export KAPPA SUPPORT_SCOPE SEARCH_OPTION NESTED_SUPPORTS
+    export TOTAL_TRIALS
+    export STUDY_SAMPLE_SIZES="${NUM_SAMPLE_VALUES[*]}"
+    if [[ "${command}" == "trial" ]]; then
+        metadata_options+=(--task-id "${task_id}")
+    fi
+    if (($# > 1)); then
+        metadata_options+=(--source-root "$2" --selection-subdir "$3" --selection-file selection.json)
+    fi
+    python "${SCRIPT_DIR}/write_upper_study_parameters.py" "${metadata_root}" "${metadata_options[@]}"
+)
+
 run_trial() {
     local support_index="$1"
     local num_samples="$2"
@@ -163,12 +191,12 @@ run_trial() {
 
     if [[ "${selection_only}" == "true" ]]; then
         [[ -f "${curve_path}" ]] || { echo "Missing saved curve: ${curve_path}" >&2; return 1; }
-        result_dir="${support_dir}/${RESELECT_SUBDIR}/num_samples_${num_samples}/seed_${random_seed}"
+        result_dir="${support_dir}/${RESELECT_RUN_ID}/${RESELECT_VARIANT}/num_samples_${num_samples}/seed_${random_seed}"
         mkdir -p "${result_dir}"
-        selection_options+=(--lm-mode support-count --Lm "${LM_WEIGHT}")
-        selection_log="${result_dir}/selection_plateau.log"
-        selection_json="${result_dir}/selection_plateau.json"
-        selection_method="plateau"
+        selection_log="${result_dir}/selection.log"
+        selection_json="${result_dir}/selection.json"
+        selection_options+=(--lm-mode "${RESELECT_LM_MODE}" --Lm "${RESELECT_LM_VALUE}")
+        selection_method="${RESELECT_METHOD}"
         selection_jobs=1
         echo "Reusing saved objective curve: ${curve_path}"
     else
@@ -197,6 +225,8 @@ run_trial() {
             --fit-omega-ref "${FIT_OMEGA_REF}" \
             --kappa "${KAPPA}" \
             2>&1 | tee "${trial_dir}/compute.log"
+    fi
+    if [[ "${selection_method}" == "plateau-bootstrap" ]]; then
         selection_options+=(--top-plateaus "${TOP_PLATEAUS}"
             --bootstrap-replicates "${BOOTSTRAP_REPLICATES}"
             --bootstrap-alpha "${BOOTSTRAP_ALPHA}"
@@ -243,7 +273,7 @@ aggregate_results() {
     local summary_dir expected_seeds seed_count overall_summary_dir="${OUTPUT_ROOT}"
     local support_dirs=() sample_sizes=() selection_options=() trial_csv_paths=()
     if [[ "${selection_only}" == "true" ]]; then
-        overall_summary_dir="${OUTPUT_ROOT}/${RESELECT_SUBDIR}"
+        overall_summary_dir="${OUTPUT_ROOT}/${RESELECT_RUN_ID}/${RESELECT_VARIANT}"
     fi
     if (($# > 0)); then
         support_dirs=("$@")
@@ -258,8 +288,8 @@ aggregate_results() {
         expected_seeds=10
         selection_options=(--selection-file selection_plateau_bootstrap.json)
         if [[ "${selection_only}" == "true" ]]; then
-            summary_dir="${support_dir}/${RESELECT_SUBDIR}"
-            selection_options=(--selection-root "${summary_dir}" --selection-file selection_plateau.json)
+            summary_dir="${support_dir}/${RESELECT_RUN_ID}/${RESELECT_VARIANT}"
+            selection_options=(--selection-root "${summary_dir}" --selection-file selection.json)
             sample_sizes=()
             expected_seeds=0
             for sample_dir in "${support_dir}"/num_samples_*; do
@@ -290,21 +320,37 @@ aggregate_results() {
         trial_csv_paths+=("${summary_dir}/selection_trials.csv")
         echo "Trial results: ${summary_dir}/selection_trials.csv"
         echo "Summary table: ${summary_dir}/selection_summary.md"
+        if [[ "${selection_only}" == "true" ]]; then
+            write_methodological_parameters "${summary_dir}" "${support_dir}" "${RESELECT_RUN_ID}/${RESELECT_VARIANT}"
+        fi
     done
     python experiments/summarize_fixed_support_scaling.py \
         --overall-trials "${trial_csv_paths[@]}" \
         --summary-output "${overall_summary_dir}/selection_summary.md"
     echo "Overall score table: ${overall_summary_dir}/selection_summary.md"
+    if [[ "${selection_only}" == "true" ]]; then
+        write_methodological_parameters "${overall_summary_dir}" "${OUTPUT_ROOT}" "${RESELECT_RUN_ID}/${RESELECT_VARIANT}"
+    fi
 }
 
 reselect_all() {
     local support_dir sample_dir trial_dir support_index num_samples random_seed
-    local worker_count worker task worker_pid
+    local worker_count worker task worker_pid variant_index reselect_root
+    local RESELECT_RUN_ID RESELECT_VARIANT RESELECT_METHOD RESELECT_LM_MODE RESELECT_LM_VALUE
     local worker_failed=0 expected_seeds seed_count support_trial_count
     local support_dirs=() support_indices=() sample_sizes=() seeds=() worker_pids=()
 
+    local variants=(penalty_plateau_lm_constant penalty_plateau_lm_support_count
+                    penalty_plateau_bootstrap_lm_constant penalty_plateau_bootstrap_lm_support_count)
+    local methods=(plateau plateau plateau-bootstrap plateau-bootstrap)
+    local lm_modes=(constant support-count constant support-count)
     if [[ ! "${N_JOBS}" =~ ^[1-9][0-9]*$ ]]; then
         echo "Error: reselect requires N_JOBS to be a positive integer." >&2
+        return 2
+    fi
+    if ! python -c 'import math,sys; values=map(float,sys.argv[1:]); sys.exit(0 if all(math.isfinite(v) and v > 0 for v in values) else 1)' \
+        "${LM_CONSTANT}" "${LM_WEIGHT}" 2>/dev/null; then
+        echo "Error: LM_CONSTANT and LM_WEIGHT must be finite and positive." >&2
         return 2
     fi
     # Preflight all saved trials before writing any selection outputs.
@@ -361,26 +407,59 @@ reselect_all() {
     if ((worker_count > ${#seeds[@]})); then
         worker_count="${#seeds[@]}"
     fi
-    echo "Reselecting ${#seeds[@]} saved curves with ${worker_count} concurrent workers."
-    for ((worker = 0; worker < worker_count; worker++)); do
-        (
-            # Disjoint trial lists also work on Bash versions without wait -n.
-            for ((task = worker; task < ${#seeds[@]}; task += worker_count)); do
-                run_trial "${support_indices[task]}" "${sample_sizes[task]}" "${seeds[task]}" true
-            done
-        ) &
-        worker_pids+=("$!")
+    reselect_root="$(mktemp -d "${OUTPUT_ROOT}/reselect_$(date -u +%Y%m%dT%H%M%SZ)_XXXXXX")"
+    RESELECT_RUN_ID="${reselect_root##*/}"
+    for support_dir in "${support_dirs[@]}"; do
+        mkdir "${support_dir}/${RESELECT_RUN_ID}"
     done
-    for worker_pid in "${worker_pids[@]}"; do
-        if ! wait "${worker_pid}"; then
-            worker_failed=1
+    cat > "${reselect_root}/README.md" <<EOF_COMPARISON
+# Penalty selection comparison
+
+Saved curves: ${OUTPUT_ROOT}
+Each experiment has its own selection_summary.md and methodological_parameters.json.
+Per-trial selections and per-support summaries are under support_XX/${RESELECT_RUN_ID}/EXPERIMENT/.
+
+| Experiment | Selection method | Lm |
+|---|---|---|
+| ${variants[0]} | plateau | ${LM_CONSTANT} |
+| ${variants[1]} | plateau | ${LM_WEIGHT} * support count |
+| ${variants[2]} | plateau-bootstrap | ${LM_CONSTANT} |
+| ${variants[3]} | plateau-bootstrap | ${LM_WEIGHT} * support count |
+EOF_COMPARISON
+    echo "Comparison output: ${reselect_root}"
+    for ((variant_index = 0; variant_index < ${#variants[@]}; variant_index++)); do
+        RESELECT_VARIANT="${variants[variant_index]}"
+        RESELECT_METHOD="${methods[variant_index]}"
+        RESELECT_LM_MODE="${lm_modes[variant_index]}"
+        RESELECT_LM_VALUE="${LM_CONSTANT}"
+        if [[ "${RESELECT_LM_MODE}" == "support-count" ]]; then
+            RESELECT_LM_VALUE="${LM_WEIGHT}"
         fi
+        mkdir "${reselect_root}/${RESELECT_VARIANT}"
+        worker_failed=0
+        worker_pids=()
+        echo "Experiment ${RESELECT_VARIANT}: ${#seeds[@]} saved curves with ${worker_count} concurrent workers."
+        for ((worker = 0; worker < worker_count; worker++)); do
+            (
+                # Each experiment uses the same bounded worker pool.
+                for ((task = worker; task < ${#seeds[@]}; task += worker_count)); do
+                    run_trial "${support_indices[task]}" "${sample_sizes[task]}" "${seeds[task]}" true
+                done
+            ) &
+            worker_pids+=("$!")
+        done
+        for worker_pid in "${worker_pids[@]}"; do
+            if ! wait "${worker_pid}"; then
+                worker_failed=1
+            fi
+        done
+        if ((worker_failed)); then
+            echo "Error: a reselect worker failed in ${RESELECT_VARIANT}; aggregation was skipped." >&2
+            return 1
+        fi
+        aggregate_results true "${support_dirs[@]}"
     done
-    if ((worker_failed)); then
-        echo "Error: a reselect worker failed; aggregation was skipped." >&2
-        return 1
-    fi
-    aggregate_results true "${support_dirs[@]}"
+    echo "Completed all four experiments: ${reselect_root}"
 }
 
 run_all() {
@@ -507,4 +586,9 @@ else
     else
         run_all
     fi
+fi
+
+# Reselect writes metadata only into the fresh comparison folders.
+if [[ "${command}" != "reselect" ]]; then
+    write_methodological_parameters "${OUTPUT_ROOT}"
 fi

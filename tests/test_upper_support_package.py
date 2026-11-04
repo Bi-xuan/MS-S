@@ -98,17 +98,27 @@ def test_legacy_reselection_uses_local_selector_without_changing_curve(package_t
     legacy = trial / "objective_curve_sigma_hat.npz"
     np.savez_compressed(legacy, **data)
     original = legacy.read_bytes()
-    env = dict(os.environ, PYTHON=sys.executable, N_JOBS="1", MPLCONFIGDIR=str(tmp_path / "mpl"))
+    env = dict(os.environ, PYTHON=sys.executable, N_JOBS="1", BOOTSTRAP_REPLICATES="3",
+               TOP_PLATEAUS="2", MPLCONFIGDIR=str(tmp_path / "mpl"))
     completed = subprocess.run(
         ["bash", str(ROOT / "experiments/run_upper_support_scaling_study.sh"), "reselect", str(tmp_path)],
-        env=env, capture_output=True, text=True, timeout=30,
+        env=env, capture_output=True, text=True, timeout=90,
     )
     assert completed.returncode == 0, completed.stderr
     assert legacy.read_bytes() == original
-    selection = tmp_path / "support_00/reselect_lm_support_count_plateau/num_samples_100/seed_124/selection_plateau.json"
-    _load_trial(legacy, selection, 100, 124)
-    assert "package_path" not in json.loads(selection.read_text())
-    assert (tmp_path / "reselect_lm_support_count_plateau/selection_summary.md").exists()
+    run, = tmp_path.glob("reselect_*")
+    for name in ("penalty_plateau_lm_constant", "penalty_plateau_lm_support_count",
+                 "penalty_plateau_bootstrap_lm_constant", "penalty_plateau_bootstrap_lm_support_count"):
+        folder = tmp_path / "support_00" / run.name / name
+        selection = folder / "num_samples_100/seed_124/selection.json"
+        _load_trial(legacy, selection, 100, 124)
+        report = json.loads(selection.read_text())
+        assert "package_path" not in report
+        assert report["method"] == ("plateau-bootstrap" if "bootstrap" in name else "plateau")
+        assert (folder / "selection_summary.md").exists()
+        assert (folder / "methodological_parameters.json").exists()
+        assert (run / name / "selection_summary.md").exists()
+    assert not (trial / "selection_plateau_bootstrap.json").exists()
 
 
 @pytest.mark.parametrize("options", [

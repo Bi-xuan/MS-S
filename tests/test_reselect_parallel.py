@@ -4,7 +4,9 @@ import os
 import json
 from pathlib import Path
 import shlex
+import shutil
 import subprocess
+import sys
 
 import pytest
 
@@ -23,6 +25,9 @@ def study_env(tmp_path):
 import json, os, sys
 from pathlib import Path
 args = sys.argv[1:]
+if Path(args[0]).name == "write_upper_study_parameters.py":
+    executable = os.environ["METADATA_TEST_PYTHON"]
+    os.execv(executable, [executable, *args])
 if args[0] == "-c":
     os.execv(sys.executable, [sys.executable, *args])
 with Path(os.environ["CALLS"]).open("a") as f:
@@ -36,52 +41,104 @@ if "summarize_fixed_support_scaling.py" in args[0]:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("summary")
 if "--method" in args:
+    method = args[args.index("--method") + 1]
+    mode = args[args.index("--lm-mode") + 1] if "--lm-mode" in args else "constant"
+    lm = float(args[args.index("--Lm") + 1]) if "--Lm" in args else 1.0
+    report = dict(precision=0.75, method=method, objective_floor=1e-8,
+                  Lm_mode=mode, Lm=lm if mode == "constant" else [lm, 6*lm, 15*lm])
+    if method == "plateau-bootstrap":
+        report.update(top_plateaus=int(args[args.index("--top-plateaus")+1]),
+                      bootstrap_replicates=int(args[args.index("--bootstrap-replicates")+1]),
+                      alpha=float(args[args.index("--bootstrap-alpha")+1]),
+                      seed=int(args[args.index("--bootstrap-seed")+1]))
     Path(args[args.index("--output-json") + 1]).write_text(
-        json.dumps({"precision": 0.75}))
+        json.dumps(report))
     print("Selected dimension at recommended scale: 4")
+    if method == "plateau":
+        print("Recommendation factor: 2")
 ''')
     python_stub.chmod(0o755)
     env = dict(os.environ, OUTPUT_ROOT=str(output), N_JOBS="1",
+               METADATA_TEST_PYTHON=sys.executable,
                CALLS=str(output / "calls.jsonl"),
                PATH=str(bin_dir) + os.pathsep + os.environ["PATH"])
-    for key in ("SLURM_ARRAY_TASK_ID", "SLURM_CPUS_PER_TASK", "NSLOTS", "SEARCH_OPTION"):
+    for key in ("SLURM_ARRAY_TASK_ID", "SLURM_CPUS_PER_TASK", "NSLOTS", "SEARCH_OPTION", "RESELECT_METHOD", "LM_CONSTANT", "LM_WEIGHT"):
         env.pop(key, None)
     return output, env
 
 
-@pytest.mark.parametrize("lm_weight", [None, "0.2"])
-def test_reselect_uses_support_count_plateau_and_separate_outputs(study_env, lm_weight):
+VARIANTS = {
+    "penalty_plateau_lm_constant": ("plateau", "constant"),
+    "penalty_plateau_lm_support_count": ("plateau", "support-count"),
+    "penalty_plateau_bootstrap_lm_constant": ("plateau-bootstrap", "constant"),
+    "penalty_plateau_bootstrap_lm_support_count": ("plateau-bootstrap", "support-count"),
+}
+
+
+@pytest.mark.parametrize("weights", [None, ("2", "0.2")])
+def test_reselect_runs_four_experiments_without_overwriting_results(study_env, weights):
     output, env = study_env
     trial = output / "support_18/num_samples_100/seed_2"
     trial.mkdir(parents=True)
     (trial / "objective_curve_sigma_hat.npz").touch()
-    env.pop("LM_WEIGHT", None)
+    for path in (trial / "selection_plateau_bootstrap.json", trial / "result.csv",
+                 trial.parent.parent / "selection_trials.csv",
+                 trial.parent.parent / "selection_summary.md", output / "selection_summary.md",
+                 output / "methodological_parameters.json"):
+        path.write_text("old results")
+    original = {path: path.read_bytes() for path in output.rglob("*") if path.is_file()}
     env["SEARCH_OPTION"] = "ignored-for-reselect"
-    if lm_weight is not None:
-        env["LM_WEIGHT"] = lm_weight
+    env["RESELECT_METHOD"] = "window"  # An old environment setting cannot reduce the comparison.
+    if weights is not None:
+        env.update(LM_CONSTANT=weights[0], LM_WEIGHT=weights[1])
+    env.update(TOP_PLATEAUS="2", BOOTSTRAP_REPLICATES="39",
+               BOOTSTRAP_ALPHA="0.1", BOOTSTRAP_SEED="456")
     result = subprocess.run(["bash", str(SCRIPT), "reselect"], env=env,
-                            capture_output=True, text=True, timeout=20)
+                            capture_output=True, text=True, timeout=40)
     assert result.returncode == 0, result.stderr
-    assert "unbound variable" not in result.stderr
-    selection_dir = output / "support_18/reselect_lm_support_count_plateau/num_samples_100/seed_2"
-    assert (selection_dir / "result.csv").read_text().strip() == "100,2,4,0.75,false"
-    assert not (trial / "result.csv").exists()
+    assert all(path.read_bytes() == content for path, content in original.items())
+    run, = output.glob("reselect_*")
+    assert {path.name for path in run.iterdir() if path.is_dir()} == set(VARIANTS)
     calls = [json.loads(line) for line in (output / "calls.jsonl").read_text().splitlines()]
-    selection = next(call for call in calls if "--method" in call)
     assert not any("compute_objective_curve.py" in call[0] for call in calls)
-    assert selection[selection.index("--method") + 1] == "plateau"
-    assert selection[selection.index("--lm-mode") + 1] == "support-count"
-    assert selection[selection.index("--Lm") + 1] == (lm_weight or "0.1")
-    assert selection[selection.index("--n-jobs") + 1] == "1"
-    assert "--bootstrap-replicates" not in selection
-    summary = next(call for call in calls if "summarize_fixed_support_scaling.py" in call[0])
-    assert summary[summary.index("--sample-sizes") + 1] == "100"
-    assert summary[summary.index("--expected-seeds") + 1] == "1"
-    assert summary[summary.index("--selection-file") + 1] == "selection_plateau.json"
-    overall = next(call for call in calls if "--overall-trials" in call)
-    assert overall[overall.index("--overall-trials") + 1] == str(
-        output / "support_18/reselect_lm_support_count_plateau/selection_trials.csv")
-    assert (output / "reselect_lm_support_count_plateau/selection_summary.md").exists()
+    selections = [call for call in calls if "--method" in call]
+    assert len(selections) == 4
+    for (variant, (method, mode)), selection in zip(VARIANTS.items(), selections):
+        weight = (weights or ("1", "0.1"))[mode == "support-count"]
+        destination = output / "support_18" / run.name / variant
+        assert (destination / "num_samples_100/seed_2/result.csv").read_text().strip() == "100,2,4,0.75,false"
+        assert selection[selection.index("--method") + 1] == method
+        assert selection[selection.index("--lm-mode") + 1] == mode
+        assert selection[selection.index("--Lm") + 1] == weight
+        assert selection[selection.index("--n-jobs") + 1] == "1"
+        if method == "plateau-bootstrap":
+            for flag, value in {"--top-plateaus": "2", "--bootstrap-replicates": "39",
+                                "--bootstrap-alpha": "0.1", "--bootstrap-seed": "456"}.items():
+                assert selection[selection.index(flag) + 1] == value
+        else:
+            assert "--bootstrap-replicates" not in selection
+        summary = next(call for call in calls if "--selection-root" in call and str(destination) in call)
+        assert summary[summary.index("--sample-sizes") + 1] == "100"
+        assert summary[summary.index("--expected-seeds") + 1] == "1"
+        assert summary[summary.index("--selection-file") + 1] == "selection.json"
+        for folder in (destination, run / variant):
+            assert (folder / "selection_summary.md").read_text() == "summary"
+            metadata = json.loads((folder / "methodological_parameters.json").read_text())
+            saved = metadata["saved_results"]["selection"]
+            assert saved["method"] == method and saved["Lm_mode"] == mode
+            if method == "plateau":
+                assert "bootstrap_replicates" not in saved
+            else:
+                assert saved["bootstrap_replicates"] == 39
+    # A repeated invocation makes a fresh run rather than overwriting the first one.
+    if weights is None:
+        first_run = {path: path.read_bytes() for folder in (run, output / "support_18" / run.name)
+                     for path in folder.rglob("*") if path.is_file()}
+        result = subprocess.run(["bash", str(SCRIPT), "reselect"], env=env,
+                                capture_output=True, text=True, timeout=40)
+        assert result.returncode == 0, result.stderr
+        assert len(list(output.glob("reselect_*"))) == 2
+        assert all(path.read_bytes() == content for path, content in {**original, **first_run}.items())
 
 
 @pytest.fixture
@@ -91,7 +148,7 @@ def reselect_harness(tmp_path):
     source = SCRIPT.read_text()
     overrides = r'''
 run_trial() {
-    printf 'start %s %s\n' "$3" "$4" >> "${OUTPUT_ROOT}/events"
+    printf 'start %s %s %s\n' "$3" "$4" "${RESELECT_VARIANT}" >> "${OUTPUT_ROOT}/events"
     sleep 0.1
     if [[ "$3" == "${FAIL_SEED:-none}" ]]; then
         printf 'failed %s\n' "$3" >> "${OUTPUT_ROOT}/events"
@@ -100,19 +157,20 @@ run_trial() {
     printf 'end %s\n' "$3" >> "${OUTPUT_ROOT}/events"
 }
 aggregate_results() {
-    printf 'aggregate %s\n' "$#" >> "${OUTPUT_ROOT}/events"
+    printf 'aggregate %s %s\n' "$#" "${RESELECT_VARIANT}" >> "${OUTPUT_ROOT}/events"
 }
 '''
     script = tmp_path / "experiments/study.sh"
     script.parent.mkdir()
     script.write_text(source.replace('command="${1:-auto}"', overrides + '\ncommand="${1:-auto}"'))
+    shutil.copy2(SCRIPT.with_name("write_upper_study_parameters.py"), script.parent)
     output = tmp_path / "output"
     for seed in range(1, 7):
         trial = output / f"support_18/num_samples_100/seed_{seed}"
         trial.mkdir(parents=True)
         (trial / "objective_curve_sigma_hat.npz").write_bytes(b"saved curve")
     env = dict(os.environ, OUTPUT_ROOT=str(output))
-    for key in ("N_JOBS", "SLURM_CPUS_PER_TASK", "NSLOTS", "FAIL_SEED"):
+    for key in ("N_JOBS", "SLURM_CPUS_PER_TASK", "NSLOTS", "FAIL_SEED", "RESELECT_METHOD"):
         env.pop(key, None)
     return script, output, env
 
@@ -141,16 +199,18 @@ def test_reselect_bounds_concurrency_and_aggregates_after_workers(
         if parts[0] == "start":
             assert parts[2] == "true"  # Use the curve-only selection path.
             active.add(parts[1])
-            started.append(parts[1])
+            started.append((parts[3], parts[1]))
             peak = max(peak, len(active))
         elif parts[0] == "end":
             active.remove(parts[1])
         else:
-            assert parts == ["aggregate", "2"]
+            assert parts[:2] == ["aggregate", "2"]
+            assert parts[2] in VARIANTS
             assert not active
-    assert sorted(started) == [str(seed) for seed in range(1, 7)]
+    assert set(started) == {(variant, str(seed)) for variant in VARIANTS for seed in range(1, 7)}
+    assert len(started) == 24
     assert peak == expected_workers
-    assert events[-1] == "aggregate 2"
+    assert events[-1] == "aggregate 2 penalty_plateau_bootstrap_lm_support_count"
 
 
 def test_reselect_worker_failure_prevents_aggregation(reselect_harness):
@@ -180,6 +240,21 @@ def test_reselect_rejects_invalid_worker_count(reselect_harness, n_jobs):
     assert not (output / "events").exists()
 
 
+@pytest.mark.parametrize("settings", [{"LM_CONSTANT": "0"}, {"LM_WEIGHT": "-1"},
+                                      {"LM_CONSTANT": "nan"}, {"LM_WEIGHT": "invalid"}])
+def test_reselect_rejects_invalid_weights_before_writing_results(reselect_harness, settings):
+    script, output, env = reselect_harness
+    result = subprocess.run(
+        ["bash", str(script), "reselect"],
+        env=dict(env, N_JOBS="1", **settings),
+        capture_output=True, text=True, timeout=20,
+    )
+    assert result.returncode == 2
+    assert "LM_CONSTANT and LM_WEIGHT must be finite and positive" in result.stderr
+    assert not (output / "events").exists()
+    assert not list(output.glob("reselect_*"))
+
+
 @pytest.mark.parametrize("task_id,support,samples,seed", [
     (0, 0, 100, 124), (10, 0, 1000, 6), (20, 0, 10000, 3),
     (30, 0, 1000000, 2), (40, 1, 100, 124), (799, 19, 1000000, 237),
@@ -204,6 +279,10 @@ def test_trial_maps_support_sample_and_seed_and_forwards_configuration(
     assert (trial / "selection_plateau_bootstrap.json").is_file()
     assert (trial / "selection_plateau_bootstrap.log").is_file()
     assert (trial / "result.csv").read_text().strip() == f"{samples},{seed},4,0.75,false"
+    metadata = json.loads((output / "methodological_parameters.json").read_text())
+    assert metadata["last_command"] == "trial" and metadata["task_id"] == task_id
+    assert metadata["configured_parameters"]["SEARCH_OPTION"] == "forward"
+    assert metadata["configured_parameters"]["FIT_OMEGA_REF"] is True
     calls = [json.loads(line) for line in (output / "calls.jsonl").read_text().splitlines()]
     compute, selection = calls
     for flag, value in {
@@ -241,6 +320,7 @@ def test_upper_search_option_reaches_curve_with_default_output_folder(
         'PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"',
         "PROJECT_ROOT=" + shlex.quote(str(tmp_path)),
     ))
+    shutil.copy2(SCRIPT.with_name("write_upper_study_parameters.py"), script.parent)
     result = subprocess.run(["bash", str(script), "trial", "0"], env=env,
                             capture_output=True, text=True, timeout=20)
     assert result.returncode == 0, result.stderr
@@ -331,6 +411,7 @@ aggregate_results() {
 '''
     script = tmp_path / "study.sh"
     script.write_text(source.replace('command="${1:-auto}"', overrides + '\ncommand="${1:-auto}"'))
+    shutil.copy2(SCRIPT.with_name("write_upper_study_parameters.py"), script.parent)
     env = dict(os.environ, OUTPUT_ROOT=str(tmp_path), TOTAL_CPUS="6", CPUS_PER_TRIAL="2")
     env.pop("SLURM_ARRAY_TASK_ID", None)
     result = subprocess.run(["bash", str(script), "run-all"], env=env,
