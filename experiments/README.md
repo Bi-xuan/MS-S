@@ -65,8 +65,8 @@ For saved upper-scope trials, set `SUPPORT_SCOPE=upper` when running this
 launcher command. Direct analysis commands can infer the saved scope.
 
 This runner leaves the original shell script available. Its commands are
-`run-all` and `summarize`; it does not implement the original script's plain
-Plateau `reselect` command.
+`run-all` and `summarize`; it does not implement the original script's
+four-experiment `reselect` command.
 
 `compute_objective_curve.py` uses forward-nested support recovery by default
 (`--nested-supports true`). Starting from the diagonal-only model at `D_m=1`,
@@ -343,8 +343,8 @@ four experiments. `RESELECT_METHOD` no longer restricts reselection to one metho
 
 Saved search results are reused without applying `SEARCH_OPTION`. Bootstrap
 uses each trial's saved fitting settings and nesting mode, and accepts
-`TOP_PLATEAUS` (default 3), `BOOTSTRAP_REPLICATES` (199),
-`BOOTSTRAP_ALPHA` (0.05), and `BOOTSTRAP_SEED` (20260913). Experiments run in
+`TOP_PLATEAUS` (default 2), `BOOTSTRAP_REPLICATES` (199),
+`BOOTSTRAP_ALPHA` (0.1), and `BOOTSTRAP_SEED` (20260913). Experiments run in
 sequence, each using up to `N_JOBS` concurrent trials with one CPU per trial,
 including bootstrap refits. For example:
 
@@ -590,22 +590,40 @@ pooled upper-study table gains average lasso EC score across individual trials.
 Regular summary regeneration preserves these columns when lasso results are
 present for every trial; partial comparisons raise an error.
 
-# Reselect fixed-support curves without fitting
+# Reselect fixed-support curves
 
 ```sh
 N_JOBS=8 bash experiments/run_fixed_support_scaling.sh reselect
+
+# Reselect all 40 saved n=10 trials with the four experiment settings:
+N=10 N_JOBS=8 bash experiments/run_fixed_support_scaling.sh reselect \
+  experiments/output/fixed_support_scaling_n10_upper_scope_fit_omega_ref_true
 ```
 
 This reads existing `num_samples_*/seed_*/objective_curve_sigma_hat.npz` files
 from `experiments/output/fixed_support_scaling_n4_omega_ref_eq_star` by default.
 Pass another folder after `reselect`, or set `OUTPUT_ROOT`, to change the input.
-It runs up to `N_JOBS` curve-only `plateau` selections concurrently. All new
-files go under `OUTPUT_ROOT/reselect_lm_support_count_plateau/`: each trial has
-`selection_plateau.log`, `selection_plateau.json`, and `result.csv`, and the
-subfolder root has `selection_trials.csv` and `selection_summary.md`. The
-original curves, trial results, summaries, and bootstrap reports remain intact.
+It runs the same four experiments as the upper-study `reselect` command:
+`penalty_plateau_lm_constant`, `penalty_plateau_lm_support_count`,
+`penalty_plateau_bootstrap_lm_constant`, and
+`penalty_plateau_bootstrap_lm_support_count`. Constant Lm defaults to
+`LM_CONSTANT=1`. Bootstrap defaults match the upper study:
+`TOP_PLATEAUS=2`, `BOOTSTRAP_REPLICATES=199`, `BOOTSTRAP_ALPHA=0.1`, and
+`BOOTSTRAP_SEED=20260913`. The fixed-support `run-all` defaults remain three
+plateaus and alpha 0.05.
 
-For each candidate dimension `D_m`, this reselect uses `Lm` equal to
+Each invocation creates a fresh
+`OUTPUT_ROOT/reselect_<UTC timestamp>_<unique suffix>/` containing a comparison
+`README.md` and all four experiment folders. Each experiment contains
+`selection_trials.csv`, `selection_summary.md`, `methodological_parameters.json`,
+and `num_samples_N/seed_S/selection.json`, `selection.log`, and `result.csv`.
+The parameters describe that experiment's saved fitting, search, and selection
+settings. Experiments run in sequence with up to `N_JOBS` concurrent trials and
+one CPU per selection, including bootstrap refits. Saved curves are reused;
+bootstrap comparisons refit candidate supports using the saved fitting and
+nesting settings. Existing results and earlier comparison runs are preserved.
+
+For each candidate dimension `D_m`, the support-count experiments use `Lm` equal to
 `LM_WEIGHT` times the number of available supports with `D_m - 1` edges.
 `LM_WEIGHT` defaults to `0.1` and can be set in the environment. For an
 `n=4` upper-triangular curve, the support counts are `C(6, D_m - 1)`, or

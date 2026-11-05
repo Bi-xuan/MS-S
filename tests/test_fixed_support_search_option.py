@@ -111,4 +111,7 @@ def test_reselect_does_not_recompute_or_apply_environment_search_mode(runner):
     assert result.returncode == 0, result.stderr
     calls = [json.loads(line) for line in Path(env["CALLS"]).read_text().splitlines()]
     assert not any("compute_objective_curve.py" in call[0] for call in calls)
-    assert (output / "reselect_lm_support_count_plateau/num_samples_100/seed_124/result.csv").exists()
+    run, = output.glob("reselect_*")
+    for variant in ("penalty_plateau_lm_constant", "penalty_plateau_lm_support_count",
+                    "penalty_plateau_bootstrap_lm_constant", "penalty_plateau_bootstrap_lm_support_count"):
+        assert (run / variant / "num_samples_100/seed_124/result.csv").exists()

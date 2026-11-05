@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 
+import numpy as np
 import pytest
 
 
@@ -33,7 +34,8 @@ if args[0] == "-c":
 with Path(os.environ["CALLS"]).open("a") as f:
     f.write(json.dumps(args) + "\\n")
 if "compute_objective_curve.py" in args[0]:
-    Path(args[args.index("--sigma-hat-output") + 1]).touch()
+    import numpy as np
+    np.savez(args[args.index("--sigma-hat-output") + 1], n=4)
 if "summarize_fixed_support_scaling.py" in args[0]:
     for flag in ("--trials-output", "--summary-output"):
         if flag in args:
@@ -76,11 +78,17 @@ VARIANTS = {
 
 
 @pytest.mark.parametrize("weights", [None, ("2", "0.2")])
-def test_reselect_runs_four_experiments_without_overwriting_results(study_env, weights):
+@pytest.mark.parametrize("script_name", ["run_upper_support_scaling_study.sh", "run_fixed_support_scaling.sh"])
+def test_reselect_runs_four_experiments_without_overwriting_results(study_env, weights, script_name):
     output, env = study_env
-    trial = output / "support_18/num_samples_100/seed_2"
+    script = SCRIPT.with_name(script_name)
+    upper_study = script == SCRIPT
+    support = output / "support_18" if upper_study else output
+    trial = support / "num_samples_100/seed_2"
     trial.mkdir(parents=True)
-    (trial / "objective_curve_sigma_hat.npz").touch()
+    np.savez(trial / "objective_curve_sigma_hat.npz", n=10, lambda_star_dimension=10,
+             support_scope="upper", nested_supports=True, fit_omega_ref=True,
+             fit_settings_json=json.dumps({"omega_fixed": .6, "max_restarts": 10}))
     for path in (trial / "selection_plateau_bootstrap.json", trial / "result.csv",
                  trial.parent.parent / "selection_trials.csv",
                  trial.parent.parent / "selection_summary.md", output / "selection_summary.md",
@@ -91,9 +99,18 @@ def test_reselect_runs_four_experiments_without_overwriting_results(study_env, w
     env["RESELECT_METHOD"] = "window"  # An old environment setting cannot reduce the comparison.
     if weights is not None:
         env.update(LM_CONSTANT=weights[0], LM_WEIGHT=weights[1])
-    env.update(TOP_PLATEAUS="2", BOOTSTRAP_REPLICATES="39",
-               BOOTSTRAP_ALPHA="0.1", BOOTSTRAP_SEED="456")
-    result = subprocess.run(["bash", str(SCRIPT), "reselect"], env=env,
+    bootstrap = ({"TOP_PLATEAUS": "2", "BOOTSTRAP_REPLICATES": "199",
+                  "BOOTSTRAP_ALPHA": "0.1", "BOOTSTRAP_SEED": "20260913"}
+                 if weights is None else
+                 {"TOP_PLATEAUS": "4", "BOOTSTRAP_REPLICATES": "39",
+                  "BOOTSTRAP_ALPHA": "0.2", "BOOTSTRAP_SEED": "456"})
+    for key in bootstrap:
+        env.pop(key, None)
+    if weights is not None:
+        env.update(bootstrap)
+    # Explicit input takes precedence over OUTPUT_ROOT.
+    env["OUTPUT_ROOT"] = str(output / "unused")
+    result = subprocess.run(["bash", str(script), "reselect", str(output)], env=env,
                             capture_output=True, text=True, timeout=40)
     assert result.returncode == 0, result.stderr
     assert all(path.read_bytes() == content for path, content in original.items())
@@ -105,15 +122,15 @@ def test_reselect_runs_four_experiments_without_overwriting_results(study_env, w
     assert len(selections) == 4
     for (variant, (method, mode)), selection in zip(VARIANTS.items(), selections):
         weight = (weights or ("1", "0.1"))[mode == "support-count"]
-        destination = output / "support_18" / run.name / variant
+        destination = support / run.name / variant
         assert (destination / "num_samples_100/seed_2/result.csv").read_text().strip() == "100,2,4,0.75,false"
         assert selection[selection.index("--method") + 1] == method
         assert selection[selection.index("--lm-mode") + 1] == mode
         assert selection[selection.index("--Lm") + 1] == weight
         assert selection[selection.index("--n-jobs") + 1] == "1"
         if method == "plateau-bootstrap":
-            for flag, value in {"--top-plateaus": "2", "--bootstrap-replicates": "39",
-                                "--bootstrap-alpha": "0.1", "--bootstrap-seed": "456"}.items():
+            for key, value in bootstrap.items():
+                flag = "--" + key.lower().replace("_", "-")
                 assert selection[selection.index(flag) + 1] == value
         else:
             assert "--bootstrap-replicates" not in selection
@@ -121,31 +138,37 @@ def test_reselect_runs_four_experiments_without_overwriting_results(study_env, w
         assert summary[summary.index("--sample-sizes") + 1] == "100"
         assert summary[summary.index("--expected-seeds") + 1] == "1"
         assert summary[summary.index("--selection-file") + 1] == "selection.json"
-        for folder in (destination, run / variant):
+        for folder in {destination, run / variant}:
             assert (folder / "selection_summary.md").read_text() == "summary"
             metadata = json.loads((folder / "methodological_parameters.json").read_text())
             saved = metadata["saved_results"]["selection"]
+            assert metadata["saved_results"]["study"]["n"] == 10
+            assert metadata["saved_results"]["data_generation"]["fit_omega_ref"] is True
+            assert not metadata["saved_results"]["metadata_read_errors"]
+            assert metadata["saved_results"]["missing_selection_reports"] == 0
             assert saved["method"] == method and saved["Lm_mode"] == mode
             if method == "plateau":
                 assert "bootstrap_replicates" not in saved
             else:
-                assert saved["bootstrap_replicates"] == 39
+                assert saved["bootstrap_replicates"] == int(bootstrap["BOOTSTRAP_REPLICATES"])
     # A repeated invocation makes a fresh run rather than overwriting the first one.
     if weights is None:
-        first_run = {path: path.read_bytes() for folder in (run, output / "support_18" / run.name)
+        first_run = {path: path.read_bytes() for folder in {run, support / run.name}
                      for path in folder.rglob("*") if path.is_file()}
-        result = subprocess.run(["bash", str(SCRIPT), "reselect"], env=env,
+        result = subprocess.run(["bash", str(script), "reselect", str(output)], env=env,
                                 capture_output=True, text=True, timeout=40)
         assert result.returncode == 0, result.stderr
         assert len(list(output.glob("reselect_*"))) == 2
         assert all(path.read_bytes() == content for path, content in {**original, **first_run}.items())
 
 
-@pytest.fixture
-def reselect_harness(tmp_path):
+@pytest.fixture(params=["run_upper_support_scaling_study.sh", "run_fixed_support_scaling.sh"])
+def reselect_harness(tmp_path, request):
     # Keep discovery and worker scheduling intact; replace the expensive trial
     # and summary operations with events so concurrency and failures are observable.
-    source = SCRIPT.read_text()
+    source_script = SCRIPT.with_name(request.param)
+    upper_study = source_script == SCRIPT
+    source = source_script.read_text()
     overrides = r'''
 run_trial() {
     printf 'start %s %s %s\n' "$3" "$4" "${RESELECT_VARIANT}" >> "${OUTPUT_ROOT}/events"
@@ -160,13 +183,27 @@ aggregate_results() {
     printf 'aggregate %s %s\n' "$#" "${RESELECT_VARIANT}" >> "${OUTPUT_ROOT}/events"
 }
 '''
+    marker = 'command="${1:-auto}"'
+    if not upper_study:
+        overrides = overrides.replace('"$3"', '"$2"').replace('"$4"', '"$3"')
+        overrides += r'''
+python() {
+    if [[ "$1" == "experiments/summarize_fixed_support_scaling.py" ]]; then
+        aggregate_results true "${OUTPUT_ROOT}"
+    else
+        command python "$@"
+    fi
+}
+'''
+        marker = 'case "${COMMAND}" in'
     script = tmp_path / "experiments/study.sh"
     script.parent.mkdir()
-    script.write_text(source.replace('command="${1:-auto}"', overrides + '\ncommand="${1:-auto}"'))
+    script.write_text(source.replace(marker, overrides + '\n' + marker))
     shutil.copy2(SCRIPT.with_name("write_upper_study_parameters.py"), script.parent)
     output = tmp_path / "output"
     for seed in range(1, 7):
-        trial = output / f"support_18/num_samples_100/seed_{seed}"
+        support = output / "support_18" if upper_study else output
+        trial = support / f"num_samples_100/seed_{seed}"
         trial.mkdir(parents=True)
         (trial / "objective_curve_sigma_hat.npz").write_bytes(b"saved curve")
     env = dict(os.environ, OUTPUT_ROOT=str(output))
@@ -251,6 +288,24 @@ def test_reselect_rejects_invalid_weights_before_writing_results(reselect_harnes
     )
     assert result.returncode == 2
     assert "LM_CONSTANT and LM_WEIGHT must be finite and positive" in result.stderr
+    assert not (output / "events").exists()
+    assert not list(output.glob("reselect_*"))
+
+
+@pytest.mark.parametrize("problem", ["missing_curve", "unequal_seeds"])
+def test_reselect_preflights_all_trials_before_writing_results(reselect_harness, problem):
+    script, output, env = reselect_harness
+    sample = next(output.glob("**/num_samples_100"))
+    if problem == "missing_curve":
+        (sample / "seed_6/objective_curve_sigma_hat.npz").unlink()
+    else:
+        trial = sample.with_name("num_samples_200") / "seed_1"
+        trial.mkdir(parents=True)
+        (trial / "objective_curve_sigma_hat.npz").write_bytes(b"saved curve")
+    result = subprocess.run(["bash", str(script), "reselect"], env=dict(env, N_JOBS="1"),
+                            capture_output=True, text=True, timeout=20)
+    assert result.returncode != 0
+    assert "Error:" in result.stderr
     assert not (output / "events").exists()
     assert not list(output.glob("reselect_*"))
 
