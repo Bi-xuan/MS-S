@@ -46,21 +46,66 @@ def load_lasso_inputs(curve_path):
     return saved
 
 
-def fit_lasso_trial(curve_path, gammas, options):
-    saved = load_lasso_inputs(curve_path)
+def reconstruct_lasso_samples(saved, curve_path):
+    """Replay a saved trial, resolving legacy SVD column signs if necessary.
+
+    For covariance factor U sqrt(D), the empirical covariance in the U basis
+    is sqrt(D) S (Z.T Z / N) S sqrt(D), where S is a diagonal sign matrix.
+    Recover relative signs from the strongest available Gram entries, then
+    verify the reconstructed covariance at the original strict tolerance.
+    The remaining global sign changes no observation's outer product, so it
+    also leaves every training/validation fold covariance unchanged.
+    """
     # Existing studies store covariances, not observation rows. Reconstruct
     # their original simulation; truth is never used for fitting or tuning.
     population = covariance_from_lambda_star(saved["Lambda_star"], float(saved["omega_star"]))
     sample_seed = int(saved.get("sample_seed", int(saved["random_seed"]) + 2))
+    n, count = int(saved["n"]), int(saved["num_samples"])
     samples = np.random.default_rng(sample_seed).multivariate_normal(
-        np.zeros(int(saved["n"])), population, size=int(saved["num_samples"]),
+        np.zeros(n), population, size=count,
     )
-    if not np.allclose(samples.T @ samples / len(samples), saved["Sigma"], rtol=2e-12, atol=2e-12):
-        raise ValueError(f"{curve_path}: reconstructed observations do not match the saved covariance.")
+    if np.allclose(samples.T @ samples / count, saved["Sigma"], rtol=2e-12, atol=2e-12):
+        return samples, dict(method="default_rng.multivariate_normal")
+    del samples
+
+    # SVD vectors can change signs across numerical libraries while preserving
+    # the population covariance. Replay the same standard normals and recover
+    # the saved convention, rather than generating a different simulated trial.
+    vectors, singular_values, _ = np.linalg.svd(population)
+    normals = np.random.default_rng(sample_seed).standard_normal((count, n))
+    gram = normals.T @ normals / count
+    target = (vectors.T @ saved["Sigma"] @ vectors) / np.sqrt(
+        singular_values[:, None] * singular_values[None, :])
+    signs = np.ones(n)
+    known = np.zeros(n, dtype=bool)
+    known[0] = True
+    error = f"{curve_path}: reconstructed observations do not match the saved covariance."
+    for _ in range(n - 1):
+        crossing = known[:, None] & ~known[None, :]
+        weights = np.where(crossing, np.abs(gram), -np.inf)
+        i, j = np.unravel_index(np.argmax(weights), weights.shape)
+        if weights[i, j] <= 64 * np.finfo(float).eps or target[i, j] == 0:
+            raise ValueError(error + " SVD column signs cannot be resolved.")
+        signs[j] = signs[i] * np.sign(target[i, j]) * np.sign(gram[i, j])
+        known[j] = True
+    normals *= signs
+    samples = normals @ (vectors * np.sqrt(singular_values)).T
+    if not np.allclose(samples.T @ samples / count, saved["Sigma"], rtol=2e-12, atol=2e-12):
+        raise ValueError(error + " SVD column-sign alignment did not resolve the mismatch.")
+    return samples, dict(method="svd-sign-aligned", column_signs=signs.astype(int).tolist())
+
+
+def fit_lasso_trial(curve_path, gammas, options):
+    saved = load_lasso_inputs(curve_path)
+    samples, reconstruction = reconstruct_lasso_samples(saved, curve_path)
+    sample_seed = int(saved.get("sample_seed", int(saved["random_seed"]) + 2))
+    if reconstruction["method"] == "svd-sign-aligned":
+        print(f"Aligned saved SVD sampling signs: {curve_path}", flush=True)
     result = select_lasso(samples, gammas, **options)
     saved.update({f"lasso_{name}": value for name, value in result.items()})
     saved["lasso_fit_options_json"] = json.dumps(dict(
         options, folds=5, sample_seed=sample_seed, covariance="X.T @ X / N",
+        sample_reconstruction=reconstruction,
         penalty="strict-upper L1", gamma_units="absolute", cv_loss="unsquared Frobenius",
         tie_rule="largest gamma among exact minima", unpenalized_refit=False,
     ), sort_keys=True)

@@ -146,6 +146,70 @@ def save_trial(root, seed=1, package=False):
     return curve
 
 
+@pytest.mark.parametrize("n", [4, 10])
+@pytest.mark.parametrize("global_sign", [1, -1])
+def test_reconstruction_recovers_legacy_svd_signs_and_fold_covariances(n, global_sign):
+    matrix = np.diag(np.linspace(.1, .55, n))
+    matrix[:-1, -1] = np.linspace(.2, .6, n - 1)
+    population = covariance_from_lambda_star(matrix, 1.)
+    vectors, values, _ = np.linalg.svd(population)
+    count, seed = 103, 126
+    normals = np.random.default_rng(seed).standard_normal((count, n))
+    signs = np.ones(n)
+    signs[1::2] = -1
+    original = normals @ ((vectors * np.sqrt(values)) * signs * global_sign).T
+    saved = dict(n=n, num_samples=count, random_seed=9, sample_seed=seed,
+                 Lambda_star=matrix, omega_star=1., Sigma=original.T @ original / count)
+    unaligned = np.random.default_rng(seed).multivariate_normal(np.zeros(n), population, size=count)
+    assert not np.allclose(unaligned.T @ unaligned / count, saved["Sigma"], rtol=2e-12, atol=2e-12)
+
+    recovered, details = runner.reconstruct_lasso_samples(saved, "legacy.npz")
+    assert details["method"] == "svd-sign-aligned"
+    np.testing.assert_allclose(recovered, global_sign * original, rtol=2e-12, atol=2e-12)
+    np.testing.assert_allclose(recovered.T @ recovered / count, saved["Sigma"], rtol=2e-12, atol=2e-12)
+    for indices in np.array_split(np.random.default_rng(42).permutation(count), 5):
+        np.testing.assert_allclose(recovered[indices].T @ recovered[indices],
+                                   original[indices].T @ original[indices], rtol=2e-12, atol=2e-12)
+
+
+def test_matching_reconstruction_preserves_original_draws():
+    matrix = np.diag([.2, -.4, .5])
+    population = covariance_from_lambda_star(matrix, 1.)
+    original = np.random.default_rng(3).multivariate_normal(np.zeros(3), population, size=100)
+    saved = dict(n=3, num_samples=100, random_seed=1, Lambda_star=matrix,
+                 omega_star=1., Sigma=original.T @ original / 100)
+    recovered, details = runner.reconstruct_lasso_samples(saved, "matching.npz")
+    np.testing.assert_array_equal(recovered, original)
+    assert details == dict(method="default_rng.multivariate_normal")
+
+
+def test_signed_trial_reaches_lasso_and_records_reconstruction_without_changing_original_fields(tmp_path, monkeypatch):
+    curve = save_trial(tmp_path)
+    with np.load(curve, allow_pickle=False) as data:
+        before = dict(data)
+    population = covariance_from_lambda_star(before["Lambda_star"], 1.)
+    vectors, values, _ = np.linalg.svd(population)
+    normals = np.random.default_rng(3).standard_normal((100, 3))
+    original = normals @ ((vectors * np.sqrt(values)) * [1, -1, 1]).T
+    before["Sigma"] = original.T @ original / 100
+    np.savez_compressed(curve, **before)
+    calls = []
+
+    def selected(samples, grid, **options):
+        calls.append(samples.copy())
+        return dict(support_mask=before["selected_support_masks"][0])
+
+    monkeypatch.setattr(runner, "select_lasso", selected)
+    runner.fit_lasso_trial(curve, [0, 1.], {})
+    assert len(calls) == 1
+    np.testing.assert_allclose(calls[0], original, rtol=2e-12, atol=2e-12)
+    with np.load(curve, allow_pickle=False) as saved:
+        for key, value in before.items():
+            np.testing.assert_array_equal(saved[key], value)
+        options = json.loads(str(saved["lasso_fit_options_json"]))
+        assert options["sample_reconstruction"] == dict(method="svd-sign-aligned", column_signs=[1, -1, 1])
+
+
 @pytest.mark.parametrize("package", [False, True])
 def test_real_saved_trial_preserves_archive_and_reports_lasso(tmp_path, package):
     curve = save_trial(tmp_path, package=package)

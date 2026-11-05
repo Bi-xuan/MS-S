@@ -532,6 +532,16 @@ ties choose the larger gamma. Refit on all observations with the full-data
 omega rule; extract strict-upper edges when `abs(Lambda_ij) > 1e-5`. The fitted
 coefficients are retained without an additional unpenalized refit.
 
+Legacy files store the empirical covariance rather than observation rows.
+Lasso reconstructs the seeded Gaussian observations and checks `X.T @ X / N`
+against the saved `Sigma` with `rtol=atol=2e-12`. If an SVD column-sign change
+across numerical libraries prevents replay, reconstruction aligns the SVD
+factor's signs to the saved covariance and repeats the same strict check.
+Relative signs are recovered from the seeded standard-normal Gram matrix;
+the unresolved global sign leaves every fold covariance unchanged. Other
+reconstruction mismatches still raise an error before fitting. The method and
+any corrected signs are recorded in `lasso_fit_options_json.sample_reconstruction`.
+
 The configurable defaults are:
 
 | Environment variable | Default | Meaning |
