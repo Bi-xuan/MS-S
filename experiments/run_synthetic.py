@@ -1,4 +1,4 @@
-"""Run the active synthetic Lambda/omega optimization experiment. Optimize over one D_m"""
+"""Fit Lambda at one D_m using synthetic population and empirical covariances."""
 
 import argparse
 from pathlib import Path
@@ -147,7 +147,7 @@ def parse_args(argv=None):
         "--num-samples",
         type=int,
         default=100,
-        help="Number of observations used to build Sigma_hat for a fitted omega_ref.",
+        help="Number of simulated Gaussian observations used to build Sigma_hat.",
     )
     parser.add_argument(
         "--support-scope",
@@ -177,6 +177,38 @@ def parse_args(argv=None):
         ),
     )
     return parser.parse_args(argv)
+
+
+def fit_covariance(covariance, covariance_name, D_m, omega_ref, args):
+    lambda_min = np.linalg.eigvalsh(covariance)[0]
+    print(f"lambda_min({covariance_name}): {lambda_min:.6f}")
+    print(f"{covariance_name}:\n{covariance}")
+    if omega_ref is not None and omega_ref > lambda_min:
+        print(f"omega_ref ({omega_ref:.6f}) exceeds lambda_min({covariance_name}).")
+
+    np.random.seed(args.random_seed)
+    Lambda, omega, obj, metadata = optimize_lambda(
+        covariance,
+        D_m,
+        max_iter=800,
+        tol=1e-7,
+        max_restarts=args.max_restarts,
+        omega_ref=omega_ref,
+        n_jobs=args.n_jobs,
+        random_seed=args.random_seed,
+        init_strategy=args.init_strategy,
+        refine_after_fixed_omega=args.refine_after_fixed_omega,
+        preselect_k=args.preselect_k,
+        preselect_direction_policy=args.preselect_direction_policy,
+        return_metadata=True,
+        support_scope=args.support_scope,
+    )
+    if args.preselect_k is not None:
+        print(f"preselected_edges: {metadata['preselected_edges']}")
+        print(f"preselected_scores: {metadata['preselected_scores']}")
+    print_optimization_result(Lambda, omega, obj)
+    if omega is not None and np.isfinite(omega):
+        print(f"omega <= lambda_min({covariance_name}): {omega <= lambda_min + 1e-12}")
 
 
 def main():
@@ -212,43 +244,22 @@ def main():
         )
 
     Sigma_given = covariance_from_lambda_star(Lambda_star, omega_star)
+    Sigma_hat = sample_empirical_covariance(
+        Sigma_given, num_samples=args.num_samples, seed=args.random_seed + 2,
+    )
     if args.fit_omega_ref:
-        Sigma_hat = sample_empirical_covariance(
-            Sigma_given, num_samples=args.num_samples, seed=args.random_seed + 2,
-        )
         omega_ref = resolve_omega_ref(
             Sigma_hat, omega_ref, fit_omega_ref=True, kappa=args.kappa,
         )
     else:
         omega_ref = resolve_omega_ref(Sigma_given, omega_ref)
-    lambda_min_sigma = np.min(np.linalg.eigvalsh(Sigma_given))
 
-    np.random.seed(args.random_seed)
-    Lambda, omega, obj, metadata = optimize_lambda(
-        Sigma_given,
-        D_m,
-        max_iter=800,
-        tol=1e-7,
-        max_restarts=args.max_restarts,
-        omega_ref=omega_ref,
-        n_jobs=args.n_jobs,
-        random_seed=args.random_seed,
-        init_strategy=args.init_strategy,
-        refine_after_fixed_omega=args.refine_after_fixed_omega,
-        preselect_k=args.preselect_k,
-        preselect_direction_policy=args.preselect_direction_policy,
-        return_metadata=True,
-        support_scope=args.support_scope,
-    )
     if omega_ref is None:
-        print("\nTest 7: free-omega support selection")
+        print("Free-omega support selection")
     elif args.refine_after_fixed_omega:
-        print(
-            "\nTest 7: fixed-omega support selection, then bounded "
-            "free-omega optimization"
-        )
+        print("Fixed-omega support selection, then bounded free-omega optimization")
     else:
-        print("\nTest 7: fixed-omega support selection only")
+        print("Fixed-omega support selection only")
     print(f"Lambda_star:\n{Lambda_star}")
     print(f"Spectral radius of Lambda_star: {lambda_star_radius:.6f}")
     print(f"omega_star: {omega_star:.6f}")
@@ -257,16 +268,12 @@ def main():
     if args.preselect_k is not None:
         print(f"preselect_k: {args.preselect_k}")
         print(f"preselect_direction_policy: {args.preselect_direction_policy}")
-        print(f"preselected_edges: {metadata['preselected_edges']}")
-        print(f"preselected_scores: {metadata['preselected_scores']}")
-    print(f"lambda_min(Sigma): {lambda_min_sigma:.6f}")
-    print(f"Sigma:\n{Sigma_given}")
-    print_optimization_result(Lambda, omega, obj)
-    if omega is not None and np.isfinite(omega):
-        print(
-            "omega <= lambda_min(Sigma): "
-            f"{omega <= lambda_min_sigma + 1e-12}"
-        )
+
+    print("\nTest 7: population covariance")
+    fit_covariance(Sigma_given, "Sigma", D_m, omega_ref, args)
+
+    print(f"\nTest 8: empirical covariance from {args.num_samples} samples")
+    fit_covariance(Sigma_hat, "Sigma_hat", D_m, omega_ref, args)
 
 
 if __name__ == "__main__":

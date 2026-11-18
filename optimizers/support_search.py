@@ -6,7 +6,7 @@ from math import comb
 
 import numpy as np
 
-from admm import admm_solve
+from admm import DEFAULT_ADMM_RADIUS, admm_solve
 from objective import frobenius_objective
 from supports.common import (
     off_diagonal_edges, support_mask_from_edges, upper_triangular_edges,
@@ -97,6 +97,7 @@ def solve_support_with_restarts(
     omega_fixed=None,
     omega_upper=None,
     init_strategy="halton",
+    radius=DEFAULT_ADMM_RADIUS,
 ):
     runs = []
 
@@ -112,6 +113,7 @@ def solve_support_with_restarts(
             omega_upper=omega_upper,
             init_strategy=init_strategy,
             init_offset=restart_index,
+            radius=radius,
         )
         Lambda_thr = threshold_lambda(Lambda, zero_tol)
         obj = frobenius_objective(Sigma, Lambda_thr, omega)
@@ -147,6 +149,7 @@ def solve_support_worker(task):
         min_omega,
         omega_fixed,
         omega_upper,
+        radius,
         seed,
         init_strategy,
     ) = task
@@ -166,6 +169,7 @@ def solve_support_worker(task):
         omega_fixed=omega_fixed,
         omega_upper=omega_upper,
         init_strategy=init_strategy,
+        radius=radius,
     )
 
     return support_index, mask, result
@@ -267,7 +271,7 @@ def select_preselected_edge_scores(
 def rank_preselected_edges(
     Sigma,
     preselect_k,
-    beta=1.0,
+    beta=None,
     max_iter=500,
     tol=1e-6,
     zero_tol=1e-5,
@@ -279,6 +283,7 @@ def rank_preselected_edges(
     random_seed=None,
     init_strategy="halton",
     direction_policy="directed",
+    radius=DEFAULT_ADMM_RADIUS,
 ):
     """Rank directed off-diagonal edges by their one-edge support objective."""
     n = Sigma.shape[0]
@@ -309,6 +314,7 @@ def rank_preselected_edges(
                 min_omega,
                 omega_fixed,
                 omega_upper,
+                radius,
                 None if random_seed is None else random_seed + edge_index,
                 init_strategy,
             )
@@ -345,7 +351,7 @@ def rank_preselected_edges(
 def optimize_lambda(
     Sigma,
     D_m,
-    beta=1.0,
+    beta=None,
     max_iter=500,
     tol=1e-6,
     zero_tol=1e-5,
@@ -367,6 +373,7 @@ def optimize_lambda(
     previous_support_mask=None,
     fit_omega_ref=False,
     kappa=0.93,
+    radius=DEFAULT_ADMM_RADIUS,
 ):
     """
     Optimize Lambda over a support iterator.
@@ -489,6 +496,7 @@ def optimize_lambda(
             random_seed=random_seed,
             init_strategy=init_strategy,
             direction_policy=preselect_direction_policy,
+            radius=radius,
         )
         metadata["preselected_edges"] = selected_edges
         metadata["preselected_scores"] = selected_scores
@@ -549,6 +557,7 @@ def optimize_lambda(
                 min_omega,
                 omega_ref,
                 omega_upper,
+                radius,
                 None if random_seed is None else random_seed + support_index,
                 init_strategy,
             )
@@ -624,6 +633,7 @@ def optimize_lambda(
             omega_fixed=None,
             omega_upper=free_omega_upper,
             init_strategy=init_strategy,
+            radius=radius,
         )
 
         if final_result is None:

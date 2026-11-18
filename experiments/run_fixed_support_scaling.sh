@@ -18,6 +18,8 @@ LAMBDA_STAR_OFFDIAG_ABS_MAX="${LAMBDA_STAR_OFFDIAG_ABS_MAX:-0.60}"
 TOTAL_CPUS="${TOTAL_CPUS:-${SLURM_CPUS_PER_TASK:-${NSLOTS:-100}}}"
 CPUS_PER_TRIAL="${CPUS_PER_TRIAL:-5}"
 MAX_RESTARTS="${MAX_RESTARTS:-10}"
+ADMM_RADIUS="${ADMM_RADIUS:-3.75}"
+ADMM_BETA="${ADMM_BETA:-auto}"
 REFINE_AFTER_FIXED_OMEGA="${REFINE_AFTER_FIXED_OMEGA:-false}"
 OMEGA_STAR="${OMEGA_STAR:-1}"
 OMEGA_REF="${OMEGA_REF:-1}"
@@ -95,6 +97,7 @@ Usage: $(basename "$0") [run-all | reselect [OUTPUT_FOLDER] | oracle [OUTPUT_FOL
             dimension, using SUPPORT_SCOPE=all (default) or upper, without nesting.
             The backward and greedy modes default to output folders ending in
             _forward_backward_nested and _greedy; OUTPUT_ROOT overrides the folder.
+            ADMM_BETA sets a fixed positive ADMM penalty (default auto).
   reselect  Discover saved num_samples_*/seed_* curves under OUTPUT_ROOT,
             then run all four combinations of plateau/plateau-bootstrap and
             constant/support-count Lm using the saved curves and current penalty.
@@ -190,6 +193,8 @@ run_trial() {
             --n-jobs "${CPUS_PER_TRIAL}" \
             --random-seed "${random_seed}" \
             --max-restarts "${MAX_RESTARTS}" \
+            --admm-radius "${ADMM_RADIUS}" \
+            --beta "${ADMM_BETA}" \
             --refine-after-fixed-omega "${REFINE_AFTER_FIXED_OMEGA}" \
             --omega-star "${OMEGA_STAR}" \
             --omega-ref "${OMEGA_REF}" \
@@ -345,7 +350,7 @@ EOF_COMPARISON
         echo "Summary table: ${summary_dir}/selection_summary.md"
         (
             export N LAMBDA_STAR_OFFDIAG_ABS_MIN LAMBDA_STAR_OFFDIAG_ABS_MAX
-            export TOTAL_CPUS CPUS_PER_TRIAL N_JOBS MAX_RESTARTS REFINE_AFTER_FIXED_OMEGA
+            export TOTAL_CPUS CPUS_PER_TRIAL N_JOBS MAX_RESTARTS ADMM_BETA REFINE_AFTER_FIXED_OMEGA
             export OMEGA_STAR OMEGA_REF FIT_OMEGA_REF KAPPA SUPPORT_SCOPE SEARCH_OPTION
             export STUDY_SAMPLE_SIZES="${sample_sizes[*]}" TOTAL_TRIALS="${#trial_dirs[@]}"
             python "${SCRIPT_DIR}/write_upper_study_parameters.py" "${summary_dir}" \

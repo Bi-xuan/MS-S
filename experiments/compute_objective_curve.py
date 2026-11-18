@@ -12,7 +12,7 @@ import numpy as np
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from admm import DEFAULT_OMEGA_STAR
+from admm import DEFAULT_ADMM_RADIUS, DEFAULT_OMEGA_STAR, fixed_omega_admm_beta
 from optimizers.support_search import (
     optimize_lambda, rank_preselected_edges, resolve_omega_ref,
 )
@@ -43,6 +43,18 @@ def parse_omega_ref(value):
     if normalized in ("none", "null", "free"):
         return None
     return float(value)
+
+
+def parse_admm_beta(value):
+    if value.strip().lower() == "auto":
+        return None
+    try:
+        beta = float(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("beta must be a finite positive number or 'auto'") from error
+    if not np.isfinite(beta) or beta <= 0:
+        raise argparse.ArgumentTypeError("beta must be a finite positive number or 'auto'")
+    return beta
 
 
 def empirical_covariance_from_samples(X):
@@ -86,7 +98,7 @@ def lambda_star_spectral_radius(Lambda_star):
 
 def compute_objective_curve(
     Sigma,
-    beta=1.0,
+    beta=None,
     max_iter=500,
     tol=1e-6,
     zero_tol=1e-5,
@@ -112,6 +124,7 @@ def compute_objective_curve(
     fit_omega_ref=False,
     kappa=0.93,
     search_option="forward",
+    radius=DEFAULT_ADMM_RADIUS,
 ):
     """Fit each dimension, by default along a greedy forward-nested path."""
     if search_option not in SEARCH_OPTIONS:
@@ -219,7 +232,7 @@ def compute_objective_curve(
             beta=beta, max_iter=max_iter, tol=tol, zero_tol=zero_tol,
             max_restarts=max_restarts, min_omega=min_omega, omega_ref=omega_ref,
             n_jobs=n_jobs, random_seed=random_seed, init_strategy=init_strategy,
-            refine_after_fixed_omega=refine_after_fixed_omega,
+            refine_after_fixed_omega=refine_after_fixed_omega, radius=radius,
         )
 
     completed_d_m_values = set(int(d_m) for d_m in exact_d_m_values)
@@ -259,6 +272,7 @@ def compute_objective_curve(
                 return_metadata=True,
                 support_scope=support_scope,
                 previous_support_mask=previous_mask,
+                radius=radius,
             )
         Lambda, omega, obj, metadata = solve_result
 
@@ -683,6 +697,18 @@ def parse_args(argv=None):
         help="Number of ADMM initializations to try per support.",
     )
     parser.add_argument(
+        "--beta",
+        type=parse_admm_beta,
+        default=None,
+        help="Fixed ADMM penalty or 'auto' to use the default penalty rule.",
+    )
+    parser.add_argument(
+        "--admm-radius",
+        type=float,
+        default=DEFAULT_ADMM_RADIUS,
+        help=f"Spectral-norm radius for choosing fixed-omega ADMM beta (default: {DEFAULT_ADMM_RADIUS}).",
+    )
+    parser.add_argument(
         "--refine-after-fixed-omega",
         type=parse_bool,
         default=True,
@@ -847,6 +873,7 @@ def preselect_edges_for_sigma(
     selected_edges, selected_scores = rank_preselected_edges(
         Sigma,
         args.preselect_k,
+        beta=args.beta,
         max_iter=max_iter,
         tol=tol,
         max_restarts=args.max_restarts,
@@ -857,6 +884,7 @@ def preselect_edges_for_sigma(
         random_seed=solve_seed,
         init_strategy=args.init_strategy,
         direction_policy=args.preselect_direction_policy,
+        radius=args.admm_radius,
     )
     print(f"  Best one-edge screening objective: {selected_scores[0]:.6f}")
     print(f"  Worst retained screening objective: {selected_scores[-1]:.6f}")
@@ -952,9 +980,11 @@ def run_experiment(args, n, add_output_suffix):
             "--refine-after-fixed-omega false for free-omega support search."
         )
     print(f"omega_ref for support selection: {omega_ref}")
+    if args.beta is not None:
+        print(f"ADMM beta override: {args.beta:.6g}")
     fit_settings = dict(
         omega_fixed=None if args.refine_after_fixed_omega else omega_ref,
-        beta=1.0, max_iter=800, tol=1e-7, zero_tol=1e-5,
+        beta=args.beta, radius=args.admm_radius, max_iter=800, tol=1e-7, zero_tol=1e-5,
         max_restarts=args.max_restarts, min_omega=0.0,
         init_strategy=args.init_strategy,
     )
@@ -968,6 +998,8 @@ def run_experiment(args, n, add_output_suffix):
     compute_sigma_hat = args.curve in ("both", "sigma_hat")
 
     if compute_sigma_given:
+        if args.beta is None and omega_ref is not None:
+            print(f"Given-Sigma ADMM beta: {fixed_omega_admm_beta(Sigma_given, omega_ref, args.admm_radius):.6g}")
         given_existing_curve = load_existing_curve_result(
             given_output,
             "given_sigma",
@@ -1054,6 +1086,7 @@ def run_experiment(args, n, add_output_suffix):
 
         given_curve = compute_objective_curve(
             Sigma_given,
+            beta=args.beta,
             max_iter=800,
             tol=1e-7,
             max_restarts=args.max_restarts,
@@ -1073,6 +1106,7 @@ def run_experiment(args, n, add_output_suffix):
             support_scope=args.support_scope,
             nested_supports=args.nested_supports,
             search_option=args.search_option,
+            radius=args.admm_radius,
         )
         save_given_curve(given_curve)
         print(f"Saved given-Sigma curve data to {given_output}")
@@ -1090,6 +1124,8 @@ def run_experiment(args, n, add_output_suffix):
 
     print("\nEmpirical covariance Sigma_hat from given Sigma:")
     print(Sigma_hat_given)
+    if args.beta is None and omega_ref is not None:
+        print(f"Sigma_hat ADMM beta: {fixed_omega_admm_beta(Sigma_hat_given, omega_ref, args.admm_radius):.6g}")
     sigma_hat_existing_curve = load_existing_curve_result(
         sigma_hat_output,
         "sigma_hat_from_given_sigma",
@@ -1172,6 +1208,7 @@ def run_experiment(args, n, add_output_suffix):
 
     sigma_hat_curve = compute_objective_curve(
         Sigma_hat_given,
+        beta=args.beta,
         max_iter=800,
         tol=1e-7,
         max_restarts=args.max_restarts,
@@ -1191,6 +1228,7 @@ def run_experiment(args, n, add_output_suffix):
         support_scope=args.support_scope,
         nested_supports=args.nested_supports,
         search_option=args.search_option,
+        radius=args.admm_radius,
     )
     save_sigma_hat_curve(sigma_hat_curve)
     print(f"Saved Sigma_hat curve data to {sigma_hat_output}")

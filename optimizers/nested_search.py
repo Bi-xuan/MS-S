@@ -5,6 +5,7 @@ import hashlib
 
 import numpy as np
 
+from admm import DEFAULT_ADMM_RADIUS
 from optimizers import support_search as search
 from supports.common import validate_support_mask
 
@@ -34,7 +35,7 @@ class CachedSupportFitter:
 
     def __init__(self, Sigma, *, beta, max_iter, tol, zero_tol, max_restarts,
                  min_omega, omega_ref, n_jobs, random_seed, init_strategy,
-                 refine_after_fixed_omega):
+                 refine_after_fixed_omega, radius=DEFAULT_ADMM_RADIUS):
         if n_jobs is not None and n_jobs < 1:
             raise ValueError("n_jobs must be positive or None.")
         if refine_after_fixed_omega and omega_ref is None:
@@ -48,6 +49,7 @@ class CachedSupportFitter:
         self.n_jobs = n_jobs
         self.random_seed = 0 if random_seed is None else random_seed
         self.init_strategy = init_strategy
+        self.radius = radius
         self.refine = refine_after_fixed_omega
         self.cache = {}
 
@@ -59,7 +61,7 @@ class CachedSupportFitter:
         omega = None if refine else self.omega_ref
         upper = self.omega_upper - 1e-6 if refine else self.omega_upper
         return (index, self.Sigma, mask, *self.settings, omega, upper,
-                seed, self.init_strategy)
+                self.radius, seed, self.init_strategy)
 
     def _run(self, masks, refine=False):
         tasks = [self._task(index, mask, refine) for index, mask in enumerate(masks)]

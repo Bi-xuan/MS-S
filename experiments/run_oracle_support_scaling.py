@@ -48,6 +48,8 @@ def load_oracle_inputs(curve_path: Path) -> tuple[dict, dict]:
     omega_ref = float(saved["omega_ref"])
     # A free final fit with a numeric reference denotes two-stage refinement.
     options = {key: settings[key] for key in required_settings - {"omega_fixed"}}
+    if "radius" in settings:
+        options["radius"] = settings["radius"]
     options.update(
         min_omega=settings.get("min_omega", 0.0),
         omega_ref=omega_ref,

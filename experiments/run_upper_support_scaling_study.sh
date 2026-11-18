@@ -22,6 +22,8 @@ TOTAL_CPUS="${TOTAL_CPUS:-${SLURM_CPUS_PER_TASK:-${NSLOTS:-100}}}"
 CPUS_PER_TRIAL="${CPUS_PER_TRIAL:-5}"
 N_JOBS="${N_JOBS:-${SLURM_CPUS_PER_TASK:-${NSLOTS:-8}}}"
 MAX_RESTARTS="${MAX_RESTARTS:-10}"
+ADMM_RADIUS="${ADMM_RADIUS:-3.75}"
+ADMM_BETA="${ADMM_BETA:-auto}"
 REFINE_AFTER_FIXED_OMEGA="${REFINE_AFTER_FIXED_OMEGA:-false}"
 OMEGA_STAR="${OMEGA_STAR:-1}"
 OMEGA_REF="${OMEGA_REF:-1}"
@@ -86,6 +88,8 @@ Usage: $(basename "$0") [run-all | trial [TASK_ID] | aggregate | reselect [OUTPU
   SEARCH_OPTION=forward-backward-nested adds backward corrections to the nested path.
   Both forward modes require NESTED_SUPPORTS=true.
   SEARCH_OPTION=greedy searches supports independently and sets NESTED_SUPPORTS=false.
+  ADMM_RADIUS sets the spectral-norm radius for fixed-omega fits (default 3.75).
+  ADMM_BETA sets a fixed positive ADMM penalty (default auto).
   The backward and greedy modes default to output folders ending in
   _forward_backward_nested and _greedy; OUTPUT_ROOT overrides the folder.
   Reselect uses saved curves without applying SEARCH_OPTION.
@@ -159,7 +163,7 @@ write_methodological_parameters() (
     local metadata_options=(--command "${command}")
     export N TRUE_DIMENSION NUM_SUPPORTS LAMBDA_STAR_OFFDIAG_ABS_MIN
     export LAMBDA_STAR_OFFDIAG_ABS_MAX TOTAL_CPUS CPUS_PER_TRIAL N_JOBS
-    export MAX_RESTARTS REFINE_AFTER_FIXED_OMEGA OMEGA_STAR OMEGA_REF FIT_OMEGA_REF
+    export MAX_RESTARTS ADMM_RADIUS ADMM_BETA REFINE_AFTER_FIXED_OMEGA OMEGA_STAR OMEGA_REF FIT_OMEGA_REF
     export KAPPA SUPPORT_SCOPE SEARCH_OPTION NESTED_SUPPORTS
     export TOTAL_TRIALS
     export STUDY_SAMPLE_SIZES="${NUM_SAMPLE_VALUES[*]}"
@@ -219,6 +223,8 @@ run_trial() {
             --n-jobs "${CPUS_PER_TRIAL}" \
             --random-seed "${random_seed}" \
             --max-restarts "${MAX_RESTARTS}" \
+            --admm-radius "${ADMM_RADIUS}" \
+            --beta "${ADMM_BETA}" \
             --refine-after-fixed-omega "${REFINE_AFTER_FIXED_OMEGA}" \
             --omega-star "${OMEGA_STAR}" \
             --omega-ref "${OMEGA_REF}" \

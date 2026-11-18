@@ -321,7 +321,8 @@ def test_trial_maps_support_sample_and_seed_and_forwards_configuration(
     env.update(CPUS_PER_TRIAL="2", TOTAL_CPUS="6", TOP_PLATEAUS="2",
                BOOTSTRAP_REPLICATES="39", BOOTSTRAP_ALPHA="0.1",
                BOOTSTRAP_SEED="456", LAMBDA_STAR_OFFDIAG_ABS_MIN="0.3",
-               LAMBDA_STAR_OFFDIAG_ABS_MAX="0.5", MAX_RESTARTS="7",
+               LAMBDA_STAR_OFFDIAG_ABS_MAX="0.5", MAX_RESTARTS="7", ADMM_RADIUS="4.25",
+               ADMM_BETA="10",
                OMEGA_STAR="2", OMEGA_REF="1.5", KAPPA="0.8",
                FIT_OMEGA_REF="true", REFINE_AFTER_FIXED_OMEGA="true",
                SUPPORT_SCOPE="upper", NESTED_SUPPORTS="true", OBJECTIVE_FLOOR="1e-7")
@@ -338,13 +339,16 @@ def test_trial_maps_support_sample_and_seed_and_forwards_configuration(
     assert metadata["last_command"] == "trial" and metadata["task_id"] == task_id
     assert metadata["configured_parameters"]["SEARCH_OPTION"] == "forward"
     assert metadata["configured_parameters"]["FIT_OMEGA_REF"] is True
+    assert metadata["configured_parameters"]["ADMM_RADIUS"] == 4.25
+    assert metadata["configured_parameters"]["ADMM_BETA"] == 10
     calls = [json.loads(line) for line in (output / "calls.jsonl").read_text().splitlines()]
     compute, selection = calls
     for flag, value in {
         "--lambda-star-support-index": support, "--num-samples": samples,
         "--random-seed": seed, "--lambda-star-dims": 4, "--lambda-star-dimension": 4,
         "--n-jobs": 2, "--lambda-star-offdiag-abs-min": "0.3",
-        "--lambda-star-offdiag-abs-max": "0.5", "--max-restarts": 7,
+        "--lambda-star-offdiag-abs-max": "0.5", "--max-restarts": 7, "--admm-radius": 4.25,
+        "--beta": 10,
         "--omega-star": 2, "--omega-ref": "1.5", "--kappa": "0.8",
         "--fit-omega-ref": "true", "--refine-after-fixed-omega": "true",
         "--support-scope": "upper", "--nested-supports": "true",

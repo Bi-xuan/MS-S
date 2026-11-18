@@ -19,6 +19,7 @@ import numpy as np
 from scipy.linalg import solve_discrete_lyapunov
 from scipy.stats import wishart
 
+from admm import DEFAULT_ADMM_RADIUS
 from optimizers.support_search import solve_support_with_restarts
 from supports.common import off_diagonal_edges, validate_support_mask
 
@@ -816,13 +817,14 @@ class FitSettings:
     """Settings of the final fit on each selected model mask."""
 
     omega_fixed: float | None = 1.0
-    beta: float = 1.0
+    beta: float | None = None
     max_iter: int = 800
     tol: float = 1e-7
     zero_tol: float = 1e-5
     max_restarts: int = 10
     min_omega: float = 0.0
     init_strategy: str = "halton"
+    radius: float = DEFAULT_ADMM_RADIUS
 
 
 @dataclass(frozen=True)
@@ -923,8 +925,10 @@ def select_plateau_bootstrap(
     settings = fit_settings or FitSettings()
     if settings.init_strategy != "halton":
         raise ValueError("Bootstrap refitting currently requires deterministic Halton starts.")
-    if settings.max_restarts < 1 or settings.max_iter < 1 or settings.beta <= 0:
-        raise ValueError("Fit iteration/restart counts and beta must be positive.")
+    if settings.max_restarts < 1 or settings.max_iter < 1:
+        raise ValueError("Fit iteration/restart counts must be positive.")
+    if settings.beta is not None and (not np.isfinite(settings.beta) or settings.beta <= 0):
+        raise ValueError("Fit beta must be finite and positive.")
     Sigma = np.asarray(Sigma, dtype=float)
     if Sigma.ndim != 2 or Sigma.shape[0] != Sigma.shape[1] or not np.all(np.isfinite(Sigma)):
         raise ValueError("Sigma must be a finite square matrix.")

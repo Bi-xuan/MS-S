@@ -9,6 +9,7 @@ import numpy as np
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+import admm
 from admm import admm_solve, halton_point, initialize_admm_state
 
 
@@ -76,6 +77,37 @@ def test_admm_solve_accepts_both_initialization_strategies():
 
         assert np.all(np.isfinite(Lambda))
         assert np.isfinite(omega)
+
+
+def test_fixed_omega_admm_uses_radius_and_solves_restricted_blocks(monkeypatch):
+    Sigma, support_mask = make_problem()
+    support_mask[0, 1] = True
+    omega = 0.9
+    radius = 2.0
+    target = Sigma - omega * np.eye(len(Sigma))
+    sigma_norm = np.linalg.norm(Sigma, 2)
+    L = 6 * sigma_norm**2 * radius**2 + 2 * sigma_norm * np.linalg.norm(target, 2)
+    beta = 1.1 * max(1, 3 * L)
+    _, other = initialize_admm_state(len(Sigma), support_mask, 0, "halton")
+    solve_on_support = admm.solve_on_support
+    updates = []
+
+    def check_update(system, rhs, column_rows):
+        other_block = updates[-1] if updates else other
+        product = Sigma @ other_block
+        np.testing.assert_allclose(system, 2 * product @ product.T + beta * np.eye(len(Sigma)))
+        result = solve_on_support(system, rhs, column_rows)
+        np.testing.assert_allclose((system @ result - rhs)[support_mask], 0, atol=1e-12)
+        np.testing.assert_array_equal(result[~support_mask], 0)
+        updates.append(result)
+        return result
+
+    monkeypatch.setattr(admm, "solve_on_support", check_update)
+    fitted, _ = admm_solve(
+        Sigma, support_mask, omega_fixed=omega, radius=radius, max_iter=1, max_restarts=1,
+    )
+    assert len(updates) == 2
+    np.testing.assert_array_equal(fitted, updates[0])
 
 
 def print_halton_sequence(n, num_points):

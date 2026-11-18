@@ -51,6 +51,7 @@ if "select_scaling_parameter.py" in args[0]:
 def test_mode_reaches_curve_and_selection(runner, mode, scope):
     harness, env, root = runner
     env["SUPPORT_SCOPE"] = scope
+    env["ADMM_BETA"] = "10" if scope == "upper" else ""
     if mode:
         env["SEARCH_OPTION"] = mode
     result = subprocess.run(["bash", str(harness)], env=env, capture_output=True, text=True, timeout=20)
@@ -60,6 +61,7 @@ def test_mode_reaches_curve_and_selection(runner, mode, scope):
     assert compute[compute.index("--search-option") + 1] == (mode or "forward")
     assert compute[compute.index("--nested-supports") + 1] == ("false" if mode == "greedy" else "true")
     assert compute[compute.index("--support-scope") + 1] == scope
+    assert compute[compute.index("--beta") + 1] == ("10" if scope == "upper" else "auto")
     suffix = {"forward-backward-nested": "_forward_backward_nested", "greedy": "_greedy"}.get(mode, "")
     output = root / f"experiments/output/fixed_support_scaling_n4{suffix}"
     assert compute[compute.index("--sigma-hat-output") + 1] == str(output.relative_to(root) / "num_samples_100/seed_124/objective_curve_sigma_hat.npz")

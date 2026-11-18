@@ -5,6 +5,7 @@ import numpy as np
 
 
 DEFAULT_OMEGA_STAR = 0.1
+DEFAULT_ADMM_RADIUS = 3.75
 
 
 def parse_args(argv=None):
@@ -139,10 +140,32 @@ def initialize_admm_state(n, support_mask, restart_index, init_strategy):
     )
 
 
+def fixed_omega_admm_beta(Sigma, omega, radius=DEFAULT_ADMM_RADIUS):
+    """Choose beta from the joint gradient bound on a spectral-norm ball."""
+    if not np.isfinite(radius) or radius <= 0:
+        raise ValueError("ADMM radius must be finite and positive.")
+
+    sigma_norm = np.linalg.norm(Sigma, ord=2)
+    residual_norm = np.linalg.norm(Sigma - omega * np.eye(len(Sigma)), ord=2)
+    lipschitz_bound = 6.0 * sigma_norm**2 * radius**2 + 2.0 * sigma_norm * residual_norm
+    return float(1.1 * max(1.0, 3.0 * lipschitz_bound))
+
+
+def solve_on_support(system, rhs, column_rows):
+    """Minimize the block quadratic with forbidden entries fixed to zero."""
+    result = np.zeros_like(rhs)
+    for column, rows in enumerate(column_rows):
+        if rows.size:
+            result[rows, column] = np.linalg.solve(
+                system[np.ix_(rows, rows)], rhs[rows, column],
+            )
+    return result
+
+
 def admm_solve(
     Sigma,
     support_mask,
-    beta=1.0,
+    beta=None,
     max_iter=500,
     tol=1e-6,
     max_restarts=3,
@@ -150,13 +173,29 @@ def admm_solve(
     omega_upper=None,
     init_strategy="halton",
     init_offset=0,
+    radius=DEFAULT_ADMM_RADIUS,
+    *,
+    stop_when=None,
 ):
+    """Fit a support with automatic beta for fixed omega unless explicitly supplied.
+
+    If provided, stop_when(iteration, L1, L2, previous_L2, omega, beta)
+    replaces the default stopping rule. The callback receives read-only inputs
+    by convention and the iteration count starts at one for each restart.
+    """
     if omega_fixed is not None and omega_fixed < 0.0:
         raise ValueError("omega_fixed must be nonnegative.")
     if omega_upper is not None and omega_upper < 0.0:
         raise ValueError("omega_upper must be nonnegative.")
 
     n = Sigma.shape[0]
+    identity = np.eye(n)
+    if beta is None:
+        beta = 1.0 if omega_fixed is None else fixed_omega_admm_beta(Sigma, omega_fixed, radius)
+    if not np.isfinite(beta) or beta <= 0:
+        raise ValueError("ADMM beta must be finite and positive.")
+    penalty = beta * identity
+    column_rows = tuple(np.flatnonzero(column) for column in support_mask.T)
     best_Lambda = None
     best_omega = None
     best_obj = np.inf
@@ -173,23 +212,23 @@ def admm_solve(
         omega = 0.0 if omega_fixed is None else omega_fixed
         failed = False
 
-        for _ in range(max_iter):
+        for iteration in range(1, max_iter + 1):
             L1_prev = L1.copy()
+            L2_prev = L2
 
             try:
+                target = Sigma - omega * identity
                 # Update Lambda_1
                 SL2 = Sigma @ L2
-                A1 = 2 * SL2 @ SL2.T + beta * np.eye(n)
-                B1 = 2 * SL2 @ (Sigma - omega * np.eye(n)) - alpha + beta * L2
-                L1 = np.linalg.solve(A1, B1)
-                L1 = impose_support(L1, support_mask)
+                A1 = 2 * SL2 @ SL2.T + penalty
+                B1 = 2 * SL2 @ target - alpha + beta * L2
+                L1 = solve_on_support(A1, B1, column_rows)
 
                 # Update Lambda_2
                 SL1 = Sigma @ L1
-                A2 = 2 * SL1 @ SL1.T + beta * np.eye(n)
-                B2 = 2 * SL1 @ (Sigma - omega * np.eye(n)) + alpha + beta * L1
-                L2 = np.linalg.solve(A2, B2)
-                L2 = impose_support(L2, support_mask)
+                A2 = 2 * SL1 @ SL1.T + penalty
+                B2 = 2 * SL1 @ target + alpha + beta * L1
+                L2 = solve_on_support(A2, B2, column_rows)
             except np.linalg.LinAlgError:
                 failed = True
                 break
@@ -209,11 +248,14 @@ def admm_solve(
                 break
 
             # Check convergence
-            if np.linalg.norm(L1 - L1_prev, 'fro') < tol:
+            if stop_when is not None:
+                if stop_when(iteration, L1, L2, L2_prev, omega, beta):
+                    break
+            elif np.linalg.norm(L1 - L1_prev, 'fro') < tol:
                 break
 
         if not failed and is_finite_state(L1, L2, alpha, omega):
-            residual = Sigma - L1.T @ Sigma @ L1 - omega * np.eye(n)
+            residual = Sigma - L1.T @ Sigma @ L1 - omega * identity
             obj = np.linalg.norm(residual, 'fro') ** 2
             if np.isfinite(obj) and obj < best_obj:
                 best_Lambda = L1.copy()
